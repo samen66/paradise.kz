@@ -29,7 +29,7 @@ export default async function CatalogPage({
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: tCommon("home"), href: "/" }, { label: t("title") }]} />
+      <Breadcrumbs items={[{ label: t("title") }]} />
       <CatalogView
         locale={locale}
         searchParams={await searchParams}

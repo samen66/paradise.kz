@@ -11,7 +11,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations("common");
+  const tHome = await getTranslations("home");
   const [home, categories] = await Promise.all([
     apiGet<{ data: HomeData }>("/public/home", { locale, revalidate: 300 }),
     apiGet<{ data: Category[] }>("/public/categories", { locale, revalidate: 300 }),
@@ -25,9 +25,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {rootCategories.length > 0 ? (
         <section>
           <div className="mb-6 flex items-baseline justify-between">
-            <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">Каталог</h2>
+            <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">{tHome("catalog")}</h2>
             <Link href="/catalog" className="text-sm font-medium text-ink hover:text-ink/70">
-              Смотреть все →
+              {tHome("viewAll")}
             </Link>
           </div>
           <CategoryIcons categories={rootCategories} />
@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               href="/catalog"
               className="text-sm font-medium text-ink hover:text-ink/70"
             >
-              Смотреть все →
+              {tHome("viewAll")}
             </Link>
           </div>
           <Carousel>
@@ -55,12 +55,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </section>
       ))}
 
-      <section className="rounded-3xl bg-surface px-6 py-12 sm:p-16 text-center max-w-4xl mx-auto">
-        <h2 className="font-display text-2xl sm:text-3xl font-semibold text-ink mb-4">Paradise.kz — гипермаркет мебели</h2>
-        <p className="text-muted leading-relaxed">
-          Мы предлагаем стильную и надежную мебель для вашего дома. Наша цель — сделать процесс обустройства интерьера простым и приятным.
-          Сотни товаров всегда в наличии на наших складах в Казахстане. Откройте для себя новые коллекции для гостиной, спальни и кухни.
+      <section className="rounded-3xl bg-surface px-6 py-12 sm:p-16 text-center max-w-4xl mx-auto shadow-sm border border-line">
+        <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink mb-4 tracking-tight">{tHome("heroTitle")}</h2>
+        <p className="text-ink/80 leading-relaxed max-w-[700px] mx-auto mb-8 font-medium">
+          {tHome("heroText")}
         </p>
+        <Link href="/catalog" className="inline-block bg-ink text-white px-6 py-3 rounded-xl font-medium hover:bg-ink/90 transition-colors">
+          {tHome("goToCatalog")}
+        </Link>
       </section>
     </div>
   );

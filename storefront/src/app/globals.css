@@ -13,7 +13,7 @@
   /* Ink & text */
   --color-ink: #404040; /* primary text + dark buttons (never pure black) */
   --color-ink-hover: #2a2a2a;
-  --color-muted: #8b857c; /* secondary / label text */
+  --color-muted: #6b655f; /* secondary / label text (WCAG AA compliant) */
 
   /* Lines */
   --color-line: #e4ded6; /* subtle borders & dividers */
@@ -68,3 +68,18 @@ body {
   from { transform: translateX(100%); }
   to { transform: none; }
 }
+
+/* 
+ * TODO: External Chat Widget Positioning Fix
+ * If the "N" widget (e.g. Novachat) is injected externally, uncomment and update the selector below
+ * to move it from the bottom-left to the bottom-right corner to prevent overlapping with the footer.
+ */
+/*
+#novachat-widget,
+.n-widget-container {
+  left: auto !important;
+  right: 24px !important;
+  bottom: 24px !important;
+  z-index: 50 !important;
+}
+*/

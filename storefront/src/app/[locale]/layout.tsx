@@ -69,7 +69,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={`${golos.variable} ${manrope.variable}`}>
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <NextIntlClientProvider>
           <Header categories={categories} settings={settings} />
           <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-10">
