@@ -75,7 +75,7 @@ export default async function LocaleLayout({
           <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-10">
             {children}
           </main>
-          <Footer settings={settings} />
+          <Footer settings={settings} categories={categories} />
           <ToastContainer />
         </NextIntlClientProvider>
       </body>
