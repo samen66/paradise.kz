@@ -30,6 +30,7 @@ export async function Header({
             <Link href="/about" className="hover:text-ink transition">{tNav("about")}</Link>
             <Link href="/delivery" className="hover:text-ink transition">{tNav("delivery")}</Link>
             <Link href="/contacts" className="hover:text-ink transition">{tNav("contacts")}</Link>
+            <a href="/b2b/login" className="font-medium text-ink hover:opacity-70 transition">Стать партнером</a>
           </div>
           <div className="flex items-center gap-4">
             <span className="truncate">{settings?.contacts.address ?? ""}</span>
@@ -65,11 +66,12 @@ export async function Header({
           <Link
             href="/account/favorites"
             aria-label={tAccount("favorites")}
-            className="grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-panel"
+            className="flex items-center gap-2 text-sm font-medium text-ink transition hover:opacity-70"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true" className="h-5 w-5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true" className="h-6 w-6">
               <path d="M12 20s-7-4.35-9.5-8.5C1 8.5 2.5 5.5 5.5 5.5c1.9 0 3.2 1.1 4 2.2.8-1.1 2.1-2.2 4-2.2 3 0 4.5 3 3 6C19 15.65 12 20 12 20Z" />
             </svg>
+            <span className="hidden lg:inline">{tAccount("favorites")}</span>
           </Link>
           <CartBadge />
         </div>
