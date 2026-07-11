@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typography — wired to next/font variables set on <html> in layout.tsx */
+  --font-sans: var(--font-golos), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-src), var(--font-golos), ui-sans-serif, sans-serif;
+
+  /* Surfaces */
+  --color-surface: #f5f3f1; /* page background — warm off-white */
+  --color-panel: #efe7dd; /* cream hero / accent panels */
+  --color-card: #efeae4; /* product photo backdrop — slightly warm gray */
+
+  /* Ink & text */
+  --color-ink: #404040; /* primary text + dark buttons (never pure black) */
+  --color-ink-hover: #2a2a2a;
+  --color-muted: #8b857c; /* secondary / label text */
+
+  /* Lines */
+  --color-line: #e4ded6; /* subtle borders & dividers */
+  --color-line-strong: #c4c4c4;
+
+  /* Accents */
+  --color-mint: #d8f0e2; /* "новинка" / eco badge background */
+  --color-mint-ink: #1f7a4d; /* text on mint */
+  --color-sale: #e5482d; /* discount badge background */
+  --color-sale-ink: #ffffff;
+
+  /* Legacy alias — existing `text-brand` usages resolve to ink, matching the
+     restrained near-black link style of the reference design. */
+  --color-brand: #404040;
+  --color-brand-dark: #2a2a2a;
+}
+
+body {
+  @apply bg-surface font-sans text-ink antialiased;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
