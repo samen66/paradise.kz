@@ -59,3 +59,12 @@ body {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+@keyframes slide-right {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+@keyframes slide-left {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
