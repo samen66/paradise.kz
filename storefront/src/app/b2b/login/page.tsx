@@ -10,7 +10,7 @@ export default function B2BLoginPage() {
   const router = useRouter();
   const setSession = useB2bAuth((state) => state.setSession);
 
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function B2BLoginPage() {
 
     try {
       const response = await apiPost<{ token: string; user: ApiUser }>("/auth/login", {
-        email,
+        phone,
         password,
         device_name: "b2b_web",
       });
@@ -41,7 +41,7 @@ export default function B2BLoginPage() {
       if (err instanceof ApiValidationError) {
         setError(err.messages.join(", "));
       } else if (err instanceof ApiError && err.status === 401) {
-        setError("Неверный email или пароль");
+        setError("Неверный номер телефона или пароль");
       } else {
         setError("Произошла ошибка при входе");
       }
@@ -63,14 +63,14 @@ export default function B2BLoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-ink mb-1">Email</label>
+            <label className="block text-sm font-medium text-ink mb-1">Номер телефона</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               required
               className="w-full px-4 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-ink"
-              placeholder="company@example.com"
+              placeholder="+7 (___) ___-__-__"
             />
           </div>
 
