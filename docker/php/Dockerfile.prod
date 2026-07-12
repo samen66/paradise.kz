@@ -1,0 +1,73 @@
+# syntax=docker/dockerfile:1
+
+# ---- Stage 1: Vite assets (public/build) --------------------------------
+FROM node:22-alpine AS assets
+WORKDIR /app
+COPY package.json package-lock.json vite.config.js ./
+RUN npm ci --ignore-scripts
+COPY resources/ resources/
+RUN mkdir -p public && npm run build
+
+# ---- Stage 2: Composer dependencies (no scripts: no PHP runtime needed) --
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist \
+    --no-autoloader --no-scripts --ignore-platform-reqs
+
+# ---- Stage 3: Application image ------------------------------------------
+FROM php:8.4-fpm AS app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    libonig-dev \
+    libicu-dev \
+    default-mysql-client \
+    && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
+    && docker-php-ext-install \
+        pdo_mysql \
+        mbstring \
+        bcmath \
+        pcntl \
+        zip \
+        exif \
+        intl \
+        gd \
+        opcache \
+    && pecl install redis && docker-php-ext-enable redis \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
+RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/zz-app.ini
+
+WORKDIR /var/www/html
+
+COPY --from=vendor /app/vendor vendor/
+COPY . .
+COPY --from=assets /app/public/build public/build
+
+# post-autoload-dump runs artisan (package:discover, filament:upgrade) — it
+# needs a bootable app, so give it a throwaway .env and drop it afterwards.
+# The vendor stage installs with --no-autoloader, so artisan cannot run until
+# an autoloader exists: dump it once without scripts, generate the key, then
+# dump again with scripts so package:discover & co. run against a keyed app.
+RUN cp .env.example .env \
+    && composer dump-autoload --optimize --no-dev --no-scripts \
+    && php artisan key:generate --force \
+    && composer dump-autoload --optimize --no-dev \
+    && rm .env \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+COPY docker/php/entrypoint.prod.sh /usr/local/bin/entrypoint.prod.sh
+RUN chmod +x /usr/local/bin/entrypoint.prod.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.prod.sh"]
+CMD ["php-fpm"]
