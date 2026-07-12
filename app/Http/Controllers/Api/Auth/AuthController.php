@@ -43,9 +43,12 @@ class AuthController extends Controller
         Role::findOrCreate('b2b_customer', 'web');
         $user->assignRole('b2b_customer');
 
-        return (new UserResource($user))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+        $token = $user->createToken('api')->plainTextToken;
+
+        return new JsonResponse([
+            'token' => $token,
+            'user' => new UserResource($user),
+        ], Response::HTTP_CREATED);
     }
 
     /**
