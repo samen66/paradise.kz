@@ -78,9 +78,16 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'ru'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'ru'),
+
+    /**
+     * Locales the storefront/API may serve. Content is authored in ru
+     * (the ERP sync writes ru only) with kk translations added by admins;
+     * missing kk values fall back to ru.
+     */
+    'locales' => ['ru', 'kk'],
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 

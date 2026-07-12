@@ -1,0 +1,105 @@
+# Production stack. Lives on the server at /opt/paradise together with a real
+# .env (see .env.production.example). Images are built by CI and pulled from
+# GHCR; TAG is set by the deploy workflow (git sha) and defaults to latest.
+name: paradise
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app-image: &app-image
+  image: ghcr.io/samen66/paradise-api:${TAG:-latest}
+  restart: always
+  env_file: .env
+  volumes:
+    - media:/var/www/html/storage/app/public
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_started
+  logging: *default-logging
+
+services:
+  nginx:
+    image: ghcr.io/samen66/paradise-nginx:${TAG:-latest}
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - media:/var/www/html/storage/app/public:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      - app
+      - storefront
+    logging: *default-logging
+    # Reload every 6h so renewed certificates get picked up.
+    command: ["/bin/sh", "-c", "while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"]
+
+  app:
+    <<: *app-image
+
+  queue:
+    <<: *app-image
+    command: ["php", "artisan", "queue:work", "redis", "--tries=3", "--max-time=3600"]
+    deploy:
+      replicas: 2
+
+  scheduler:
+    <<: *app-image
+    command: ["php", "artisan", "schedule:work"]
+
+  storefront:
+    image: ghcr.io/samen66/paradise-storefront:${TAG:-latest}
+    restart: always
+    environment:
+      # SSR requests go over the docker network through nginx's internal
+      # listener (port 8080, not published on the host).
+      API_URL_INTERNAL: http://nginx:8080/api
+    logging: *default-logging
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    logging: *default-logging
+
+  certbot:
+    image: certbot/certbot
+    restart: always
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    # Renew loop; nginx reloads itself every 6h (see nginx command).
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
+    logging: *default-logging
+
+volumes:
+  mysql_data:
+  redis_data:
+  media:
+  letsencrypt:
+  certbot-webroot:
