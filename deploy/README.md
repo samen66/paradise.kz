@@ -138,7 +138,7 @@
 
    # 8.3 Выпустить настоящие сертификаты (DNS уже должен указывать на сервер):
    for d in api.paradise.kz shop.paradise.kz; do
-     docker compose -f docker-compose.prod.yml run --rm certbot certonly \
+     docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot certonly \
        --webroot -w /var/www/certbot --force-renewal \
        -d $d --email admin@paradise.kz --agree-tos --no-eff-email
    done
@@ -257,7 +257,7 @@ Nginx также пишет по-vhost'но access/error логи внутри �
 для API:
 
 ```bash
-docker compose exec nginx tail -f /var/log/nginx/api.error.log
+docker compose -f docker-compose.prod.yml exec nginx tail -f /var/log/nginx/api.error.log
 ```
 
 Аналогично доступны `api.access.log`, `shop.error.log`, `shop.access.log`
