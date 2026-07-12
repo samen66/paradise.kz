@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useB2bAuth } from "@/stores/useB2bAuth";
 import { apiPost, ApiError, ApiValidationError } from "@/lib/api";
 import type { ApiUser } from "@/lib/types";
@@ -89,11 +90,18 @@ export default function B2BLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-ink text-white py-3 rounded-lg font-medium hover:bg-ink-hover transition-colors disabled:opacity-50"
+            className="w-full bg-ink text-white py-3 rounded-lg font-medium hover:bg-ink-hover transition-colors disabled:opacity-50 mt-4"
           >
             {isLoading ? "Вход..." : "Войти"}
           </button>
         </form>
+
+        <div className="mt-6 text-center text-sm text-muted">
+          Нет аккаунта?{" "}
+          <Link href="/b2b/register" className="text-ink font-medium hover:underline">
+            Зарегистрироваться
+          </Link>
+        </div>
       </div>
     </div>
   );

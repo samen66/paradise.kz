@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useB2bAuth } from '@/stores/useB2bAuth';
+import '../globals.css';
 
 export default function B2BLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
