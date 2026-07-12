@@ -1,0 +1,25 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "php",
+            "args": [
+                "/Users/samenuatkhan/PhpstormProjects/paradise.kz/artisan",
+                "boost:mcp"
+            ]
+        },
+        "mysql": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@liangshanli/mcp-server-mysql"
+            ],
+            "env": {
+                "MYSQL_HOST": "127.0.0.1",
+                "MYSQL_PORT": "3308",
+                "MYSQL_USER": "paradise",
+                "MYSQL_PASSWORD": "secret",
+                "MYSQL_DATABASE": "paradise"
+            }
+        }
+    }
+}

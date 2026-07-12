@@ -39,7 +39,7 @@ export default function B2BLayout({ children }: { children: React.ReactNode }) {
   // Don't render layout structure on login or pending pages
   if (pathname.startsWith('/b2b/login') || pathname.startsWith('/b2b/pending')) {
     return (
-      <html lang="ru">
+      <html lang="ru" suppressHydrationWarning>
         <body className="bg-surface font-sans antialiased text-ink" suppressHydrationWarning>
           {children}
         </body>
@@ -50,7 +50,7 @@ export default function B2BLayout({ children }: { children: React.ReactNode }) {
   // Prevent flash of content while checking auth
   if (!isMounted || !user || user.is_approved === false) {
     return (
-      <html lang="ru">
+      <html lang="ru" suppressHydrationWarning>
         <body className="bg-surface font-sans antialiased min-h-screen flex items-center justify-center" suppressHydrationWarning>
           <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin"></div>
         </body>
@@ -71,7 +71,7 @@ export default function B2BLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
       <body className="bg-surface font-sans antialiased text-ink flex min-h-screen" suppressHydrationWarning>
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r border-line flex flex-col hidden md:flex">

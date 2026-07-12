@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { Category, Settings } from "@/lib/types";
+import { tValue } from "@/lib/format";
 import { Drawer } from "./ui/Drawer";
 
 export function BurgerDrawer({
@@ -18,6 +19,7 @@ export function BurgerDrawer({
   settings: Settings | null;
 }) {
   const t = useTranslations("nav");
+  const locale = useLocale();
   const [expanded, setExpanded] = useState<number | null>(null);
   const pathname = usePathname();
 
@@ -43,7 +45,7 @@ export function BurgerDrawer({
                       onClick={handleLinkClick}
                       className="flex-1 font-medium"
                     >
-                      {cat.name}
+                      {tValue(cat.name, locale)}
                     </Link>
                     {hasChildren && (
                       <button
@@ -72,7 +74,7 @@ export function BurgerDrawer({
                             onClick={handleLinkClick}
                             className="block py-1 text-sm text-muted hover:text-ink"
                           >
-                            {child.name}
+                            {tValue(child.name, locale)}
                           </Link>
                         </li>
                       ))}

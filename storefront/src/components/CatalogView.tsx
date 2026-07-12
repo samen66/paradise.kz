@@ -83,7 +83,7 @@ export async function CatalogView({
   ) as Record<string, string | undefined>;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+    <div className="grid gap-8 lg:grid-cols-[260px_1fr] pb-24 lg:pb-0">
       <FilterSidebar facets={facets} />
 
       <div>

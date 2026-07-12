@@ -4,14 +4,17 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { Drawer } from "./ui/Drawer";
 import type { Facets } from "@/lib/types";
+import { tValue } from "@/lib/format";
 
 export function FilterSidebar({ facets }: { facets: Facets }) {
   const t = useTranslations("catalog");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const locale = useLocale();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [priceMin, setPriceMin] = useState(searchParams.get("price_min") ?? "");
@@ -102,7 +105,11 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
       </details>
 
       <div className="border-t border-line pt-6">
-        <label className="flex cursor-pointer items-center gap-3 text-ink">
+        <label
+          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+            searchParams.get("in_stock") === "1" ? "border-ink bg-black/5 text-ink" : "border-transparent text-ink hover:bg-black/5"
+          }`}
+        >
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-line-strong text-ink focus:ring-ink"
@@ -135,7 +142,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
                       checked={selectedBrands.has(brand.slug)}
                       onChange={() => apply((params) => toggleSetParam(params, "brand", brand.slug))}
                     />
-                    <span className="flex-1 text-sm">{brand.name}</span>
+                    <span className="flex-1 text-sm">{tValue(brand.name, locale)}</span>
                     <span className="text-xs text-muted font-medium">{brand.count}</span>
                   </label>
                 </li>
@@ -149,7 +156,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
         <div key={attribute.slug} className="border-t border-line pt-6">
           <details open className="group">
             <summary className="font-semibold text-ink cursor-pointer list-none flex items-center justify-between [&::-webkit-details-marker]:hidden select-none">
-              {attribute.name}
+              {tValue(attribute.name, locale)}
               <Chevron />
             </summary>
             <ul className="pt-4 max-h-48 space-y-2.5 overflow-y-auto pr-2 scrollbar-hide">

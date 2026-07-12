@@ -3,10 +3,13 @@
 import { useState, useRef } from "react";
 import { Link } from "@/i18n/navigation";
 import type { Category } from "@/lib/types";
+import { useLocale } from "next-intl";
+import { tValue } from "@/lib/format";
 
 export function MegaMenu({ categories }: { categories: Category[] }) {
   const [activeId, setActiveId] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const locale = useLocale();
 
   const handleEnter = (id: number) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -36,7 +39,7 @@ export function MegaMenu({ categories }: { categories: Category[] }) {
               href={`/catalog/${category.slug}`}
               className="group flex items-center gap-1.5 py-4 text-sm font-medium transition-colors hover:text-ink/80"
             >
-              {category.name}
+              {tValue(category.name, locale)}
               {hasChildren && (
                 <svg
                   viewBox="0 0 24 24"
@@ -59,7 +62,7 @@ export function MegaMenu({ categories }: { categories: Category[] }) {
                         href={`/catalog/${child.slug}`}
                         className="mb-3 block font-display text-base font-semibold hover:text-ink/80"
                       >
-                        {child.name}
+                        {tValue(child.name, locale)}
                       </Link>
                       {child.children && child.children.length > 0 && (
                         <ul className="space-y-2">
@@ -69,7 +72,7 @@ export function MegaMenu({ categories }: { categories: Category[] }) {
                                 href={`/catalog/${sub.slug}`}
                                 className="text-sm text-muted hover:text-ink"
                               >
-                                {sub.name}
+                                {tValue(sub.name, locale)}
                               </Link>
                             </li>
                           ))}

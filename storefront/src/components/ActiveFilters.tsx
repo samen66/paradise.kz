@@ -48,6 +48,7 @@ export function ActiveFilters({
         if (key === "price_min") label = `${t("from")} ${searchParams[key]}`;
         if (key === "price_max") label = `${t("to")} ${searchParams[key]}`;
         if (key === "in_stock") label = t("onlyInStock");
+        if (key === "q") label = `"${searchParams[key]}"`;
         if (key.startsWith("attr[")) {
           label = searchParams[key] as string;
         }

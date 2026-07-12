@@ -3,7 +3,7 @@ set -e
 
 if [ -n "$DB_HOST" ]; then
     echo "Waiting for MySQL at $DB_HOST..."
-    until mysqladmin ping -h "$DB_HOST" -u "${DB_USERNAME:-root}" -p"${DB_PASSWORD:-}" --silent 2>/dev/null; do
+    until mysqladmin ping -h "$DB_HOST" -u "${DB_USERNAME:-root}" -p"${DB_PASSWORD:-}" --skip-ssl --silent 2>/dev/null; do
         sleep 2
     done
     echo "MySQL is ready."

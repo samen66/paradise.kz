@@ -1,12 +1,17 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libwebp-dev \
+    libfreetype6-dev \
     libzip-dev \
     libonig-dev \
+    libicu-dev \
     default-mysql-client \
+    && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     && docker-php-ext-install \
         pdo_mysql \
         mbstring \
@@ -14,10 +19,14 @@ RUN apt-get update && apt-get install -y \
         pcntl \
         zip \
         exif \
+        intl \
+        gd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/zz-app.ini
 
 WORKDIR /var/www/html
 

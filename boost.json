@@ -1,0 +1,30 @@
+{
+    "agents": [
+        "junie",
+        "cursor",
+        "claude_code",
+        "antigravity"
+    ],
+    "cloud": true,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "filament/filament",
+        "spatie/laravel-medialibrary",
+        "spatie/laravel-permission",
+        "spatie/laravel-query-builder",
+        "spatie/laravel-translatable"
+    ],
+    "sail": false,
+    "skills": [
+        "laravel-best-practices",
+        "mcp-development",
+        "tailwindcss-development",
+        "medialibrary-development",
+        "laravel-permission-development",
+        "laravel-query-builder",
+        "translatable-development",
+        "deploying-laravel-cloud"
+    ]
+}

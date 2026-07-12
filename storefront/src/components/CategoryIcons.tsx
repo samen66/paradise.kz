@@ -1,5 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import type { Category } from "@/lib/types";
+import { useLocale } from "next-intl";
+import { tValue } from "@/lib/format";
 
 const ICONS: Record<string, string> = {
   sofa: "🛋️",
@@ -11,8 +13,9 @@ const ICONS: Record<string, string> = {
 };
 
 export function CategoryIcons({ categories }: { categories: Category[] }) {
+  const locale = useLocale();
   return (
-    <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+    <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide [mask-image:linear-gradient(to_right,black_90%,transparent_100%)] pr-[10%]">
       {categories.map((category) => {
         const icon = ICONS[category.slug] || ICONS.default;
         
@@ -26,7 +29,7 @@ export function CategoryIcons({ categories }: { categories: Category[] }) {
               {icon}
             </div>
             <span className="line-clamp-2 text-center text-sm font-medium text-ink">
-              {category.name}
+              {tValue(category.name, locale)}
             </span>
           </Link>
         );

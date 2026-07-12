@@ -17,6 +17,21 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
+        host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
+        // Browser runs on host; Docker maps 5174 -> 5173 inside the container.
+        origin: 'http://localhost:5174',
+        cors: {
+            origin: [
+                'http://localhost:8080',
+                /^https?:\/\/localhost(:\d+)?$/,
+            ],
+        },
+        hmr: {
+            host: 'localhost',
+            clientPort: 5174,
+        },
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

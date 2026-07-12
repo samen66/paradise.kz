@@ -29,8 +29,8 @@ MVP должен быть запущен за 1–2 месяца. Из-за эт
 | Слой | Технология |
 |---|---|
 | Backend | Laravel 11.x (PHP 8.3+), API-only (без Blade-шаблонов для публичной части) |
-| Frontend | Vue 3 + TypeScript + Vite, отдельное SPA (не Inertia) |
-| Стейт-менеджмент | Pinia |
+| Frontend | Next.js (App Router, TypeScript) + next-intl (ru/kk) + zustand, папка `/storefront`. B2C и B2B объединены в одном проекте |
+| Стейт-менеджмент | zustand (раздельные сторы для B2C и B2B) |
 | Стили | Tailwind CSS |
 | Auth | Laravel Sanctum (токены, не sessions — фронт отдельный) |
 | Роли | spatie/laravel-permission |
@@ -45,7 +45,7 @@ MVP должен быть запущен за 1–2 месяца. Из-за эт
 
 ```
 /backend     — Laravel API
-/frontend    — Vue 3 SPA
+/storefront  — Next.js витрина (B2C и B2B портал, разделенные роутингом)
 /docs        — техническая документация, ТЗ, ER-диаграммы
 ```
 
@@ -78,3 +78,6 @@ MVP должен быть запущен за 1–2 месяца. Из-за эт
 ## Текущий этап разработки
 
 См. `docs/mvp-prompts.md` — пошаговый план реализации по этапам (структура БД → auth → каталог → заказы → МойСклад → frontend → админка → деплой). Двигаемся последовательно, не перепрыгивая этапы.
+
+## Дополнительные правила
+- **Laravel и Filament:** При работе с Laravel, Filament или написании тестов, **обязательно** ознакомься с подробным руководством в файле `docs/laravel-boost-guidelines.md`.

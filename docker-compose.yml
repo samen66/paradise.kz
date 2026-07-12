@@ -17,7 +17,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "8000:80"
     volumes:
       - .:/var/www/html
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -27,7 +27,7 @@ services:
   mysql:
     image: mysql:8.0
     ports:
-      - "3306:3306"
+      - "3308:3306"
     environment:
       MYSQL_DATABASE: paradise
       MYSQL_USER: paradise
@@ -48,7 +48,41 @@ services:
     volumes:
       - .:/var/www/html
     ports:
-      - "5173:5173"
+      - "5174:5173"
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5175:5173"
+    environment:
+      API_TARGET: http://nginx
+    depends_on:
+      - nginx
+
+  # B2C storefront (Next.js). Server-side fetches go through the docker
+  # network (API_URL_INTERNAL), browser requests through the published
+  # nginx port.
+  storefront:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --webpack"
+    volumes:
+      - ./storefront:/app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      API_URL_INTERNAL: http://nginx/api
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    extra_hosts:
+      - "localhost:host-gateway"
+    depends_on:
+      - nginx
 
   queue:
     build: .

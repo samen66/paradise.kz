@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { apiGet, ApiError } from "@/lib/api";
-import type { Category } from "@/lib/types";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { tValue } from "@/lib/format";
 import { CatalogView, type CatalogSearchParams } from "@/components/CatalogView";
 import { Link } from "@/i18n/navigation";
+import type { Category } from "@/lib/types";
 
 async function fetchCategory(slug: string, locale: string): Promise<Category | null> {
   try {
@@ -36,8 +37,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: category.seo_title ?? category.name,
-    description: category.seo_description ?? undefined,
+    title: tValue(category.seo_title, locale) || tValue(category.name, locale),
+    description: tValue(category.seo_description, locale) || undefined,
   };
 }
 
@@ -65,13 +66,12 @@ export default async function CategoryPage({
     <div>
       <Breadcrumbs
         items={[
-          { label: tCommon("home"), href: "/" },
           { label: t("title"), href: "/catalog" },
           ...ancestors.map((ancestor) => ({
-            label: ancestor.name,
+            label: tValue(ancestor.name, locale),
             href: `/catalog/${ancestor.slug}`,
           })),
-          { label: category.name },
+          { label: tValue(category.name, locale) },
         ]}
       />
 
@@ -83,7 +83,7 @@ export default async function CategoryPage({
               href={`/catalog/${child.slug}`}
               className="rounded-full border border-line bg-white px-4 py-2 text-sm text-ink transition hover:border-ink"
             >
-              {child.name}
+              {tValue(child.name, locale)}
             </Link>
           ))}
         </div>
@@ -94,8 +94,8 @@ export default async function CategoryPage({
         searchParams={await searchParams}
         categorySlug={slug}
         pathname={`/catalog/${slug}`}
-        title={category.name}
-        seoDescription={category.seo_description}
+        title={tValue(category.name, locale)}
+        seoDescription={tValue(category.seo_description, locale)}
       />
     </div>
   );
