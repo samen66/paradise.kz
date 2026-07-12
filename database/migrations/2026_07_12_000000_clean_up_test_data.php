@@ -10,11 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Fix typo in stores
-        DB::table('stores')
-            ->where('city', 'like', '%Akmaty%')
-            ->update(['city' => DB::raw("REPLACE(city, 'Akmaty', 'Almaty')")]);
-
+        // Fix typo in stores (the table has no `city` column — only address).
         DB::table('stores')
             ->where('address', 'like', '%Akmaty%')
             ->update(['address' => DB::raw("REPLACE(address, 'Akmaty', 'Almaty')")]);
