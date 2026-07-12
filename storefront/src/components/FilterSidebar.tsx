@@ -104,15 +104,15 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
         </div>
       </details>
 
-      <div className="border-t border-line pt-6">
+      <div className="pt-2">
         <label
-          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
-            searchParams.get("in_stock") === "1" ? "border-ink bg-black/5 text-ink" : "border-transparent text-ink hover:bg-black/5"
+          className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition ${
+            searchParams.get("in_stock") === "1" ? "bg-black/5 text-ink" : "text-ink hover:bg-black/5"
           }`}
         >
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-line-strong text-ink focus:ring-ink"
+            className="peer h-4 w-4 rounded bg-surface border-line-strong text-ink focus:ring-ink focus:ring-offset-0 transition-all checked:bg-ink checked:border-ink"
             checked={searchParams.get("in_stock") === "1"}
             onChange={(event) =>
               apply((params) => {
@@ -126,7 +126,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
       </div>
 
       {facets.brands.length > 0 ? (
-        <div className="border-t border-line pt-6">
+        <div className="pt-6">
           <details open className="group">
             <summary className="font-semibold text-ink cursor-pointer list-none flex items-center justify-between [&::-webkit-details-marker]:hidden select-none">
               {t("brand")}
@@ -153,7 +153,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
       ) : null}
 
       {facets.attributes.map((attribute) => (
-        <div key={attribute.slug} className="border-t border-line pt-6">
+        <div key={attribute.slug} className="pt-6">
           <details open className="group">
             <summary className="font-semibold text-ink cursor-pointer list-none flex items-center justify-between [&::-webkit-details-marker]:hidden select-none">
               {tValue(attribute.name, locale)}
@@ -178,7 +178,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
         </div>
       ))}
 
-      <div className="border-t border-line pt-6">
+      <div className="pt-6">
         <button
           type="button"
           onClick={() => {
@@ -195,7 +195,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
 
   return (
     <>
-      <aside className="hidden lg:block h-fit rounded-2xl border border-line bg-white p-5 lg:sticky lg:top-24">
+      <aside className="hidden lg:block h-fit rounded-2xl bg-transparent p-5 lg:sticky lg:top-24">
         <FilterContent />
       </aside>
 
