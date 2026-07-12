@@ -1,19 +1,25 @@
+"use client";
+
 import Image from "next/image";
-import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Link as I18nLink } from "@/i18n/navigation";
+import NextLink from "next/link";
 import { formatPrice, tValue } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import { AddToCartButton } from "./AddToCartButton";
 import { FavoriteButton } from "./FavoriteButton";
 
-export async function ProductCard({ product }: { product: Product }) {
-  const t = await getTranslations("common");
-  const locale = await getLocale();
-  const href = `/product/${product.slug ?? product.id}`;
+export function ProductCard({ product, isB2B = false }: { product: Product; isB2B?: boolean }) {
+  const locale = useLocale();
+  const t = useTranslations("common");
+  const outOfStockText = t("outOfStock");
+
+  const href = isB2B ? `/b2b/product/${product.slug ?? product.id}` : `/product/${product.slug ?? product.id}`;
+  const LinkComponent = isB2B ? NextLink : I18nLink;
 
   return (
-    <article className="group flex h-full flex-col">
-      <Link href={href} className="relative mb-3 block w-full aspect-square overflow-hidden rounded-2xl bg-card">
+    <article className="group flex h-full flex-col rounded-2xl bg-white p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <LinkComponent href={href} className="relative mb-3 block w-full aspect-square overflow-hidden rounded-xl bg-card">
         {product.image ? (
           <Image
             src={product.image}
@@ -30,16 +36,22 @@ export async function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         <FavoriteButton productId={product.id} className="absolute right-3 top-3" />
-      </Link>
+      </LinkComponent>
 
       <div className="flex items-center gap-2">
         <span className="text-lg font-semibold text-ink">{formatPrice(product.price, locale)}</span>
-        {/* Product data has no old_price/discount field — never fabricate a struck price or % badge. */}
+        {isB2B && <span className="text-[10px] font-bold tracking-wider uppercase text-mint-ink bg-mint/40 rounded px-1.5 py-0.5">Опт</span>}
       </div>
 
-      <Link href={href} className="mt-1 line-clamp-2 min-h-10 text-sm text-ink hover:underline">
+      {isB2B && (product.b2b_min_order_qty ?? 1) > 1 && (
+        <span className="mt-1 inline-block w-fit bg-mint/40 text-mint-ink px-2 py-0.5 rounded-full text-[11px] font-semibold">
+          Мин. заказ: {product.b2b_min_order_qty} шт.
+        </span>
+      )}
+
+      <LinkComponent href={href} className="mt-1 line-clamp-2 min-h-10 text-sm text-ink hover:underline">
         {tValue(product.name, locale)}
-      </Link>
+      </LinkComponent>
 
       {product.characteristics?.[0] ? (
         <span className="mt-2 inline-block w-fit self-start rounded-full bg-black/5 px-2.5 py-1 text-xs text-muted">
@@ -49,9 +61,9 @@ export async function ProductCard({ product }: { product: Product }) {
 
       <div className="mt-auto flex items-center justify-end gap-2 pt-3">
         {!product.in_stock ? (
-          <span className="mr-auto text-xs text-muted">{t("outOfStock")}</span>
+          <span className="mr-auto text-xs text-muted">{outOfStockText}</span>
         ) : (
-          <AddToCartButton product={product} compact />
+          <AddToCartButton product={product} compact isB2B={isB2B} />
         )}
       </div>
     </article>
