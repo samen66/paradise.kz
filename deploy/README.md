@@ -347,6 +347,6 @@ docker run --rm \
 - [ ] Создание заказа проходит
 - [ ] https://api.paradise.kz/admin — вход в Filament
 - [ ] Ручной MoySklad-синк из админки / artisan
-- [ ] `docker compose logs queue` — джобы разгребаются, без ошибок
+- [ ] `docker compose -f docker-compose.prod.yml logs queue` — джобы разгребаются, без ошибок
 - [ ] https://api.paradise.kz/up → 200 (встроенный health-check Laravel,
       настроен в `bootstrap/app.php` через `health: '/up'`)
