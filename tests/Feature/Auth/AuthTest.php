@@ -129,11 +129,12 @@ class AuthTest extends TestCase
     {
         $user = User::factory()->b2b()->create([
             'email' => 'login@example.com',
+            'phone' => '+77001112233',
             'password' => 'secret123',
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'login@example.com',
+            'phone' => '+77001112233',
             'password' => 'secret123',
         ]);
 
@@ -149,15 +150,16 @@ class AuthTest extends TestCase
     {
         User::factory()->b2b()->create([
             'email' => 'login@example.com',
+            'phone' => '+77001112233',
             'password' => 'secret123',
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'login@example.com',
+            'phone' => '+77001112233',
             'password' => 'wrong-password',
         ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['email']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['phone']);
     }
 
     #[Test]

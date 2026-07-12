@@ -114,17 +114,24 @@ class OtpService
     }
 
     /**
-     * The canonical (non-guest) retail account for a phone number.
+     * The canonical (non-guest) retail account for a phone number. `phone` is
+     * unique across all users, so any existing row (including a guest row
+     * from an earlier anonymous checkout) must be reused and promoted rather
+     * than inserting a second row with the same number.
      */
     private function findOrCreateRetailUser(string $phone): User
     {
-        $user = User::query()
-            ->where('type', User::TYPE_RETAIL)
-            ->where('is_guest', false)
-            ->where('phone', $phone)
-            ->first();
+        $user = User::query()->where('phone', $phone)->first();
 
         if ($user !== null) {
+            if ($user->type !== User::TYPE_RETAIL || $user->is_guest || ! $user->is_approved) {
+                $user->update([
+                    'type' => User::TYPE_RETAIL,
+                    'is_guest' => false,
+                    'is_approved' => true,
+                ]);
+            }
+
             return $user;
         }
 
