@@ -9,7 +9,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY: ghcr.io
   API_IMAGE: ghcr.io/samen66/paradise-api
   NGINX_IMAGE: ghcr.io/samen66/paradise-nginx
   STOREFRONT_IMAGE: ghcr.io/samen66/paradise-storefront
@@ -126,6 +125,7 @@ jobs:
             set -e
             cd /opt/paradise
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            grep -q '^TAG=' .env || { echo 'FATAL: TAG= line missing in /opt/paradise/.env'; exit 1; }
             sed -i "s/^TAG=.*/TAG=$GIT_SHA/" .env
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
