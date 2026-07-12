@@ -32,7 +32,10 @@ export const metadata: Metadata = {
 };
 
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+  // Intentionally empty: pages render on demand (on-demand ISR) so the
+  // production image can be built without a reachable API. fetch-level
+  // `revalidate` still caches data after the first request.
+  return [];
 }
 
 async function layoutData(locale: string) {
@@ -68,7 +71,7 @@ export default async function LocaleLayout({
   const { categories, settings } = await layoutData(locale);
 
   return (
-    <html lang={locale} className={`${golos.variable} ${manrope.variable}`}>
+    <html lang={locale} className={`${golos.variable} ${manrope.variable}`} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <NextIntlClientProvider>
           <Header categories={categories} settings={settings} />
