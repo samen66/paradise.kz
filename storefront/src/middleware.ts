@@ -1,5 +1,5 @@
 import createMiddleware from 'next-intl/middleware';
-import { routing } from './src/i18n/routing';
+import { routing } from './i18n/routing';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -36,5 +36,9 @@ export const config = {
   // Match all pathnames except for
   // - ... if they start with `/api`, `/_next` or `/_vercel`
   // - ... the ones containing a dot (e.g. `favicon.ico`)
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
+  matcher: [
+    '/',
+    '/(ru|kk)/:path*',
+    '/((?!api|_next|_vercel|.*\\..*).*)'
+  ]
 };
