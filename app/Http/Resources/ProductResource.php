@@ -49,6 +49,7 @@ class ProductResource extends JsonResource
             'stock' => $this->when($this->showStockQuantity(), $this->resolvedStock()),
             'in_stock' => $this->resolvedStock() > 0,
             'price' => $this->majorPrice(),
+            'b2b_min_order_qty' => $this->resource->effectiveB2bMinOrderQty(),
             'external_folder_id' => $this->external_folder_id,
             // Mirrored ERP data so the B2B site never has to call the ERP at
             // read time. `barcodes`/`attributes` are JSON-cast on the model.

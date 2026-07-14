@@ -42,6 +42,8 @@ export interface Product {
   stock?: number;
   in_stock: boolean;
   price: number | null;
+  b2b_min_order_qty?: number;
+  external_folder_id?: string;
   country: string | null;
   supplier: string | null;
   barcodes: string[];
@@ -143,6 +145,8 @@ export interface ApiUser {
   email: string | null;
   phone: string | null;
   type: "b2b" | "retail";
+  company_name?: string | null;
+  company_bin?: string | null;
   is_approved?: boolean;
 }
 

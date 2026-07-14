@@ -57,6 +57,7 @@ class Product extends Model implements HasMedia
         'attributes',
         'is_active',
         'synced_at',
+        'b2b_min_order_qty',
     ];
 
     /**
@@ -76,6 +77,7 @@ class Product extends Model implements HasMedia
             'attributes' => 'array',
             'is_active' => 'boolean',
             'synced_at' => 'datetime',
+            'b2b_min_order_qty' => 'integer',
         ];
     }
 
@@ -232,5 +234,15 @@ class Product extends Model implements HasMedia
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /**
+     * Effective B2B minimum order quantity: per-product override → global default → 1.
+     */
+    public function effectiveB2bMinOrderQty(): int
+    {
+        return $this->b2b_min_order_qty
+            ?? CatalogSetting::current()->b2b_default_min_order_qty
+            ?? 1;
     }
 }

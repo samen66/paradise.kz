@@ -81,4 +81,33 @@ class StoreOrderRequest extends FormRequest
             'delivery.building.required' => 'Укажите дом.',
         ];
     }
+
+    public function after(): array
+    {
+        return [
+            function (\Illuminate\Validation\Validator $validator): void {
+                $user = $this->user();
+                if ($user === null || $user->type !== 'b2b') {
+                    return;
+                }
+
+                foreach ($this->input('items', []) as $index => $item) {
+                    $product = \App\Models\Product::find($item['product_id'] ?? 0);
+                    if ($product === null) {
+                        continue;
+                    }
+
+                    $minQty = $product->effectiveB2bMinOrderQty();
+                    $qty = (int) ($item['quantity'] ?? 0);
+
+                    if ($qty < $minQty) {
+                        $validator->errors()->add(
+                            "items.{$index}.quantity",
+                            "Минимальное количество для «{$product->getTranslation('name', 'ru', false)}» — {$minQty} шт.",
+                        );
+                    }
+                }
+            },
+        ];
+    }
 }

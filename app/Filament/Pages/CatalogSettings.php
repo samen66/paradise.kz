@@ -49,6 +49,13 @@ class CatalogSettings extends Page
                         ->label('Показывать точный остаток B2B-клиентам')
                         ->helperText('Если выключено, клиенты видят только «Есть в наличии» / «Нет в наличии», без точного числа.')
                         ->required(),
+                    TextInput::make('b2b_default_min_order_qty')
+                        ->label('Минимальное кол-во заказа для B2B (по умолчанию)')
+                        ->helperText('Применяется ко всем товарам, у которых не указано своё минимальное кол-во.')
+                        ->numeric()
+                        ->minValue(1)
+                        ->default(1)
+                        ->required(),
                     TextInput::make('delivery_price')
                         ->label('Стоимость доставки (тиын)')
                         ->helperText('Фиксированная плата за доставку. Пусто — доставка бесплатна.')

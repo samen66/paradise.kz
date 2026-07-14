@@ -81,7 +81,17 @@ async function request<T>(method: string, path: string, body: unknown, options: 
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  let dataText = await response.text();
+
+  // In local development, rewrite absolute storage URLs to relative paths
+  // so that Next.js rewrites can proxy them to the nginx container.
+  // This bypasses docker host-gateway port conflicts on Mac.
+  if (publicBase && publicBase.includes("localhost")) {
+    const publicHost = new URL(publicBase).origin;
+    dataText = dataText.replaceAll(publicHost + "/storage", "/storage");
+  }
+
+  return JSON.parse(dataText) as T;
 }
 
 export async function apiGet<T>(path: string, options: ApiOptions = {}): Promise<T> {

@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
+  async rewrites() {
+    return process.env.NODE_ENV !== "production"
+      ? [
+          {
+            source: "/storage/:path*",
+            destination: "http://nginx/storage/:path*",
+          },
+        ]
+      : [];
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -26,6 +26,7 @@ class CatalogSetting extends Model
         'contact_address',
         'whatsapp_url',
         'instagram_url',
+        'b2b_default_min_order_qty',
     ];
 
     /**
@@ -37,6 +38,7 @@ class CatalogSetting extends Model
             'show_stock_quantity' => 'boolean',
             'delivery_price' => 'integer',
             'free_delivery_from' => 'integer',
+            'b2b_default_min_order_qty' => 'integer',
         ];
     }
 

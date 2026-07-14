@@ -45,6 +45,11 @@ class ProductForm
                 TextInput::make('b2b_price')
                     ->helperText('In kopecks. ERP-mirrored fallback, used only when no "Цены" entry exists for this product.')
                     ->numeric(),
+                TextInput::make('b2b_min_order_qty')
+                    ->label('Мин. кол-во для B2B')
+                    ->helperText('Оставьте пустым — будет использовано глобальное значение из Настроек каталога.')
+                    ->numeric()
+                    ->minValue(1),
                 TextInput::make('purchase_price')
                     ->helperText('In kopecks (minor units).')
                     ->numeric(),

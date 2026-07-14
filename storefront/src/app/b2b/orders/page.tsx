@@ -1,114 +1,122 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { apiGet } from "@/lib/api";
-import type { Paginated, Order } from "@/lib/types";
 import { useB2bAuth } from "@/stores/useB2bAuth";
-import dayjs from "dayjs";
-import "dayjs/locale/ru";
+import { formatPrice } from "@/lib/format";
+import type { Order, Paginated } from "@/lib/types";
 
-dayjs.locale("ru");
+function statusPillClass(status: string): string {
+  return status === "synced" ? "bg-mint text-mint-ink" : "bg-black/5 text-muted";
+}
 
 export default function B2BOrdersPage() {
-  const { token } = useB2bAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const t = useTranslations("account");
+  const tCart = useTranslations("cart");
+  const token = useB2bAuth((state) => state.token);
+  const [orders, setOrders] = useState<Order[] | null>(null);
 
   useEffect(() => {
-    if (!token) return;
-
-    const fetchOrders = async () => {
-      try {
-        const response = await apiGet<Paginated<Order>>("/orders", { token });
-        setOrders(response.data);
-      } catch (error) {
-        console.error("Failed to fetch B2B orders:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOrders();
+    if (!token) {
+      return;
+    }
+    void apiGet<Paginated<Order>>("/orders", { token, locale: "ru", revalidate: false })
+      .then((response) => setOrders(response.data))
+      .catch(() => setOrders([]));
   }, [token]);
 
-  const translateStatus = (status: string) => {
-    const statuses: Record<string, string> = {
-      new: "Новый",
-      processing: "В обработке",
-      shipped: "Отправлен",
-      completed: "Выполнен",
-      cancelled: "Отменён",
-    };
-    return statuses[status] || status;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "new":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  if (orders === null) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-display font-bold text-ink">Мои заказы</h1>
-        <p className="text-muted mt-2">История ваших оптовых заказов.</p>
+    <div className="mx-auto max-w-4xl py-8">
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-ink">Мои заказы</h1>
+        <p className="mt-2 text-muted">История ваших оптовых заказов и бронирований.</p>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin"></div>
+      {orders.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 py-16 text-center bg-white rounded-2xl border border-line">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.4}
+            aria-hidden="true"
+            className="h-20 w-20 text-line-strong"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M7 12V8.5A2.5 2.5 0 0 1 9.5 6h5a2.5 2.5 0 0 1 2.5 2.5V12"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4.5 12.5A1.5 1.5 0 0 1 6 11h12a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 16v-3.5Z"
+            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 17.5v2M18 17.5v2" />
+          </svg>
+          <p className="text-muted">{t("noOrders")}</p>
+          <Link
+            href="/b2b/catalog"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-medium text-white transition hover:bg-ink-hover"
+          >
+            В каталог
+          </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-line overflow-hidden">
-          {orders.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-surface border-b border-line">
-                  <tr>
-                    <th className="px-6 py-4 font-medium text-muted">Заказ</th>
-                    <th className="px-6 py-4 font-medium text-muted">Дата</th>
-                    <th className="px-6 py-4 font-medium text-muted">Сумма</th>
-                    <th className="px-6 py-4 font-medium text-muted">Статус</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-surface/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-ink">
-                          № {order.number}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-ink">
-                        {dayjs(order.created_at).format("DD MMMM YYYY, HH:mm")}
-                      </td>
-                      <td className="px-6 py-4 font-bold text-ink">
-                        {order.total.toLocaleString("ru-RU")} ₸
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {translateStatus(order.status)}
+        <ul className="space-y-4">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link
+                href={`/b2b/orders/${order.id}`}
+                className="block rounded-2xl border border-line bg-white p-5 transition hover:border-line-strong"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-display text-base font-semibold text-ink">
+                      {t("order")} {order.number}
+                    </p>
+                    <p className="mt-0.5 text-sm text-muted">
+                      {t("from")} {new Date(order.created_at).toLocaleDateString("ru-KZ")}
+                      {" · "}
+                      {order.delivery_method === "delivery" ? t("receivingDelivery") : t("receivingPickup")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusPillClass(order.status)}`}>
+                      {t(`status.${order.status}`)}
+                    </span>
+                    <span className="text-base font-semibold text-ink">{formatPrice(order.total, "ru")}</span>
+                  </div>
+                </div>
+
+                {order.items && order.items.length > 0 ? (
+                  <ul className="mt-4 space-y-1 border-t border-line pt-3 text-sm text-muted">
+                    {order.items.map((item) => (
+                      <li key={item.id} className="flex justify-between gap-4">
+                        <span className="line-clamp-1">
+                          {item.name} × {Number(item.quantity)}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-muted">У вас пока нет заказов.</p>
-            </div>
-          )}
-        </div>
+                        <span className="whitespace-nowrap text-ink">
+                          {formatPrice(item.price * item.quantity, "ru")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

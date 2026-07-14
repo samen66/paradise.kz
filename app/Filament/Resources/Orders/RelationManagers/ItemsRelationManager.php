@@ -46,12 +46,25 @@ class ItemsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
+                \Filament\Tables\Columns\ImageColumn::make('product.image')
+                    ->label('Фото')
+                    ->getStateUsing(fn (\App\Models\OrderItem $record): array => $record->product
+                        ? $record->product->getMedia(\App\Models\Product::IMAGE_COLLECTION)->map(fn ($media): string => $media->getUrl('thumb'))->all()
+                        : [])
+                    ->stacked()
+                    ->limit(3),
                 TextColumn::make('product.name')
+                    ->label('Товар')
+                    ->searchable(),
+                TextColumn::make('product.article')
+                    ->label('Артикул')
                     ->searchable(),
                 TextColumn::make('external_product_id')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('quantity')
                     ->numeric()
                     ->sortable(),

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart";
+import { useB2bCart } from "@/stores/useB2bCart";
 import type { Product } from "@/lib/types";
 
-export function AddToCartButton({ product, compact = false }: { product: Product; compact?: boolean }) {
+export function AddToCartButton({ product, compact = false, isB2B = false }: { product: Product; compact?: boolean; isB2B?: boolean }) {
   const t = useTranslations("common");
-  const add = useCart((state) => state.add);
+  const retailAdd = useCart((state) => state.add);
+  const b2bAdd = useB2bCart((state) => state.addItem);
   const [justAdded, setJustAdded] = useState(false);
 
   if (!product.in_stock) {
@@ -15,13 +17,17 @@ export function AddToCartButton({ product, compact = false }: { product: Product
   }
 
   function handleAdd() {
-    add({
-      productId: product.id,
-      slug: product.slug,
-      name: product.name,
-      image: product.image,
-      price: product.price,
-    });
+    if (isB2B) {
+      b2bAdd(product, product.b2b_min_order_qty ?? 1);
+    } else {
+      retailAdd({
+        productId: product.id,
+        slug: product.slug,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+      });
+    }
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   }
