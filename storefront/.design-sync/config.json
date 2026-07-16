@@ -1,0 +1,28 @@
+{
+  "projectId": "0d732c72-7bfe-4272-b713-3b1ced8fa6c5",
+  "pkg": "storefront",
+  "globalName": "ParadiseStorefront",
+  "shape": "package",
+  "entry": "./src/components/index.ts",
+  "srcDir": "src/components",
+  "tsconfig": ".design-sync/support/tsconfig.design-sync.json",
+  "cssEntry": ".ds-sync/generated-globals.css",
+  "extraFonts": [".design-sync/support/fonts.css"],
+  "extraEntries": ["./.design-sync/support/preview-providers.tsx"],
+  "provider": {
+    "component": "PreviewProviders"
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "Header": null,
+    "Footer": null,
+    "CatalogView": null,
+    "Breadcrumbs": null
+  },
+  "overrides": {
+    "Modal": { "cardMode": "single", "viewport": "480x420" },
+    "Drawer": { "cardMode": "single", "viewport": "420x480" },
+    "ToastContainer": { "cardMode": "single", "viewport": "420x200" },
+    "HeaderBurger": { "viewport": "375x140" }
+  }
+}
