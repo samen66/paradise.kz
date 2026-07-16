@@ -108,7 +108,7 @@ export async function CatalogView({
         {products.data.length === 0 ? (
           <div className="rounded-2xl bg-surface py-16 text-center text-muted">{t("empty")}</div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4">
             {products.data.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

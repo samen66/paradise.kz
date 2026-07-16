@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "user-role",
+          "value": "b2b"
+        },
+        {
+          "name": "auth-token",
+          "value": "test-token-123"
+        }
+      ]
+    }
+  ]
+}

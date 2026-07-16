@@ -47,6 +47,7 @@ services:
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     volumes:
       - .:/var/www/html
+      - /var/www/html/node_modules
     ports:
       - "5174:5173"
 
@@ -56,6 +57,7 @@ services:
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     ports:
       - "5175:5173"
     environment:
@@ -72,6 +74,7 @@ services:
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --webpack"
     volumes:
       - ./storefront:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
     environment:

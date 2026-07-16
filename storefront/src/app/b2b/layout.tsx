@@ -70,7 +70,7 @@ export default function B2BLayout({ children }: { children: React.ReactNode }) {
         <NextIntlClientProvider locale="ru" messages={ruMessages}>
           <B2BProvider token={token} user={user}>
             <B2BHeader />
-            <main className="flex-1">
+            <main className="flex-1 mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 lg:px-10">
               {children}
             </main>
             <B2BFooter />

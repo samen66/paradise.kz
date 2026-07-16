@@ -1,17 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useB2bAuth } from '@/stores/useB2bAuth';
-import { useRouter } from 'next/navigation';
 
 export function B2BHeader() {
-  const { user, clear } = useB2bAuth();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    // Clear token from store
-    clear();
-    router.push('/b2b/login');
-  };
+  const { user } = useB2bAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-md">
@@ -41,14 +33,14 @@ export function B2BHeader() {
           Paradise B2B
         </Link>
 
-        <div className="flex items-center justify-end gap-4">
+        <div className="flex items-center justify-end gap-5">
           {user && (
-            <div className="hidden lg:flex items-center text-sm gap-2 mr-2">
-              <Link href="/b2b/profile" className="text-muted hover:text-ink transition">
-                {user.company_name || user.name}
-              </Link>
-              <button onClick={handleLogout} className="text-red-600 hover:underline">Выйти</button>
-            </div>
+            <Link href="/b2b/profile" className="text-ink transition hover:opacity-70" aria-label="Профиль">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
           )}
           <Link
             href="/b2b/cart"

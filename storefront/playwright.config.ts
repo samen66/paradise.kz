@@ -3,7 +3,7 @@ import { loadEnvConfig } from '@next/env';
 loadEnvConfig(process.cwd());
 
 export default defineConfig({
-  testDir: './e2e/tests',
+  testDir: './e2e',
   fullyParallel: true,
   reporter: 'html',
   use: {

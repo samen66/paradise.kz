@@ -20,6 +20,16 @@ class OrderResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.orders.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.resources.orders.plural');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return OrderForm::configure($schema);

@@ -55,7 +55,7 @@ export default function B2BCheckoutPage() {
 
   useEffect(() => {
     if (!token) return;
-    void apiGet<{ data: Settings }>("/settings", { token, revalidate: false }).then((response) => {
+    void apiGet<{ data: Settings }>("/public/settings", { token, revalidate: false }).then((response) => {
       setSettings(response.data);
       setStoreId((current) => current ?? response.data.stores.find((s) => s.is_default)?.id ?? response.data.stores[0]?.id ?? null);
     });

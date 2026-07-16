@@ -23,15 +23,24 @@ class BrandResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
 
-    protected static ?string $navigationLabel = 'Бренды';
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.brands.plural');
+    }
 
-    protected static ?string $modelLabel = 'Бренд';
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.brands.label');
+    }
 
-    protected static ?string $pluralModelLabel = 'Бренды';
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.resources.brands.plural');
+    }
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Каталог';
+        return __('admin.navigation.catalog');
     }
 
     public static function form(Schema $schema): Schema

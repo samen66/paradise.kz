@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { Link as I18nLink } from "@/i18n/navigation";
@@ -17,17 +18,50 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
   const href = isB2B ? `/b2b/product/${product.slug ?? product.id}` : `/product/${product.slug ?? product.id}`;
   const LinkComponent = isB2B ? NextLink : I18nLink;
 
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const imagesToDisplay = product.images?.length > 0 
+    ? product.images.slice(0, 5) 
+    : product.image ? [{ thumb: product.image, medium: product.image, full: product.image }] : [];
+
   return (
-    <article className="group flex h-full flex-col rounded-2xl bg-white p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-      <LinkComponent href={href} className="relative mb-3 block w-full aspect-square overflow-hidden rounded-xl bg-card">
-        {product.image ? (
-          <Image
-            src={product.image}
-            alt={tValue(product.name, locale)}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain p-4 transition-transform group-hover:scale-[1.03]"
-          />
+    <article className="group flex h-full flex-col transition-all duration-300">
+      <LinkComponent 
+        href={href} 
+        className="relative mb-3 block w-full aspect-square overflow-hidden rounded-xl bg-card group/image"
+        onMouseLeave={() => setActiveImageIndex(0)}
+      >
+        {imagesToDisplay.length > 0 ? (
+          <>
+            <Image
+              src={imagesToDisplay[activeImageIndex].medium || imagesToDisplay[activeImageIndex].full || imagesToDisplay[activeImageIndex].thumb}
+              alt={tValue(product.name, locale)}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover/image:scale-105"
+            />
+            {imagesToDisplay.length > 1 && (
+              <div className="absolute inset-0 z-10 flex">
+                {imagesToDisplay.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex-1 h-full"
+                    onMouseEnter={() => setActiveImageIndex(idx)}
+                  />
+                ))}
+              </div>
+            )}
+            {imagesToDisplay.length > 1 && (
+              <div className="absolute bottom-2 left-2 right-2 z-20 flex gap-1 opacity-0 transition-opacity duration-300 group-hover/image:opacity-100 pointer-events-none">
+                {imagesToDisplay.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`h-1 flex-1 rounded-full transition-colors ${idx === activeImageIndex ? 'bg-white' : 'bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex h-full items-center justify-center bg-black/5 text-muted">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10 opacity-50">
@@ -35,36 +69,51 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
             </svg>
           </div>
         )}
-        <FavoriteButton productId={product.id} className="absolute right-3 top-3" />
+        <FavoriteButton productId={product.id} className="absolute right-3 top-3 z-30" />
       </LinkComponent>
 
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-semibold text-ink">{formatPrice(product.price, locale)}</span>
-        {isB2B && <span className="text-[10px] font-bold tracking-wider uppercase text-mint-ink bg-mint/40 rounded px-1.5 py-0.5">Опт</span>}
-      </div>
+      <div className="flex flex-col flex-1 px-1 pt-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-lg font-semibold text-ink">{formatPrice(product.price, locale)}</span>
+            {isB2B && <span className="text-[10px] font-bold tracking-wider uppercase text-mint-ink bg-mint/40 rounded px-1.5 py-0.5">Опт</span>}
+            {product.article && <span className="text-xs text-muted">{product.article}</span>}
+          </div>
+          
+          {product.in_stock && (
+            <div className="flex-shrink-0">
+              <AddToCartButton product={product} compact isB2B={isB2B} />
+            </div>
+          )}
+        </div>
 
-      {isB2B && (product.b2b_min_order_qty ?? 1) > 1 && (
-        <span className="mt-1 inline-block w-fit bg-mint/40 text-mint-ink px-2 py-0.5 rounded-full text-[11px] font-semibold">
-          Мин. заказ: {product.b2b_min_order_qty} шт.
-        </span>
-      )}
-
-      <LinkComponent href={href} className="mt-1 line-clamp-2 min-h-10 text-sm text-ink hover:underline">
-        {tValue(product.name, locale)}
-      </LinkComponent>
-
-      {product.characteristics?.[0] ? (
-        <span className="mt-2 inline-block w-fit self-start rounded-full bg-black/5 px-2.5 py-1 text-xs text-muted">
-          {product.characteristics[0].value}
-        </span>
-      ) : null}
-
-      <div className="mt-auto flex items-center justify-end gap-2 pt-3">
-        {!product.in_stock ? (
-          <span className="mr-auto text-xs text-muted">{outOfStockText}</span>
+        {product.in_stock ? (
+          product.stock !== undefined && product.stock > 0 && (
+            <div className="mt-2 text-[13px] text-green-600 font-medium">
+              {t("inStock")}: {product.stock} шт.
+            </div>
+          )
         ) : (
-          <AddToCartButton product={product} compact isB2B={isB2B} />
+          <div className="mt-2 text-[13px] text-gray-500 font-medium">
+            {outOfStockText}
+          </div>
         )}
+
+        {isB2B && (product.b2b_min_order_qty ?? 1) > 1 && (
+          <span className="mt-2 inline-block w-fit bg-mint/40 text-mint-ink px-2 py-0.5 rounded-full text-[11px] font-semibold">
+            Мин. заказ: {product.b2b_min_order_qty} шт.
+          </span>
+        )}
+
+        <LinkComponent href={href} className="mt-2 line-clamp-2 min-h-10 text-sm text-ink hover:underline">
+          {tValue(product.name, locale)}
+        </LinkComponent>
+
+        {product.characteristics?.[0] ? (
+          <span className="mt-2 mb-2 inline-block w-fit self-start rounded-full bg-black/5 px-2.5 py-1 text-xs text-muted">
+            {product.characteristics[0].value}
+          </span>
+        ) : null}
       </div>
     </article>
   );

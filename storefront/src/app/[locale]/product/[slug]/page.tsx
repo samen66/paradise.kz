@@ -103,20 +103,22 @@ export default async function ProductPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Breadcrumbs items={crumbs} />
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <ProductGallery images={product.images} alt={product.name} />
+      <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-7">
+          <ProductGallery images={product.images} alt={product.name} />
+        </div>
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-[34px] leading-tight">
+        <div className="lg:col-span-5 lg:sticky lg:top-8 lg:self-start">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-4xl leading-tight">
             {tValue(product.name, locale)}
           </h1>
 
           {metaBadges.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               {metaBadges.map((badge) => (
                 <span
                   key={badge.key}
-                  className="inline-block rounded-full bg-black/5 px-2.5 py-1 text-xs text-muted"
+                  className="inline-block rounded-md bg-transparent border border-line px-2.5 py-1 text-xs text-muted font-medium"
                 >
                   {badge.label}: {badge.value}
                 </span>
@@ -124,9 +126,9 @@ export default async function ProductPage({
             </div>
           ) : null}
 
-          <p className="mt-4 text-2xl font-semibold text-ink">{formatPrice(product.price, locale)}</p>
+          <p className="mt-6 text-3xl sm:text-4xl font-bold text-ink">{formatPrice(product.price, locale)}</p>
 
-          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium">
+          <p className="mt-3 flex items-center gap-1.5 text-sm font-medium">
             <span
               aria-hidden="true"
               className={`h-2 w-2 rounded-full ${product.in_stock ? "bg-mint-ink" : "bg-muted"}`}
@@ -139,11 +141,11 @@ export default async function ProductPage({
             ) : null}
           </p>
 
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-8 flex items-center gap-3">
             <div className="flex-1">
               {product.in_stock ? <AddToCartButton product={product} /> : null}
             </div>
-            <FavoriteButton productId={product.id} />
+            <FavoriteButton productId={product.id} className="h-[52px] w-[52px]" />
           </div>
         </div>
       </div>

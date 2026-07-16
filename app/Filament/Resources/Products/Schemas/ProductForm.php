@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Products\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -17,68 +19,137 @@ class ProductForm
     {
         return $schema
             ->components([
-                TextInput::make('source')
-                    ->helperText('ERP provider this row was mirrored from.')
-                    ->required(),
-                TextInput::make('external_id')
-                    ->required(),
-                TextInput::make('external_folder_id'),
-                Select::make('category_id')
-                    ->label('Категория')
-                    ->relationship('category', 'name')
-                    ->searchable()
-                    ->preload(),
-                Select::make('brand_id')
-                    ->label('Бренд')
-                    ->relationship('brand', 'name')
-                    ->searchable()
-                    ->preload(),
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('code'),
-                TextInput::make('article'),
-                Textarea::make('description')
-                    ->columnSpanFull(),
-                TextInput::make('retail_price')
-                    ->helperText('In kopecks. ERP-mirrored fallback, used only when no "Цены" entry exists for this product.')
-                    ->numeric(),
-                TextInput::make('b2b_price')
-                    ->helperText('In kopecks. ERP-mirrored fallback, used only when no "Цены" entry exists for this product.')
-                    ->numeric(),
-                TextInput::make('b2b_min_order_qty')
-                    ->label('Мин. кол-во для B2B')
-                    ->helperText('Оставьте пустым — будет использовано глобальное значение из Настроек каталога.')
-                    ->numeric()
-                    ->minValue(1),
-                TextInput::make('purchase_price')
-                    ->helperText('In kopecks (minor units).')
-                    ->numeric(),
-                TextInput::make('min_price')
-                    ->helperText('In kopecks (minor units).')
-                    ->numeric(),
-                TextInput::make('stock')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('uom'),
-                TextInput::make('weight')
-                    ->numeric(),
-                TextInput::make('volume')
-                    ->numeric(),
-                TextInput::make('country'),
-                TextInput::make('supplier'),
-                TagsInput::make('barcodes')
-                    ->helperText('Mirrored ERP barcodes.')
-                    ->columnSpanFull(),
-                KeyValue::make('attributes')
-                    ->label('Attributes / characteristics')
-                    ->keyLabel('Name')
-                    ->valueLabel('Value')
-                    ->columnSpanFull(),
-                Toggle::make('is_active')
-                    ->helperText('Local-only flag: hide this product from all B2B clients.')
-                    ->required(),
-                DateTimePicker::make('synced_at'),
+                Section::make(__('admin.sections.main_info'))
+                    ->schema([
+                        TextInput::make('name')
+                            ->label(__('admin.fields.name'))
+                            ->disabled()
+                            ->helperText(__('admin.helpers.erp_readonly'))
+                            ->required(),
+                        Textarea::make('description')
+                            ->label(__('admin.fields.description'))
+                            ->columnSpanFull(),
+                        Grid::make(2)
+                            ->schema([
+                                Select::make('category_id')
+                                    ->label(__('admin.fields.category'))
+                                    ->relationship('category', 'name')
+                                    ->searchable()
+                                    ->preload(),
+                                Select::make('brand_id')
+                                    ->label(__('admin.fields.brand'))
+                                    ->relationship('brand', 'name')
+                                    ->searchable()
+                                    ->preload(),
+                            ]),
+                        Toggle::make('is_active')
+                            ->label(__('admin.fields.is_active'))
+                            ->helperText(__('admin.helpers.is_active'))
+                            ->required(),
+                    ]),
+
+                Section::make(__('admin.sections.prices_and_stock'))
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('stock')
+                                    ->label(__('admin.fields.stock'))
+                                    ->disabled()
+                                    ->helperText(__('admin.helpers.erp_readonly'))
+                                    ->required()
+                                    ->numeric()
+                                    ->default(0),
+                                TextInput::make('retail_price')
+                                    ->label(__('admin.fields.retail_price'))
+                                    ->disabled()
+                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->numeric(),
+                                TextInput::make('b2b_price')
+                                    ->label(__('admin.fields.b2b_price'))
+                                    ->disabled()
+                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->numeric(),
+                            ]),
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('purchase_price')
+                                    ->label(__('admin.fields.purchase_price'))
+                                    ->disabled()
+                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->numeric(),
+                                TextInput::make('min_price')
+                                    ->label(__('admin.fields.min_price'))
+                                    ->disabled()
+                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->numeric(),
+                                TextInput::make('b2b_min_order_qty')
+                                    ->label(__('admin.fields.b2b_min_order_qty'))
+                                    ->helperText(__('admin.helpers.b2b_min_qty'))
+                                    ->numeric()
+                                    ->minValue(1),
+                            ]),
+                    ]),
+
+                Section::make(__('admin.sections.dimensions'))
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('uom')
+                                    ->label(__('admin.fields.uom'))
+                                    ->disabled(),
+                                TextInput::make('weight')
+                                    ->label(__('admin.fields.weight'))
+                                    ->disabled()
+                                    ->numeric(),
+                                TextInput::make('volume')
+                                    ->label(__('admin.fields.volume'))
+                                    ->disabled()
+                                    ->numeric(),
+                            ]),
+                    ])->collapsed(),
+
+                Section::make(__('admin.sections.erp_sync'))
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('source')
+                                    ->label(__('admin.fields.source'))
+                                    ->disabled()
+                                    ->required(),
+                                TextInput::make('external_id')
+                                    ->label(__('admin.fields.external_id'))
+                                    ->disabled()
+                                    ->required(),
+                                TextInput::make('external_folder_id')
+                                    ->label(__('admin.fields.external_folder_id'))
+                                    ->disabled(),
+                                TextInput::make('code')
+                                    ->label(__('admin.fields.code'))
+                                    ->disabled(),
+                                TextInput::make('article')
+                                    ->label(__('admin.fields.article'))
+                                    ->disabled(),
+                                TextInput::make('country')
+                                    ->label(__('admin.fields.country'))
+                                    ->disabled(),
+                                TextInput::make('supplier')
+                                    ->label(__('admin.fields.supplier'))
+                                    ->disabled(),
+                                DateTimePicker::make('synced_at')
+                                    ->label(__('admin.fields.synced_at'))
+                                    ->disabled(),
+                            ]),
+                        TagsInput::make('barcodes')
+                            ->label(__('admin.fields.barcodes'))
+                            ->disabled()
+                            ->columnSpanFull(),
+                        KeyValue::make('attributes')
+                            ->label(__('admin.fields.attributes'))
+                            ->disabled()
+                            ->keyLabel('Name')
+                            ->valueLabel('Value')
+                            ->columnSpanFull(),
+                    ])->collapsed(),
             ]);
     }
 }

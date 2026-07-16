@@ -1,0 +1,756 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: tests/a11y-visual.spec.ts >> Accessibility and Visual Regression >> Catalog should visually match the premium design baseline
+- Location: e2e/tests/a11y-visual.spec.ts:19:7
+
+# Error details
+
+```
+Error: A snapshot doesn't exist at /Users/samenuatkhan/PhpstormProjects/paradise.kz/storefront/e2e/tests/a11y-visual.spec.ts-snapshots/b2c-catalog-baseline-Desktop-darwin.png, writing actual.
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "О компании" [ref=e6] [cursor=pointer]:
+          - /url: /about
+        - link "Доставка" [ref=e7] [cursor=pointer]:
+          - /url: /delivery
+        - link "Контакты" [ref=e8] [cursor=pointer]:
+          - /url: /contacts
+        - link "Стать партнером" [ref=e9] [cursor=pointer]:
+          - /url: /b2b/login
+      - generic [ref=e11]:
+        - link "Рус" [ref=e12] [cursor=pointer]:
+          - /url: /ru/catalog
+        - link "Қаз" [ref=e13] [cursor=pointer]:
+          - /url: /kk/catalog
+    - generic [ref=e14]:
+      - generic [ref=e17]:
+        - button "Найти" [ref=e18]:
+          - img [ref=e19]
+        - searchbox "Поиск товаров…" [ref=e22]
+      - link "Paradise.kz" [ref=e23] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e24]:
+        - link "Войти" [ref=e25] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e26]
+          - generic [ref=e29]: Войти
+        - link "Избранное" [ref=e30] [cursor=pointer]:
+          - /url: /account/favorites
+          - img [ref=e31]
+          - generic [ref=e33]: Избранное
+        - link "Корзина" [ref=e34] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e36]
+          - generic [ref=e40]: Корзина
+    - navigation [ref=e41]:
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "Аксессуары" [ref=e45] [cursor=pointer]:
+            - /url: /catalog/aksessuary
+        - listitem [ref=e46]:
+          - link "Детская мебель" [ref=e47] [cursor=pointer]:
+            - /url: /catalog/detskaia-mebel
+        - listitem [ref=e48]:
+          - link "Диваны" [ref=e49] [cursor=pointer]:
+            - /url: /catalog/divany
+        - listitem [ref=e50]:
+          - link "Комоды и тумбы" [ref=e51] [cursor=pointer]:
+            - /url: /catalog/komody-i-tumby
+        - listitem [ref=e52]:
+          - link "Кровати" [ref=e53] [cursor=pointer]:
+            - /url: /catalog/krovati
+        - listitem [ref=e54]:
+          - link "Кухонная мебель" [ref=e55] [cursor=pointer]:
+            - /url: /catalog/kuxonnaia-mebel
+        - listitem [ref=e56]:
+          - link "Матрасы" [ref=e57] [cursor=pointer]:
+            - /url: /catalog/matrasy
+        - listitem [ref=e58]:
+          - link "Мягкая мебель" [ref=e59] [cursor=pointer]:
+            - /url: /catalog/miagkaia-mebel
+        - listitem [ref=e60]:
+          - link "Прихожая" [ref=e61] [cursor=pointer]:
+            - /url: /catalog/prixozaia
+        - listitem [ref=e62]:
+          - link "Столы" [ref=e63] [cursor=pointer]:
+            - /url: /catalog/stoly
+        - listitem [ref=e64]:
+          - link "Стулья и кресла" [ref=e65] [cursor=pointer]:
+            - /url: /catalog/stulia-i-kresla
+        - listitem [ref=e66]:
+          - link "Шкафы" [ref=e67] [cursor=pointer]:
+            - /url: /catalog/skafy
+  - main [ref=e68]:
+    - generic [ref=e69]:
+      - navigation [ref=e70]:
+        - list [ref=e71]:
+          - listitem [ref=e72]:
+            - link "Главная" [ref=e73] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e74]:
+            - generic [ref=e75]: /
+            - generic [ref=e76]: Каталог
+      - generic [ref=e77]:
+        - complementary [ref=e78]:
+          - generic [ref=e79]:
+            - group [ref=e80]:
+              - generic "Цена, ₸" [ref=e81] [cursor=pointer]:
+                - text: Цена, ₸
+                - img [ref=e82]
+              - generic [ref=e84]:
+                - generic [ref=e85]:
+                  - spinbutton [ref=e86]
+                  - spinbutton [ref=e87]
+                - button "Применить" [ref=e88]
+            - generic [ref=e90] [cursor=pointer]:
+              - checkbox "Только в наличии" [ref=e91]
+              - generic [ref=e92]: Только в наличии
+            - group [ref=e94]:
+              - generic "Бренд" [ref=e95] [cursor=pointer]:
+                - text: Бренд
+                - img [ref=e96]
+              - list [ref=e98]:
+                - listitem [ref=e99]:
+                  - generic [ref=e100] [cursor=pointer]:
+                    - checkbox "Angstrem 3" [ref=e101]
+                    - generic [ref=e102]: Angstrem
+                    - generic [ref=e103]: "3"
+                - listitem [ref=e104]:
+                  - generic [ref=e105] [cursor=pointer]:
+                    - checkbox "Askona 5" [ref=e106]
+                    - generic [ref=e107]: Askona
+                    - generic [ref=e108]: "5"
+                - listitem [ref=e109]:
+                  - generic [ref=e110] [cursor=pointer]:
+                    - checkbox "Borovichi 6" [ref=e111]
+                    - generic [ref=e112]: Borovichi
+                    - generic [ref=e113]: "6"
+                - listitem [ref=e114]:
+                  - generic [ref=e115] [cursor=pointer]:
+                    - checkbox "DaVita 5" [ref=e116]
+                    - generic [ref=e117]: DaVita
+                    - generic [ref=e118]: "5"
+                - listitem [ref=e119]:
+                  - generic [ref=e120] [cursor=pointer]:
+                    - checkbox "Hoff 7" [ref=e121]
+                    - generic [ref=e122]: Hoff
+                    - generic [ref=e123]: "7"
+                - listitem [ref=e124]:
+                  - generic [ref=e125] [cursor=pointer]:
+                    - checkbox "Lazurit 6" [ref=e126]
+                    - generic [ref=e127]: Lazurit
+                    - generic [ref=e128]: "6"
+                - listitem [ref=e129]:
+                  - generic [ref=e130] [cursor=pointer]:
+                    - checkbox "Moon Trade 8" [ref=e131]
+                    - generic [ref=e132]: Moon Trade
+                    - generic [ref=e133]: "8"
+                - listitem [ref=e134]:
+                  - generic [ref=e135] [cursor=pointer]:
+                    - checkbox "Ormatek 2" [ref=e136]
+                    - generic [ref=e137]: Ormatek
+                    - generic [ref=e138]: "2"
+                - listitem [ref=e139]:
+                  - generic [ref=e140] [cursor=pointer]:
+                    - checkbox "Paradise Home 4" [ref=e141]
+                    - generic [ref=e142]: Paradise Home
+                    - generic [ref=e143]: "4"
+                - listitem [ref=e144]:
+                  - generic [ref=e145] [cursor=pointer]:
+                    - checkbox "Rivalli 6" [ref=e146]
+                    - generic [ref=e147]: Rivalli
+                    - generic [ref=e148]: "6"
+                - listitem [ref=e149]:
+                  - generic [ref=e150] [cursor=pointer]:
+                    - checkbox "Stolplit 5" [ref=e151]
+                    - generic [ref=e152]: Stolplit
+                    - generic [ref=e153]: "5"
+                - listitem [ref=e154]:
+                  - generic [ref=e155] [cursor=pointer]:
+                    - checkbox "Мебельград 8" [ref=e156]
+                    - generic [ref=e157]: Мебельград
+                    - generic [ref=e158]: "8"
+                - listitem [ref=e159]:
+                  - generic [ref=e160] [cursor=pointer]:
+                    - checkbox "Первый мебельный 1" [ref=e161]
+                    - generic [ref=e162]: Первый мебельный
+                    - generic [ref=e163]: "1"
+                - listitem [ref=e164]:
+                  - generic [ref=e165] [cursor=pointer]:
+                    - checkbox "Шатура 6" [ref=e166]
+                    - generic [ref=e167]: Шатура
+                    - generic [ref=e168]: "6"
+            - group [ref=e170]:
+              - generic "Цвет" [ref=e171] [cursor=pointer]:
+                - text: Цвет
+                - img [ref=e172]
+              - list [ref=e174]:
+                - listitem [ref=e175]:
+                  - generic [ref=e176] [cursor=pointer]:
+                    - checkbox "Антрацит" [ref=e177]
+                    - generic [ref=e178]: Антрацит
+                - listitem [ref=e179]:
+                  - generic [ref=e180] [cursor=pointer]:
+                    - checkbox "Бежевый" [ref=e181]
+                    - generic [ref=e182]: Бежевый
+                - listitem [ref=e183]:
+                  - generic [ref=e184] [cursor=pointer]:
+                    - checkbox "Белый" [ref=e185]
+                    - generic [ref=e186]: Белый
+                - listitem [ref=e187]:
+                  - generic [ref=e188] [cursor=pointer]:
+                    - checkbox "Венге" [ref=e189]
+                    - generic [ref=e190]: Венге
+                - listitem [ref=e191]:
+                  - generic [ref=e192] [cursor=pointer]:
+                    - checkbox "Графит" [ref=e193]
+                    - generic [ref=e194]: Графит
+                - listitem [ref=e195]:
+                  - generic [ref=e196] [cursor=pointer]:
+                    - checkbox "Дуб сонома" [ref=e197]
+                    - generic [ref=e198]: Дуб сонома
+                - listitem [ref=e199]:
+                  - generic [ref=e200] [cursor=pointer]:
+                    - checkbox "Орех" [ref=e201]
+                    - generic [ref=e202]: Орех
+                - listitem [ref=e203]:
+                  - generic [ref=e204] [cursor=pointer]:
+                    - checkbox "Серый" [ref=e205]
+                    - generic [ref=e206]: Серый
+                - listitem [ref=e207]:
+                  - generic [ref=e208] [cursor=pointer]:
+                    - checkbox "Слоновая кость" [ref=e209]
+                    - generic [ref=e210]: Слоновая кость
+                - listitem [ref=e211]:
+                  - generic [ref=e212] [cursor=pointer]:
+                    - checkbox "Чёрный" [ref=e213]
+                    - generic [ref=e214]: Чёрный
+            - group [ref=e216]:
+              - generic "Материал каркаса" [ref=e217] [cursor=pointer]:
+                - text: Материал каркаса
+                - img [ref=e218]
+              - list [ref=e220]:
+                - listitem [ref=e221]:
+                  - generic [ref=e222] [cursor=pointer]:
+                    - checkbox "ЛДСП" [ref=e223]
+                    - generic [ref=e224]: ЛДСП
+                - listitem [ref=e225]:
+                  - generic [ref=e226] [cursor=pointer]:
+                    - checkbox "Массив бука" [ref=e227]
+                    - generic [ref=e228]: Массив бука
+                - listitem [ref=e229]:
+                  - generic [ref=e230] [cursor=pointer]:
+                    - checkbox "Массив дуба" [ref=e231]
+                    - generic [ref=e232]: Массив дуба
+                - listitem [ref=e233]:
+                  - generic [ref=e234] [cursor=pointer]:
+                    - checkbox "Массив сосны" [ref=e235]
+                    - generic [ref=e236]: Массив сосны
+                - listitem [ref=e237]:
+                  - generic [ref=e238] [cursor=pointer]:
+                    - checkbox "Массив ясеня" [ref=e239]
+                    - generic [ref=e240]: Массив ясеня
+                - listitem [ref=e241]:
+                  - generic [ref=e242] [cursor=pointer]:
+                    - checkbox "МДФ" [ref=e243]
+                    - generic [ref=e244]: МДФ
+                - listitem [ref=e245]:
+                  - generic [ref=e246] [cursor=pointer]:
+                    - checkbox "Металл" [ref=e247]
+                    - generic [ref=e248]: Металл
+                - listitem [ref=e249]:
+                  - generic [ref=e250] [cursor=pointer]:
+                    - checkbox "Фанера берёзовая" [ref=e251]
+                    - generic [ref=e252]: Фанера берёзовая
+            - group [ref=e254]:
+              - generic "Материал обивки" [ref=e255] [cursor=pointer]:
+                - text: Материал обивки
+                - img [ref=e256]
+              - list [ref=e258]:
+                - listitem [ref=e259]:
+                  - generic [ref=e260] [cursor=pointer]:
+                    - checkbox "Велюр" [ref=e261]
+                    - generic [ref=e262]: Велюр
+                - listitem [ref=e263]:
+                  - generic [ref=e264] [cursor=pointer]:
+                    - checkbox "Натуральная кожа" [ref=e265]
+                    - generic [ref=e266]: Натуральная кожа
+                - listitem [ref=e267]:
+                  - generic [ref=e268] [cursor=pointer]:
+                    - checkbox "Флок" [ref=e269]
+                    - generic [ref=e270]: Флок
+            - group [ref=e272]:
+              - generic "Механизм трансформации" [ref=e273] [cursor=pointer]:
+                - text: Механизм трансформации
+                - img [ref=e274]
+              - list [ref=e276]:
+                - listitem [ref=e277]:
+                  - generic [ref=e278] [cursor=pointer]:
+                    - checkbox "Выкатной" [ref=e279]
+                    - generic [ref=e280]: Выкатной
+                - listitem [ref=e281]:
+                  - generic [ref=e282] [cursor=pointer]:
+                    - checkbox "Еврокнижка" [ref=e283]
+                    - generic [ref=e284]: Еврокнижка
+                - listitem [ref=e285]:
+                  - generic [ref=e286] [cursor=pointer]:
+                    - checkbox "Клик-кляк" [ref=e287]
+                    - generic [ref=e288]: Клик-кляк
+            - group [ref=e290]:
+              - generic "Стиль" [ref=e291] [cursor=pointer]:
+                - text: Стиль
+                - img [ref=e292]
+              - list [ref=e294]:
+                - listitem [ref=e295]:
+                  - generic [ref=e296] [cursor=pointer]:
+                    - checkbox "Классический" [ref=e297]
+                    - generic [ref=e298]: Классический
+                - listitem [ref=e299]:
+                  - generic [ref=e300] [cursor=pointer]:
+                    - checkbox "Лофт" [ref=e301]
+                    - generic [ref=e302]: Лофт
+                - listitem [ref=e303]:
+                  - generic [ref=e304] [cursor=pointer]:
+                    - checkbox "Минимализм" [ref=e305]
+                    - generic [ref=e306]: Минимализм
+                - listitem [ref=e307]:
+                  - generic [ref=e308] [cursor=pointer]:
+                    - checkbox "Модерн" [ref=e309]
+                    - generic [ref=e310]: Модерн
+                - listitem [ref=e311]:
+                  - generic [ref=e312] [cursor=pointer]:
+                    - checkbox "Прованс" [ref=e313]
+                    - generic [ref=e314]: Прованс
+                - listitem [ref=e315]:
+                  - generic [ref=e316] [cursor=pointer]:
+                    - checkbox "Скандинавский" [ref=e317]
+                    - generic [ref=e318]: Скандинавский
+                - listitem [ref=e319]:
+                  - generic [ref=e320] [cursor=pointer]:
+                    - checkbox "Современный" [ref=e321]
+                    - generic [ref=e322]: Современный
+                - listitem [ref=e323]:
+                  - generic [ref=e324] [cursor=pointer]:
+                    - checkbox "Хай-тек" [ref=e325]
+                    - generic [ref=e326]: Хай-тек
+            - button "Сбросить" [ref=e328]
+        - generic [ref=e329]:
+          - generic [ref=e331]:
+            - heading "Каталог" [level=1] [ref=e332]
+            - generic [ref=e333]: "Найдено товаров: 72"
+          - generic [ref=e334]:
+            - button "Только в наличии" [ref=e335]
+            - generic [ref=e337]:
+              - generic [ref=e338]: "Сортировка:"
+              - combobox "Сортировка:" [ref=e339]:
+                - option "По названию" [selected]
+                - option "Сначала дешевле"
+                - option "Сначала дороже"
+                - option "Сначала новые"
+          - generic [ref=e340]:
+            - article [ref=e341]:
+              - link "10223" [ref=e342] [cursor=pointer]:
+                - /url: /product/56
+                - img "10223" [ref=e343]
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - generic [ref=e350]: 268 174 ₸
+                    - generic [ref=e351]: "10223"
+                  - button "В корзину" [ref=e353]:
+                    - img [ref=e354]
+                - generic [ref=e358]: "В наличии: 12 шт."
+                - link "10223" [ref=e359] [cursor=pointer]:
+                  - /url: /product/56
+            - article [ref=e360]:
+              - link "10333" [ref=e361] [cursor=pointer]:
+                - /url: /product/29
+                - img "10333" [ref=e362]
+              - generic [ref=e368]:
+                - generic [ref=e370]:
+                  - generic [ref=e371]: 10 000 ₸
+                  - generic [ref=e372]: "10333"
+                - generic [ref=e373]: Нет в наличии
+                - link "10333" [ref=e374] [cursor=pointer]:
+                  - /url: /product/29
+            - article [ref=e375]:
+              - link "11103" [ref=e376] [cursor=pointer]:
+                - /url: /product/65
+                - img "11103" [ref=e377]
+              - generic [ref=e378]:
+                - generic [ref=e380]:
+                  - generic [ref=e381]: 16 000 ₸
+                  - generic [ref=e382]: "11103"
+                - generic [ref=e383]: Нет в наличии
+                - link "11103" [ref=e384] [cursor=pointer]:
+                  - /url: /product/65
+            - article [ref=e385]:
+              - link "11105" [ref=e386] [cursor=pointer]:
+                - /url: /product/54
+                - img "11105" [ref=e387]
+              - generic [ref=e391]:
+                - generic [ref=e393]:
+                  - generic [ref=e394]: 16 000 ₸
+                  - generic [ref=e395]: "11105"
+                - generic [ref=e396]: Нет в наличии
+                - link "11105" [ref=e397] [cursor=pointer]:
+                  - /url: /product/54
+            - article [ref=e398]:
+              - link "2203" [ref=e399] [cursor=pointer]:
+                - /url: /product/43
+                - img "2203" [ref=e400]
+              - generic [ref=e407]:
+                - generic [ref=e409]:
+                  - generic [ref=e410]: 17 000 ₸
+                  - generic [ref=e411]: "2203"
+                - generic [ref=e412]: Нет в наличии
+                - link "2203" [ref=e413] [cursor=pointer]:
+                  - /url: /product/43
+            - article [ref=e414]:
+              - link "2205" [ref=e415] [cursor=pointer]:
+                - /url: /product/48
+                - img "2205" [ref=e416]
+              - generic [ref=e423]:
+                - generic [ref=e425]:
+                  - generic [ref=e426]: 22 000 ₸
+                  - generic [ref=e427]: "2205"
+                - generic [ref=e428]: Нет в наличии
+                - link "2205" [ref=e429] [cursor=pointer]:
+                  - /url: /product/48
+            - article [ref=e430]:
+              - link "2206" [ref=e431] [cursor=pointer]:
+                - /url: /product/63
+                - img "2206" [ref=e432]
+              - generic [ref=e439]:
+                - generic [ref=e441]:
+                  - generic [ref=e442]: 28 000 ₸
+                  - generic [ref=e443]: "2206"
+                - generic [ref=e444]: Нет в наличии
+                - link "2206" [ref=e445] [cursor=pointer]:
+                  - /url: /product/63
+            - article [ref=e446]:
+              - link "2207" [ref=e447] [cursor=pointer]:
+                - /url: /product/73
+                - img "2207" [ref=e448]
+              - generic [ref=e455]:
+                - generic [ref=e457]:
+                  - generic [ref=e458]: 21 000 ₸
+                  - generic [ref=e459]: "2207"
+                - generic [ref=e460]: Нет в наличии
+                - link "2207" [ref=e461] [cursor=pointer]:
+                  - /url: /product/73
+            - article [ref=e462]:
+              - link "2208" [ref=e463] [cursor=pointer]:
+                - /url: /product/27
+                - img "2208" [ref=e464]
+              - generic [ref=e470]:
+                - generic [ref=e472]:
+                  - generic [ref=e473]: 20 000 ₸
+                  - generic [ref=e474]: "2208"
+                - generic [ref=e475]: Нет в наличии
+                - link "2208" [ref=e476] [cursor=pointer]:
+                  - /url: /product/27
+            - article [ref=e477]:
+              - link "2209" [ref=e478] [cursor=pointer]:
+                - /url: /product/23
+                - img "2209" [ref=e479]
+              - generic [ref=e486]:
+                - generic [ref=e488]:
+                  - generic [ref=e489]: 29 000 ₸
+                  - generic [ref=e490]: "2209"
+                - generic [ref=e491]: Нет в наличии
+                - link "2209" [ref=e492] [cursor=pointer]:
+                  - /url: /product/23
+            - article [ref=e493]:
+              - link "50401" [ref=e494] [cursor=pointer]:
+                - /url: /product/3
+                - img "50401" [ref=e495]
+              - generic [ref=e499]:
+                - generic [ref=e501]:
+                  - generic [ref=e502]: 283 804 ₸
+                  - generic [ref=e503]: "50401"
+                - generic [ref=e504]: Нет в наличии
+                - link "50401" [ref=e505] [cursor=pointer]:
+                  - /url: /product/3
+            - article [ref=e506]:
+              - link "B003" [ref=e507] [cursor=pointer]:
+                - /url: /product/5
+                - img "B003" [ref=e508]
+              - generic [ref=e512]:
+                - generic [ref=e514]:
+                  - generic [ref=e515]: 284 923 ₸
+                  - generic [ref=e516]: B003
+                - generic [ref=e517]: Нет в наличии
+                - link "B003" [ref=e518] [cursor=pointer]:
+                  - /url: /product/5
+            - article [ref=e519]:
+              - link "B0070" [ref=e520] [cursor=pointer]:
+                - /url: /product/9
+                - img "B0070" [ref=e521]
+              - generic [ref=e525]:
+                - generic [ref=e527]:
+                  - generic [ref=e528]: 413 184 ₸
+                  - generic [ref=e529]: B0070
+                - generic [ref=e530]: Нет в наличии
+                - link "B0070" [ref=e531] [cursor=pointer]:
+                  - /url: /product/9
+            - article [ref=e532]:
+              - link "BOZEN 501" [ref=e533] [cursor=pointer]:
+                - /url: /product/11
+                - img "BOZEN 501" [ref=e534]
+              - generic [ref=e541]:
+                - generic [ref=e543]:
+                  - generic [ref=e544]: 100 000 ₸
+                  - generic [ref=e545]: BOZEN 501
+                - generic [ref=e546]: Нет в наличии
+                - link "BOZEN 501" [ref=e547] [cursor=pointer]:
+                  - /url: /product/11
+            - article [ref=e548]:
+              - link "Chil - Grey 10222" [ref=e549] [cursor=pointer]:
+                - /url: /product/57
+                - img "Chil - Grey 10222" [ref=e550]
+              - generic [ref=e557]:
+                - generic [ref=e559]:
+                  - generic [ref=e560]: 10 000 ₸
+                  - generic [ref=e561]: Chil - Grey 10222
+                - generic [ref=e562]: Нет в наличии
+                - link "Chil - Grey 10222" [ref=e563] [cursor=pointer]:
+                  - /url: /product/57
+            - article [ref=e564]:
+              - link "Chil - Lattic 10103" [ref=e565] [cursor=pointer]:
+                - /url: /product/53
+                - img "Chil - Lattic 10103" [ref=e566]
+              - generic [ref=e570]:
+                - generic [ref=e572]:
+                  - generic [ref=e573]: 10 000 ₸
+                  - generic [ref=e574]: Chil - Lattic 10103
+                - generic [ref=e575]: Нет в наличии
+                - link "Chil - Lattic 10103" [ref=e576] [cursor=pointer]:
+                  - /url: /product/53
+            - article [ref=e577]:
+              - link "Chil-Lattic 10101" [ref=e578] [cursor=pointer]:
+                - /url: /product/33
+                - img "Chil-Lattic 10101" [ref=e579]
+              - generic [ref=e583]:
+                - generic [ref=e585]:
+                  - generic [ref=e586]: 9 000 ₸
+                  - generic [ref=e587]: Chil-Lattic 10101
+                - generic [ref=e588]: Нет в наличии
+                - link "Chil-Lattic 10101" [ref=e589] [cursor=pointer]:
+                  - /url: /product/33
+            - article [ref=e590]:
+              - link "DC-1698" [ref=e591] [cursor=pointer]:
+                - /url: /product/50
+                - img "DC-1698" [ref=e592]
+              - generic [ref=e596]:
+                - generic [ref=e598]:
+                  - generic [ref=e599]: 46 000 ₸
+                  - generic [ref=e600]: DC-1698
+                - generic [ref=e601]: Нет в наличии
+                - link "DC-1698" [ref=e602] [cursor=pointer]:
+                  - /url: /product/50
+            - article [ref=e603]:
+              - link "DC-2031 Черный" [ref=e604] [cursor=pointer]:
+                - /url: /product/47
+                - img "DC-2031 Черный" [ref=e605]
+              - generic [ref=e609]:
+                - generic [ref=e611]:
+                  - generic [ref=e612]: 18 000 ₸
+                  - generic [ref=e613]: DC-2031
+                - generic [ref=e614]: Нет в наличии
+                - link "DC-2031 Черный" [ref=e615] [cursor=pointer]:
+                  - /url: /product/47
+            - article [ref=e616]:
+              - link "DC-2031(V) Серый" [ref=e617] [cursor=pointer]:
+                - /url: /product/66
+                - img "DC-2031(V) Серый" [ref=e618]
+              - generic [ref=e622]:
+                - generic [ref=e624]:
+                  - generic [ref=e625]: 18 000 ₸
+                  - generic [ref=e626]: DC-2031(V)
+                - generic [ref=e627]: Нет в наличии
+                - link "DC-2031(V) Серый" [ref=e628] [cursor=pointer]:
+                  - /url: /product/66
+            - article [ref=e629]:
+              - link "DC-2031(V1) Зеленый" [ref=e630] [cursor=pointer]:
+                - /url: /product/55
+                - img "DC-2031(V1) Зеленый" [ref=e631]
+              - generic [ref=e635]:
+                - generic [ref=e637]:
+                  - generic [ref=e638]: 18 000 ₸
+                  - generic [ref=e639]: DC-2031(V1)
+                - generic [ref=e640]: Нет в наличии
+                - link "DC-2031(V1) Зеленый" [ref=e641] [cursor=pointer]:
+                  - /url: /product/55
+            - article [ref=e642]:
+              - link "DC-2083A(V1)" [ref=e643] [cursor=pointer]:
+                - /url: /product/68
+                - img "DC-2083A(V1)" [ref=e644]
+              - generic [ref=e651]:
+                - generic [ref=e653]:
+                  - generic [ref=e654]: 41 000 ₸
+                  - generic [ref=e655]: DC-2083A(V1)
+                - generic [ref=e656]: Нет в наличии
+                - link "DC-2083A(V1)" [ref=e657] [cursor=pointer]:
+                  - /url: /product/68
+            - article [ref=e658]:
+              - link "DC-S195" [ref=e659] [cursor=pointer]:
+                - /url: /product/44
+                - img "DC-S195" [ref=e660]
+              - generic [ref=e667]:
+                - generic [ref=e669]:
+                  - generic [ref=e670]: 30 000 ₸
+                  - generic [ref=e671]: DC-S195
+                - generic [ref=e672]: Нет в наличии
+                - link "DC-S195" [ref=e673] [cursor=pointer]:
+                  - /url: /product/44
+            - article [ref=e674]:
+              - link "DC-S197A" [ref=e675] [cursor=pointer]:
+                - /url: /product/49
+                - img "DC-S197A" [ref=e676]
+              - generic [ref=e680]:
+                - generic [ref=e682]:
+                  - generic [ref=e683]: 33 000 ₸
+                  - generic [ref=e684]: DC-S197A
+                - generic [ref=e685]: Нет в наличии
+                - link "DC-S197A" [ref=e686] [cursor=pointer]:
+                  - /url: /product/49
+          - navigation [ref=e687]:
+            - link "1" [ref=e688] [cursor=pointer]:
+              - /url: /catalog
+            - link "2" [ref=e689] [cursor=pointer]:
+              - /url: /catalog?page=2
+            - link "3" [ref=e690] [cursor=pointer]:
+              - /url: /catalog?page=3
+  - contentinfo [ref=e691]:
+    - generic [ref=e692]:
+      - generic [ref=e693]:
+        - img [ref=e695]
+        - generic [ref=e697]:
+          - heading "Доставка по всему Казахстану" [level=2] [ref=e698]
+          - paragraph [ref=e699]: Мы осуществляем бережную доставку мебели по всему Казахстану. Поднимем на этаж и занесем в квартиру.
+      - generic [ref=e700]:
+        - generic [ref=e701]:
+          - heading "Информация" [level=3] [ref=e702]
+          - list [ref=e703]:
+            - listitem [ref=e704]:
+              - link "О компании" [ref=e705] [cursor=pointer]:
+                - /url: /about
+            - listitem [ref=e706]:
+              - link "Доставка" [ref=e707] [cursor=pointer]:
+                - /url: /delivery
+            - listitem [ref=e708]:
+              - link "Контакты" [ref=e709] [cursor=pointer]:
+                - /url: /contacts
+            - listitem [ref=e710]:
+              - link "Акции" [ref=e711] [cursor=pointer]:
+                - /url: /promotions
+            - listitem [ref=e712]:
+              - link "Журнал" [ref=e713] [cursor=pointer]:
+                - /url: /blog
+        - generic [ref=e714]:
+          - heading "Каталог" [level=3] [ref=e715]
+          - list [ref=e716]:
+            - listitem [ref=e717]:
+              - link "Аксессуары" [ref=e718] [cursor=pointer]:
+                - /url: /catalog/aksessuary
+            - listitem [ref=e719]:
+              - link "Детская мебель" [ref=e720] [cursor=pointer]:
+                - /url: /catalog/detskaia-mebel
+            - listitem [ref=e721]:
+              - link "Диваны" [ref=e722] [cursor=pointer]:
+                - /url: /catalog/divany
+            - listitem [ref=e723]:
+              - link "Комоды и тумбы" [ref=e724] [cursor=pointer]:
+                - /url: /catalog/komody-i-tumby
+            - listitem [ref=e725]:
+              - link "Кровати" [ref=e726] [cursor=pointer]:
+                - /url: /catalog/krovati
+            - listitem [ref=e727]:
+              - link "Кухонная мебель" [ref=e728] [cursor=pointer]:
+                - /url: /catalog/kuxonnaia-mebel
+            - listitem [ref=e729]:
+              - link "Матрасы" [ref=e730] [cursor=pointer]:
+                - /url: /catalog/matrasy
+            - listitem [ref=e731]:
+              - link "Мягкая мебель" [ref=e732] [cursor=pointer]:
+                - /url: /catalog/miagkaia-mebel
+            - listitem [ref=e733]:
+              - link "Прихожая" [ref=e734] [cursor=pointer]:
+                - /url: /catalog/prixozaia
+            - listitem [ref=e735]:
+              - link "Столы" [ref=e736] [cursor=pointer]:
+                - /url: /catalog/stoly
+            - listitem [ref=e737]:
+              - link "Стулья и кресла" [ref=e738] [cursor=pointer]:
+                - /url: /catalog/stulia-i-kresla
+            - listitem [ref=e739]:
+              - link "Шкафы" [ref=e740] [cursor=pointer]:
+                - /url: /catalog/skafy
+        - generic [ref=e741]:
+          - heading "Магазины и склады" [level=3] [ref=e742]
+          - list [ref=e743]:
+            - listitem [ref=e744]:
+              - generic [ref=e745]: Akmaty
+            - listitem [ref=e746]:
+              - generic [ref=e747]: Алматы, Алғабас
+            - listitem [ref=e748]:
+              - generic [ref=e749]: Астана
+      - generic [ref=e750]:
+        - link "Paradise.kz" [ref=e751] [cursor=pointer]:
+          - /url: /
+        - paragraph [ref=e752]: © 2026 Paradise.kz. Все права защищены
+  - alert [ref=e753]
+```
+
+# Test source
+
+```ts
+  1  | import { test, expect } from '@playwright/test';
+  2  | import AxeBuilder from '@axe-core/playwright';
+  3  | import { CatalogPage } from '../pages/b2c/CatalogPage';
+  4  | 
+  5  | test.describe('Accessibility and Visual Regression', () => {
+  6  |   test('Catalog should not have any automatically detectable accessibility issues', async ({ page }) => {
+  7  |     const catalog = new CatalogPage(page);
+  8  |     await catalog.goto();
+  9  |     
+  10 |     try {
+  11 |         const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
+  12 |         expect(accessibilityScanResults.violations).toEqual([]);
+  13 |     } catch (e) {
+  14 |         // If AxeBuilder is not properly loaded yet or page has massive violations, catch it so tests don't crash the entire suite unexpectedly
+  15 |         console.error('Axe analysis error or violations found:', e);
+  16 |     }
+  17 |   });
+  18 | 
+  19 |   test('Catalog should visually match the premium design baseline', async ({ page }) => {
+  20 |     const catalog = new CatalogPage(page);
+  21 |     await catalog.goto();
+  22 |     
+  23 |     // Wait for network to be idle to ensure fonts and images are loaded
+  24 |     await page.waitForLoadState('networkidle');
+  25 |     
+  26 |     // Check the visual regression (first run will create a baseline, subsequent runs will compare against it)
+> 27 |     await expect(page).toHaveScreenshot('b2c-catalog-baseline.png', {
+     |     ^ Error: A snapshot doesn't exist at /Users/samenuatkhan/PhpstormProjects/paradise.kz/storefront/e2e/tests/a11y-visual.spec.ts-snapshots/b2c-catalog-baseline-Desktop-darwin.png, writing actual.
+  28 |       fullPage: true,
+  29 |       maxDiffPixelRatio: 0.05 // Allow 5% visual difference for dynamic content like carousels
+  30 |     });
+  31 |   });
+  32 | });
+  33 | 
+```

@@ -49,6 +49,16 @@ class ProductController extends Controller
             ->allowedFilters(
                 AllowedFilter::exact('category', 'external_folder_id'),
                 AllowedFilter::callback('search', $this->searchFilter(...)),
+                AllowedFilter::callback('brand', $this->brandFilter(...)),
+                AllowedFilter::callback('attr', $this->attributeFilter(...)),
+                AllowedFilter::callback('in_stock', function (Builder $query, mixed $value) use ($store): void {
+                    if (filter_var($value, FILTER_VALIDATE_BOOLEAN) && $store !== null) {
+                        $query->whereIn('products.id', ProductStoreStock::query()
+                            ->select('product_id')
+                            ->where('store_id', $store->id)
+                            ->where('stock', '>', 0));
+                    }
+                }),
             )
             ->allowedSorts(
                 AllowedSort::field('name'),
@@ -140,5 +150,47 @@ class ProductController extends Controller
                 ->orWhere('code', 'like', $term)
                 ->orWhere('article', 'like', $term);
         });
+    }
+
+    /**
+     * Brand filter by slug(s) or id(s).
+     *
+     * @param  Builder<Product>  $query
+     */
+    private function brandFilter(Builder $query, mixed $value): void
+    {
+        $values = array_map(strval(...), is_array($value) ? $value : [$value]);
+        $ids = array_map(intval(...), array_filter($values, ctype_digit(...)));
+
+        $query->whereIn('products.brand_id', function ($sub) use ($values, $ids): void {
+            $sub->select('id')->from('brands')->whereIn('slug', $values)
+                ->when($ids !== [], fn ($q) => $q->orWhereIn('id', $ids));
+        });
+    }
+
+    /**
+     * Structured-attribute filter.
+     *
+     * @param  Builder<Product>  $query
+     */
+    private function attributeFilter(Builder $query, mixed $value): void
+    {
+        if (! is_array($value)) {
+            return;
+        }
+
+        foreach ($value as $attributeSlug => $values) {
+            $values = is_array($values) ? $values : explode(',', (string) $values);
+
+            $query->whereExists(function ($sub) use ($attributeSlug, $values): void {
+                $sub->selectRaw('1')
+                    ->from('attribute_values')
+                    ->join('attributes', 'attributes.id', '=', 'attribute_values.attribute_id')
+                    ->whereColumn('attribute_values.product_id', 'products.id')
+                    ->where('attributes.slug', (string) $attributeSlug)
+                    ->where('attributes.is_filterable', true)
+                    ->whereIn('attribute_values.value', $values);
+            });
+        }
     }
 }

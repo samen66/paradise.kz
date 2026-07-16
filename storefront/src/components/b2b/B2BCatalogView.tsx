@@ -27,6 +27,10 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
   // Convert Next.js ReadonlyURLSearchParams to a plain Record for `toApiParams`
   const paramsRecord: Record<string, string | string[] | undefined> = {};
   searchParams.forEach((value, key) => {
+    // Strip price-related filters and sorts since B2B prices are dynamic
+    if (key === "price_min" || key === "price_max") return;
+    if (key === "sort" && (value === "price" || value === "-price")) return;
+
     if (paramsRecord[key]) {
       const existing = paramsRecord[key];
       if (Array.isArray(existing)) {
@@ -102,7 +106,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
 
   return (
     <div className="grid gap-8 lg:grid-cols-[260px_1fr] pb-24 lg:pb-0">
-      <FilterSidebar facets={facets} />
+      <FilterSidebar facets={facets} isB2B={true} />
 
       <div>
         <div className="mb-8">
@@ -118,7 +122,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
         <div className="mb-5 flex flex-wrap items-center gap-2">
           <InStockChip searchParams={paramsRecord} pathname={pathname} />
           <div className="ml-auto">
-            <SortSelect />
+            <SortSelect isB2B={true} />
           </div>
           <div className="w-full">
             <ActiveFilters searchParams={paramsRecord} pathname={pathname} />
@@ -128,7 +132,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
         {products.data.length === 0 ? (
           <div className="rounded-2xl bg-surface py-16 text-center text-muted">{t("empty")}</div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4">
             {products.data.map((product) => (
               <ProductCard key={product.id} product={product} isB2B={true} />
             ))}

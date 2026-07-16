@@ -9,7 +9,7 @@ import { Drawer } from "./ui/Drawer";
 import type { Facets } from "@/lib/types";
 import { tValue } from "@/lib/format";
 
-export function FilterSidebar({ facets }: { facets: Facets }) {
+export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boolean }) {
   const t = useTranslations("catalog");
   const router = useRouter();
   const pathname = usePathname();
@@ -63,46 +63,48 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
 
   const FilterContent = () => (
     <div className="space-y-6 text-sm">
-      <details open className="group">
-        <summary className="font-semibold text-ink cursor-pointer list-none flex items-center justify-between [&::-webkit-details-marker]:hidden select-none">
-          {t("price")}
-          <Chevron />
-        </summary>
-        <div className="pt-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              value={priceMin}
-              onChange={(event) => setPriceMin(event.target.value)}
-              placeholder={`${t("from")}${facets.price.min !== null ? ` ${Math.floor(facets.price.min)}` : ""}`}
-              className={inputClass}
-            />
-            <input
-              type="number"
-              inputMode="numeric"
-              value={priceMax}
-              onChange={(event) => setPriceMax(event.target.value)}
-              placeholder={`${t("to")}${facets.price.max !== null ? ` ${Math.ceil(facets.price.max)}` : ""}`}
-              className={inputClass}
-            />
+      {!isB2B && (
+        <details open className="group">
+          <summary className="font-semibold text-ink cursor-pointer list-none flex items-center justify-between [&::-webkit-details-marker]:hidden select-none">
+            {t("price")}
+            <Chevron />
+          </summary>
+          <div className="pt-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={priceMin}
+                onChange={(event) => setPriceMin(event.target.value)}
+                placeholder={`${t("from")}${facets.price.min !== null ? ` ${Math.floor(facets.price.min)}` : ""}`}
+                className={inputClass}
+              />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={priceMax}
+                onChange={(event) => setPriceMax(event.target.value)}
+                placeholder={`${t("to")}${facets.price.max !== null ? ` ${Math.ceil(facets.price.max)}` : ""}`}
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                apply((params) => {
+                  if (priceMin) params.set("price_min", priceMin);
+                  else params.delete("price_min");
+                  if (priceMax) params.set("price_max", priceMax);
+                  else params.delete("price_max");
+                })
+              }
+              className="mt-3 w-full rounded-xl bg-ink py-2.5 font-medium text-white transition hover:bg-ink-hover"
+            >
+              {t("apply")}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              apply((params) => {
-                if (priceMin) params.set("price_min", priceMin);
-                else params.delete("price_min");
-                if (priceMax) params.set("price_max", priceMax);
-                else params.delete("price_max");
-              })
-            }
-            className="mt-3 w-full rounded-xl bg-ink py-2.5 font-medium text-white transition hover:bg-ink-hover"
-          >
-            {t("apply")}
-          </button>
-        </div>
-      </details>
+        </details>
+      )}
 
       <div className="pt-2">
         <label

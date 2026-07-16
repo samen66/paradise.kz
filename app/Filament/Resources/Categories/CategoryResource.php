@@ -23,15 +23,24 @@ class CategoryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $navigationLabel = 'Категории';
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.categories.plural');
+    }
 
-    protected static ?string $modelLabel = 'Категория';
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.categories.label');
+    }
 
-    protected static ?string $pluralModelLabel = 'Категории';
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.resources.categories.plural');
+    }
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Каталог';
+        return __('admin.navigation.catalog'); // Will add to lang
     }
 
     public static function form(Schema $schema): Schema

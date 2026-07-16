@@ -20,19 +20,21 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="space-y-14 sm:space-y-16">
-      <BannerCarousel banners={home.data.banners} />
+      <div className="bg-panel rounded-3xl p-6 sm:p-10 mb-10 -mt-4">
+        <BannerCarousel banners={home.data.banners} />
 
-      {rootCategories.length > 0 ? (
-        <section>
-          <div className="mb-6 flex items-baseline justify-between">
-            <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">{tHome("catalog")}</h2>
-            <Link href="/catalog" className="text-sm font-medium text-ink hover:text-ink/70">
-              {tHome("viewAll")}
-            </Link>
-          </div>
-          <CategoryIcons categories={rootCategories} />
-        </section>
-      ) : null}
+        {rootCategories.length > 0 ? (
+          <section className="mt-10">
+            <div className="mb-6 flex items-baseline justify-between">
+              <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">{tHome("catalog")}</h2>
+              <Link href="/catalog" className="text-sm font-medium text-ink hover:text-ink/70">
+                {tHome("viewAll")}
+              </Link>
+            </div>
+            <CategoryIcons categories={rootCategories} />
+          </section>
+        ) : null}
+      </div>
 
       {home.data.collections.map((collection) => (
         <section key={collection.id}>
