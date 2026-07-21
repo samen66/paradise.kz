@@ -1,5 +1,11 @@
 import { ProductCard } from "@/components/ProductCard";
-import { sampleProduct, sampleOutOfStockProduct } from "../support/sample-data";
+import {
+  sampleProduct,
+  sampleOutOfStockProduct,
+  sampleNewArrivalProduct,
+  sampleSaleProduct,
+  sampleNewArrivalSaleProduct,
+} from "../support/sample-data";
 
 export function InStock() {
   return (
@@ -30,6 +36,16 @@ export function Grid() {
     <div className="grid max-w-2xl grid-cols-2 gap-4">
       <ProductCard product={sampleProduct} />
       <ProductCard product={sampleOutOfStockProduct} />
+    </div>
+  );
+}
+
+export function Badges() {
+  return (
+    <div className="grid max-w-4xl grid-cols-3 gap-4">
+      <ProductCard product={sampleNewArrivalProduct} />
+      <ProductCard product={sampleSaleProduct} />
+      <ProductCard product={sampleNewArrivalSaleProduct} />
     </div>
   );
 }

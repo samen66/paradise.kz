@@ -125,6 +125,28 @@ export const sampleProducts: Product[] = [
 export const sampleProduct = sampleProducts[0];
 export const sampleOutOfStockProduct = sampleProducts[2];
 
+export const sampleNewArrivalProduct: Product = {
+  ...sampleProducts[1],
+  id: 105,
+  external_id: "wardrobe-oslo-3d-new",
+  is_new: true,
+};
+
+export const sampleSaleProduct: Product = {
+  ...sampleProducts[3],
+  id: 106,
+  external_id: "chair-office-ergo-sale",
+  old_price: 168000,
+};
+
+export const sampleNewArrivalSaleProduct: Product = {
+  ...sampleProducts[0],
+  id: 107,
+  external_id: "sofa-milan-3s-promo",
+  is_new: true,
+  old_price: 459900,
+};
+
 export const sampleCategories: Category[] = [
   {
     id: 10,
