@@ -5,9 +5,9 @@ import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useCart } from "@/lib/cart";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import type { CartValidation } from "@/lib/types";
+import type { CartValidation, Settings } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 
 export default function CartPage() {
@@ -18,8 +18,17 @@ export default function CartPage() {
   const { items, remove, setQuantity, clear } = useCart();
   const [mounted, setMounted] = useState(false);
   const [validation, setValidation] = useState<CartValidation | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    void apiGet<{ data: Settings }>("/public/settings", { locale, revalidate: false })
+      .then((response) => setSettings(response.data))
+      .catch(() => {});
+  }, [locale]);
+
+  const defaultStoreId = settings?.stores.find((s) => s.is_default)?.id ?? settings?.stores[0]?.id ?? null;
 
   const revalidate = useCallback(async () => {
     if (items.length === 0) {
@@ -29,7 +38,10 @@ export default function CartPage() {
     try {
       const response = await apiPost<{ data: CartValidation }>(
         "/public/cart/validate",
-        { items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })) },
+        {
+          store_id: defaultStoreId ?? undefined,
+          items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+        },
         { locale },
       );
       setValidation(response.data);
@@ -37,7 +49,7 @@ export default function CartPage() {
       // The cart still renders from local data if validation is unreachable.
       setValidation(null);
     }
-  }, [items, locale]);
+  }, [items, locale, defaultStoreId]);
 
   useEffect(() => {
     if (mounted) {
@@ -81,9 +93,9 @@ export default function CartPage() {
     validation?.subtotal ?? items.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
 
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
-  const freeDeliveryThreshold = 200000;
+  const freeDeliveryThreshold = settings?.free_delivery_from ?? 200000;
   const isFreeDelivery = subtotal >= freeDeliveryThreshold;
-  const deliveryPrice = 3500;
+  const deliveryPrice = validation?.delivery_cost ?? settings?.delivery_price ?? 3500;
   const total = subtotal + (isFreeDelivery || subtotal === 0 ? 0 : deliveryPrice);
   const remaining = freeDeliveryThreshold - subtotal;
   const showProgress = !isFreeDelivery && subtotal > 0;
