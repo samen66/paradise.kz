@@ -40,6 +40,7 @@ export default function CheckoutPage() {
   const [addressId, setAddressId] = useState<number | "new">("new");
   const [address, setAddress] = useState({ city: "", street: "", building: "", apartment: "", comment: "" });
   const [comment, setComment] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"kaspi" | "cash">("cash");
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -116,6 +117,7 @@ export default function CheckoutPage() {
         phone,
         email: email || undefined,
         store_id: storeId,
+        payment_method: paymentMethod,
         comment: comment || undefined,
         items: availableItems.map((line) => ({ product_id: line.product_id, quantity: line.quantity })),
         delivery:
@@ -288,6 +290,27 @@ export default function CheckoutPage() {
                 ) : null}
               </div>
             ) : null}
+          </section>
+
+          <section>
+            <h2 className={sectionTitleClasses}>{t("paymentMethodTitle")}</h2>
+            <div className="flex gap-2">
+              {(["cash", "kaspi"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setPaymentMethod(option)}
+                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                    paymentMethod === option
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white text-ink hover:border-ink"
+                  }`}
+                >
+                  <span aria-hidden="true">{option === "cash" ? "💵" : "📱"}</span>
+                  {t(option === "cash" ? "cashOnDelivery" : "kaspiPay")}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section>
