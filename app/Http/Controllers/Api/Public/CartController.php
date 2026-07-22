@@ -83,6 +83,7 @@ class CartController extends Controller
                 'problem' => $problem,
                 'name' => $product?->name,
                 'slug' => $product?->slug,
+                'article' => $product?->article,
                 'image' => $product?->getFirstMediaUrl(Product::IMAGE_COLLECTION, 'thumb') ?: null,
                 'price' => $price === null ? null : $price / 100,
                 'stock' => $stock,

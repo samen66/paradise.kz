@@ -159,6 +159,7 @@ export interface CartLineValidation {
   problem: "unavailable" | "no_price" | "insufficient_stock" | null;
   name: string | null;
   slug: string | null;
+  article: string | null;
   image: string | null;
   price: number | null;
   stock: number;
