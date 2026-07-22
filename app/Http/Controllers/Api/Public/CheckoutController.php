@@ -58,7 +58,7 @@ class CheckoutController extends Controller
         // this always ends in the job's existing non-transient "no
         // counterparty" failure — kept for a uniform push/status pipeline
         // across B2B and guest orders rather than special-casing the dispatch.
-        // PushOrderJob::dispatch($order);
+        PushOrderJob::dispatch($order);
         
         $resource = new OrderResource($order);
         if ($order->payment_method === 'kaspi') {
