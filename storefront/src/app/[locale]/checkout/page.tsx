@@ -7,7 +7,7 @@ import { apiGet, apiPost, ApiValidationError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
-import type { Address, CartValidation, Order, Settings } from "@/lib/types";
+import type { Address, CartValidation, CheckoutResponse, Order, Settings } from "@/lib/types";
 
 const pageTitleClasses =
   "mb-6 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-[34px] leading-tight";
@@ -128,13 +128,19 @@ export default function CheckoutPage() {
             : undefined,
       };
 
-      const response = await apiPost<{ data: Order }>("/public/checkout", payload, { locale, token });
+      const response = await apiPost<CheckoutResponse>("/public/checkout", payload, { locale, token });
 
       clear();
-      sessionStorage.setItem("last-order", JSON.stringify(response.data));
+      
+      if (response.payment_url) {
+        window.location.href = response.payment_url;
+        return;
+      }
+
+      sessionStorage.setItem("last-order", JSON.stringify({ number: response.data.number }));
       router.push(`/checkout/success?number=${encodeURIComponent(response.data.number)}`);
-    } catch (e) {
-      setErrors(e instanceof ApiValidationError ? e.messages : ["Не удалось оформить заказ. Попробуйте ещё раз."]);
+    } catch (e: any) {
+      setErrors(e?.messages || ["Не удалось оформить заказ. Попробуйте ещё раз."]);
       setBusy(false);
     }
   }

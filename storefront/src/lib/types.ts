@@ -205,6 +205,11 @@ export interface Order {
   items?: OrderItem[];
 }
 
+export interface CheckoutResponse {
+  data: Order;
+  payment_url?: string;
+}
+
 export interface Address {
   id: number;
   city: string;
