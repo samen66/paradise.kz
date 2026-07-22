@@ -58,6 +58,8 @@ class Product extends Model implements HasMedia
         'is_active',
         'synced_at',
         'b2b_min_order_qty',
+        'compare_at_price',
+        'is_new_arrival',
     ];
 
     /**
@@ -78,6 +80,8 @@ class Product extends Model implements HasMedia
             'is_active' => 'boolean',
             'synced_at' => 'datetime',
             'b2b_min_order_qty' => 'integer',
+            'compare_at_price' => 'integer',
+            'is_new_arrival' => 'boolean',
         ];
     }
 

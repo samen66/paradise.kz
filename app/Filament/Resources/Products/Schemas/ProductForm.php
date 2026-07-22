@@ -3,14 +3,14 @@
 namespace App\Filament\Resources\Products\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -42,10 +42,16 @@ class ProductForm
                                     ->searchable()
                                     ->preload(),
                             ]),
-                        Toggle::make('is_active')
-                            ->label(__('admin.fields.is_active'))
-                            ->helperText(__('admin.helpers.is_active'))
-                            ->required(),
+                        Grid::make(2)
+                            ->schema([
+                                Toggle::make('is_active')
+                                    ->label(__('admin.fields.is_active'))
+                                    ->helperText(__('admin.helpers.is_active'))
+                                    ->required(),
+                                Toggle::make('is_new_arrival')
+                                    ->label(__('admin.fields.is_new_arrival'))
+                                    ->helperText(__('admin.helpers.is_new_arrival')),
+                            ]),
                     ]),
 
                 Section::make(__('admin.sections.prices_and_stock'))
@@ -62,12 +68,12 @@ class ProductForm
                                 TextInput::make('retail_price')
                                     ->label(__('admin.fields.retail_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
                                     ->numeric(),
                                 TextInput::make('b2b_price')
                                     ->label(__('admin.fields.b2b_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
                                     ->numeric(),
                             ]),
                         Grid::make(3)
@@ -75,12 +81,12 @@ class ProductForm
                                 TextInput::make('purchase_price')
                                     ->label(__('admin.fields.purchase_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
                                     ->numeric(),
                                 TextInput::make('min_price')
                                     ->label(__('admin.fields.min_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly') . ' ' . __('admin.helpers.in_kopecks'))
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
                                     ->numeric(),
                                 TextInput::make('b2b_min_order_qty')
                                     ->label(__('admin.fields.b2b_min_order_qty'))
@@ -88,6 +94,10 @@ class ProductForm
                                     ->numeric()
                                     ->minValue(1),
                             ]),
+                        TextInput::make('compare_at_price')
+                            ->label(__('admin.fields.compare_at_price'))
+                            ->helperText(__('admin.helpers.compare_at_price').' '.__('admin.helpers.in_kopecks'))
+                            ->numeric(),
                     ]),
 
                 Section::make(__('admin.sections.dimensions'))

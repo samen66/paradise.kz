@@ -2,7 +2,7 @@
 // (.design-sync/previews/*.tsx). Not part of the app — repo-owned fixture
 // data mirroring src/lib/types.ts, used only to give preview cards
 // realistic content instead of "foo"/"test" placeholders.
-import type { Category, Facets, Product, Settings } from "@/lib/types";
+import type { Banner, Category, Facets, Product, Settings } from "@/lib/types";
 
 function img(seed: string): { thumb: string; medium: string; full: string } {
   return {
@@ -209,6 +209,33 @@ export const sampleSettings: Settings = {
     { id: 2, name: "ТЦ Мега Алматы", address: "г. Алматы, ул. Розыбакиева, 247а", is_default: false },
   ],
 };
+
+export const sampleBanners: Banner[] = [
+  {
+    id: 1,
+    title: "Летняя коллекция диванов",
+    subtitle: "Скидки до 25% на модели из ткани и велюра",
+    url: "/catalog/divany",
+    image: img("banner-summer-sofas").full,
+    image_mobile: img("banner-summer-sofas").medium,
+  },
+  {
+    id: 2,
+    title: "Новинки для спальни",
+    subtitle: null,
+    url: "/catalog/spalnya",
+    image: img("banner-bedroom").full,
+    image_mobile: img("banner-bedroom").medium,
+  },
+  {
+    id: 3,
+    title: null,
+    subtitle: null,
+    url: null,
+    image: img("banner-plain").full,
+    image_mobile: img("banner-plain").medium,
+  },
+];
 
 export const sampleFacets: Facets = {
   attributes: [

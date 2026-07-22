@@ -1,10 +1,26 @@
 {
   "home": {
     "catalog": "Каталог",
+    "categories": "Категории",
     "viewAll": "Смотреть все →",
     "heroTitle": "Paradise.kz — гипермаркет мебели",
     "heroText": "Мы предлагаем стильную и надежную мебель для вашего дома. Наша цель — сделать процесс обустройства интерьера простым и приятным. Сотни товаров всегда в наличии на наших складах в Казахстане. Откройте для себя новые коллекции для гостиной, спальни и кухни.",
-    "goToCatalog": "Перейти в каталог"
+    "goToCatalog": "Перейти в каталог",
+    "b2bLabel": "Для бизнеса",
+    "b2bTitle": "Оптовые поставки мебели для офисов и HoReCa",
+    "b2bText": "Персональный менеджер, отсрочка платежа и спеццены от 5 единиц.",
+    "b2bCta": "Оставить заявку",
+    "serviceLabel": "Сервис",
+    "serviceTitle": "Сборка и подъём — в день доставки",
+    "serviceText": "Собственная служба монтажа. Уберём упаковку и вынесем мусор.",
+    "serviceCta": "Подробнее",
+    "aiDesignBadge": "Новое · AI-подбор",
+    "aiDesignTitle": "AI-дизайн интерьера из товаров Paradise.kz",
+    "aiDesignText": "Опишите комнату или загрузите фото — получите готовый интерьер, смету и заказ в один клик.",
+    "aiDesignCta": "Попробовать бесплатно",
+    "shortsTitle": "Смотреть Shorts",
+    "shortsText": "Короткие видео о товарах — как это выглядит вживую",
+    "shortsViewAll": "Все видео"
   },
   "common": {
     "storeName": "Paradise.kz",
@@ -23,7 +39,8 @@
     "backHome": "Вернуться на главную",
     "account": "Кабинет",
     "buy": "Купить",
-    "favorite": "В избранное"
+    "favorite": "В избранное",
+    "newArrival": "Новинка"
   },
   "nav": {
     "about": "О компании",
@@ -32,7 +49,10 @@
     "promotions": "Акции",
     "blog": "Журнал",
     "allCategories": "Все категории",
-    "menu": "Меню"
+    "menu": "Меню",
+    "showrooms": "Шоурумы",
+    "aiDesign": "AI-дизайн",
+    "shorts": "Shorts"
   },
   "catalog": {
     "title": "Каталог",
@@ -50,7 +70,8 @@
     "sortPriceDesc": "Сначала дороже",
     "sortNew": "Сначала новые",
     "empty": "По вашему запросу ничего не найдено",
-    "found": "Найдено товаров: {count}"
+    "found": "Найдено товаров: {count}",
+    "shown": "Показано {shown} из {total} товаров"
   },
   "product": {
     "article": "Артикул",
@@ -59,7 +80,45 @@
     "brand": "Бренд",
     "description": "Описание",
     "characteristics": "Характеристики",
-    "variants": "Варианты"
+    "variants": "Варианты",
+    "reviews": "Отзывы",
+    "reviewsCount": "{count} отзывов",
+    "leaveReview": "Оставить отзыв",
+    "reviewHelpText": "Поделитесь впечатлениями о товаре — это поможет другим покупателям",
+    "yourRating": "Ваша оценка",
+    "ratingHint": "Нажмите на звёзды",
+    "ratingLabel": "{n} из 5",
+    "yourName": "Ваше имя",
+    "reviewPlaceholder": "Расскажите о качестве, доставке, сборке…",
+    "submitReview": "Отправить отзыв",
+    "reviewSubmitted": "Спасибо! Ваш отзыв опубликован",
+    "verifiedPurchase": "Проверенная покупка",
+    "helpful": "Отзыв полезен?",
+    "yes": "Да",
+    "no": "Нет",
+    "shopBadge": "Магазин",
+    "filterAll": "Все",
+    "filterWithPhotos": "С фото",
+    "sorting": "Сортировка",
+    "sortNew": "Сначала новые",
+    "sortHelpful": "Сначала полезные",
+    "sortHigh": "Сначала высокие оценки",
+    "sortLow": "Сначала низкие оценки",
+    "similar": "Похожие товары",
+    "showrooms": "Есть в наличии в шоурумах",
+    "showroomHint": "Посмотрите и заберите сегодня — наличие указано для каждой точки.",
+    "showOnMap": "Показать на карте",
+    "details": "Подробнее",
+    "buildRoute": "Построить маршрут",
+    "showroomPage": "Страница шоурума",
+    "deliveryAlmaty": "Доставка по Алматы",
+    "deliveryFree": "Бесплатно",
+    "deliveryDate": "Срок доставки",
+    "assemblyLabel": "Сборка и подъём",
+    "assemblyValue": "В день доставки",
+    "warranty": "Гарантия",
+    "colorLabel": "Цвет обивки",
+    "freeDeliveryNote": "Нет удобной точки рядом? Бесплатная доставка по Алматы."
   },
   "search": {
     "title": "Результаты поиска",
@@ -79,7 +138,18 @@
       "unavailable": "Товар больше недоступен",
       "no_price": "Цена не определена",
       "insufficient_stock": "Недостаточно на складе"
-    }
+    },
+    "clearCart": "Очистить корзину",
+    "itemsCount": "{count, plural, one {# товар} few {# товара} other {# товаров}}",
+    "itemsSubtotal": "{count, plural, one {# товар} few {# товара} other {# товаров}} на сумму",
+    "promoCode": "Промокод",
+    "apply": "Применить",
+    "freeDeliveryProgress": "До бесплатной доставки ещё {amount}",
+    "deliveryTerms": "Доставка по Алматы — 1–2 дня",
+    "assemblyTerms": "Сборка и подъём включены",
+    "returnTerms": "Возврат в течение 14 дней",
+    "article": "Артикул {article}",
+    "paymentMethods": "Оплата картой, Kaspi или наличными при получении"
   },
   "footer": {
     "contacts": "Контакты",

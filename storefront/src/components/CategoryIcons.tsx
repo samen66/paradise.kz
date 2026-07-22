@@ -4,11 +4,19 @@ import { useLocale } from "next-intl";
 import { tValue } from "@/lib/format";
 
 const ICONS: Record<string, string> = {
-  sofa: "🛋️",
-  bed: "🛏️",
-  chair: "🪑",
-  storage: "🗄️",
-  table: "🪑",
+  gostinaya: "🛋️",
+  spalnya: "🛏️",
+  kuhnya: "🍽️",
+  ofis: "🖥️",
+  divany: "🛋️",
+  kresla: "🪑",
+  krovati: "🛏️",
+  shkafy: "🗄️",
+  komody: "🗄️",
+  stoly: "🪑",
+  stulya: "🪑",
+  "tumby-pod-tv": "📺",
+  "ofisnye-kresla": "💺",
   default: "🏠",
 };
 

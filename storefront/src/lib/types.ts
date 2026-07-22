@@ -42,6 +42,8 @@ export interface Product {
   stock?: number;
   in_stock: boolean;
   price: number | null;
+  old_price?: number | null;
+  is_new?: boolean;
   b2b_min_order_qty?: number;
   external_folder_id?: string;
   country: string | null;
@@ -177,6 +179,7 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  image?: string | null;
 }
 
 export interface Order {

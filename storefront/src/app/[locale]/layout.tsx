@@ -8,6 +8,7 @@ import { apiGet } from "@/lib/api";
 import type { Category, Settings } from "@/lib/types";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AIAssistant } from "@/components/AIAssistant";
 import { ToastContainer } from "@/components/ui/Toast";
 import "../globals.css";
 
@@ -79,6 +80,7 @@ export default async function LocaleLayout({
             {children}
           </main>
           <Footer settings={settings} categories={categories} />
+          <AIAssistant />
           <ToastContainer />
         </NextIntlClientProvider>
       </body>

@@ -81,6 +81,32 @@ class PublicCatalogTest extends TestCase
     }
 
     #[Test]
+    public function is_new_arrival_flag_is_exposed_as_is_new(): void
+    {
+        $newArrival = Product::factory()->create(['is_new_arrival' => true]);
+        $regular = Product::factory()->create(['is_new_arrival' => false]);
+
+        $response = $this->getJson('/api/public/products')->assertOk();
+
+        $byId = collect($response->json('data'))->keyBy('id');
+        $this->assertTrue($byId[$newArrival->id]['is_new']);
+        $this->assertFalse($byId[$regular->id]['is_new']);
+    }
+
+    #[Test]
+    public function compare_at_price_becomes_old_price_only_when_above_the_resolved_price(): void
+    {
+        $discounted = Product::factory()->create(['retail_price' => 100_000, 'compare_at_price' => 150_000]);
+        $stale = Product::factory()->create(['retail_price' => 100_000, 'compare_at_price' => 90_000]);
+
+        $response = $this->getJson('/api/public/products')->assertOk();
+
+        $byId = collect($response->json('data'))->keyBy('id');
+        $this->assertEqualsWithDelta(1500.0, $byId[$discounted->id]['old_price'], 0.001);
+        $this->assertNull($byId[$stale->id]['old_price']);
+    }
+
+    #[Test]
     public function stock_reflects_the_default_store_when_none_is_requested(): void
     {
         $default = Store::factory()->create(['is_default' => true, 'name' => 'Б-склад']);

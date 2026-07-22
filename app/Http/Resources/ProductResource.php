@@ -49,6 +49,8 @@ class ProductResource extends JsonResource
             'stock' => $this->when($this->showStockQuantity(), $this->resolvedStock()),
             'in_stock' => $this->resolvedStock() > 0,
             'price' => $this->majorPrice(),
+            'old_price' => $this->majorComparePrice(),
+            'is_new' => (bool) $this->is_new_arrival,
             'b2b_min_order_qty' => $this->resource->effectiveB2bMinOrderQty(),
             'external_folder_id' => $this->external_folder_id,
             // Mirrored ERP data so the B2B site never has to call the ERP at
@@ -144,6 +146,23 @@ class ProductResource extends JsonResource
         $kopecks = $this->resource->resolved_price ?? null;
 
         if ($kopecks === null) {
+            return null;
+        }
+
+        return $kopecks / 100;
+    }
+
+    /**
+     * Admin-set "was" price for the storefront discount badge, in major units
+     * (₸). Null unless it is actually higher than the resolved price — a
+     * stale compare_at_price left below the current price would render as a
+     * negative discount, so it's suppressed rather than shown.
+     */
+    private function majorComparePrice(): ?float
+    {
+        $kopecks = $this->resource->compare_at_price ?? null;
+
+        if ($kopecks === null || $kopecks <= ($this->resource->resolved_price ?? 0)) {
             return null;
         }
 

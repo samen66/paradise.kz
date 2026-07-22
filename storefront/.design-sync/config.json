@@ -23,6 +23,11 @@
     "Modal": { "cardMode": "single", "viewport": "480x420" },
     "Drawer": { "cardMode": "single", "viewport": "420x480" },
     "ToastContainer": { "cardMode": "single", "viewport": "420x200" },
-    "HeaderBurger": { "viewport": "375x140" }
+    "HeaderBurger": { "viewport": "375x140" },
+    "AccountLink": { "viewport": "1100x120" },
+    "CartBadge": { "viewport": "1100x120" },
+    "FilterSidebar": { "cardMode": "single", "viewport": "1100x1080" },
+    "B2BCatalogView": { "cardMode": "single", "viewport": "1400x1300" },
+    "B2BHeader": { "viewport": "1200x160" }
   }
 }

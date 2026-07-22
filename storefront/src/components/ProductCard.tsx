@@ -9,8 +9,9 @@ import { formatPrice, tValue } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import { AddToCartButton } from "./AddToCartButton";
 import { FavoriteButton } from "./FavoriteButton";
+import { Badge } from "./ui/Badge";
 
-export function ProductCard({ product, isB2B = false }: { product: Product; isB2B?: boolean }) {
+export function ProductCard({ product, isB2B = false, showOverlay = true, showAddToCart = true }: { product: Product; isB2B?: boolean; showOverlay?: boolean; showAddToCart?: boolean }) {
   const locale = useLocale();
   const t = useTranslations("common");
   const outOfStockText = t("outOfStock");
@@ -19,6 +20,11 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
   const LinkComponent = isB2B ? NextLink : I18nLink;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const discountPercent =
+    product.old_price && product.price && product.old_price > product.price
+      ? Math.round((1 - product.price / product.old_price) * 100)
+      : null;
 
   const imagesToDisplay = product.images?.length > 0 
     ? product.images.slice(0, 5) 
@@ -31,6 +37,12 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
         className="relative mb-3 block w-full aspect-square overflow-hidden rounded-xl bg-card group/image"
         onMouseLeave={() => setActiveImageIndex(0)}
       >
+        {showOverlay && (product.is_new || discountPercent) && (
+          <div className="absolute left-3 top-3 z-20 flex flex-col gap-1.5">
+            {product.is_new && <Badge variant="mint">{t("newArrival")}</Badge>}
+            {discountPercent ? <Badge variant="sale">-{discountPercent}%</Badge> : null}
+          </div>
+        )}
         {imagesToDisplay.length > 0 ? (
           <>
             <Image
@@ -69,7 +81,7 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
             </svg>
           </div>
         )}
-        <FavoriteButton productId={product.id} className="absolute right-3 top-3 z-30" />
+        {showOverlay && <FavoriteButton productId={product.id} className="absolute right-3 top-3 z-30" />}
       </LinkComponent>
 
       <div className="flex flex-col flex-1 px-1 pt-1">
@@ -80,7 +92,7 @@ export function ProductCard({ product, isB2B = false }: { product: Product; isB2
             {product.article && <span className="text-xs text-muted">{product.article}</span>}
           </div>
           
-          {product.in_stock && (
+          {showAddToCart && product.in_stock && (
             <div className="flex-shrink-0">
               <AddToCartButton product={product} compact isB2B={isB2B} />
             </div>

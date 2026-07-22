@@ -25,6 +25,11 @@
   --color-sale: #e5482d; /* discount badge background */
   --color-sale-ink: #ffffff;
 
+  /* Product page accents */
+  --color-star: #f5a623; /* review star fill */
+  --color-star-empty: #e5e1da;
+  --color-red-600: #c8372f; /* showroom pin, accent links */
+
   /* Legacy alias — existing `text-brand` usages resolve to ink, matching the
      restrained near-black link style of the reference design. */
   --color-brand: #404040;

@@ -84,9 +84,40 @@ export async function Header({
       </div>
 
       {rootCategories.length > 0 ? (
-        <nav className="border-t border-line hidden md:block relative">
-          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <nav className="border-t border-line hidden md:flex items-center justify-between gap-6 relative">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10 flex-1 flex items-center justify-between gap-6 w-full">
             <MegaMenu categories={rootCategories} />
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Link
+                href="/showrooms"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-surface"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 21s7-6.4 7-11a7 7 0 10-14 0c0 4.6 7 11 7 11z" stroke="#c8372f" strokeWidth={2} />
+                  <circle cx="12" cy="10" r="2.4" fill="#c8372f" />
+                </svg>
+                {tNav("showrooms")}
+              </Link>
+              <Link
+                href="/ai-design"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-ink transition hover:opacity-80"
+                style={{ background: "linear-gradient(135deg, rgba(200,55,47,0.10), rgba(232,137,79,0.12))" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3l1.9 4.9L19 9.8l-4.1 3 1.4 5.2L12 15.4 7.7 18l1.4-5.2L5 9.8l5.1-1.9L12 3z" fill="#c8372f" />
+                </svg>
+                {tNav("aiDesign")}
+              </Link>
+              <Link
+                href="/shorts"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-surface"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" fill="#c8372f" />
+                </svg>
+                {tNav("shorts")}
+              </Link>
+            </div>
           </div>
         </nav>
       ) : null}

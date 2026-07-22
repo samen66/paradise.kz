@@ -197,7 +197,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
 
   return (
     <>
-      <aside className="hidden lg:block h-fit rounded-2xl bg-transparent p-5 lg:sticky lg:top-24">
+      <aside className="hidden lg:block h-fit rounded-2xl bg-transparent p-5 lg:sticky lg:top-[130px]">
         <FilterContent />
       </aside>
 

@@ -40,7 +40,7 @@ export function Pagination({
   });
 
   return (
-    <nav className="mt-10 flex justify-center gap-1.5">
+    <nav className="flex justify-center gap-1.5">
       {withGaps.map((entry, index) =>
         entry === "gap" ? (
           <span key={`gap-${index}`} className="grid h-9 w-9 place-items-center text-muted">

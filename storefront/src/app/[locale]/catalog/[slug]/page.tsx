@@ -75,20 +75,6 @@ export default async function CategoryPage({
         ]}
       />
 
-      {(category.children ?? []).length > 0 ? (
-        <div className="mb-6 flex flex-wrap gap-2">
-          {category.children!.map((child) => (
-            <Link
-              key={child.id}
-              href={`/catalog/${child.slug}`}
-              className="rounded-full border border-line bg-white px-4 py-2 text-sm text-ink transition hover:border-ink"
-            >
-              {tValue(child.name, locale)}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
       <CatalogView
         locale={locale}
         searchParams={await searchParams}
@@ -96,6 +82,7 @@ export default async function CategoryPage({
         pathname={`/catalog/${slug}`}
         title={tValue(category.name, locale)}
         seoDescription={tValue(category.seo_description, locale)}
+        subcategories={category.children}
       />
     </div>
   );
