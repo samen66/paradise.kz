@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // TODO: Replace with real Kaspi Pay merchant API integration.
+    // When ready, POST to Kaspi merchant API and return redirect URL from their response.
+    'kaspi' => [
+        'payment_base_url' => env('KASPI_PAYMENT_BASE_URL', 'https://kaspi.kz/pay/mock'),
+    ],
+
 ];
