@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes } from "react";
 
 const variants = {
-  primary: "bg-ink text-white hover:bg-ink-hover",
-  secondary: "border border-ink bg-white text-ink hover:bg-surface",
+  primary: "bg-ink text-ink-inverse hover:bg-ink-hover",
+  secondary: "border border-ink bg-card text-ink hover:bg-surface",
   ghost: "text-ink hover:bg-surface",
   danger: "bg-sale text-sale-ink hover:opacity-90",
 } as const;

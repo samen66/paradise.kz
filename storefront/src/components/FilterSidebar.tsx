@@ -53,7 +53,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
   }
 
   const inputClass =
-    "w-full rounded-xl border border-line bg-white px-3 py-2 text-ink placeholder:text-muted outline-none focus:border-line-strong";
+    "w-full rounded-xl border border-line bg-card px-3 py-2 text-ink placeholder:text-muted outline-none focus:border-line-strong";
 
   const Chevron = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4 text-muted transition group-open:rotate-180">
@@ -98,7 +98,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
                   else params.delete("price_max");
                 })
               }
-              className="mt-3 w-full rounded-xl bg-ink py-2.5 font-medium text-white transition hover:bg-ink-hover"
+              className="mt-3 w-full rounded-xl bg-inverse py-2.5 font-medium text-ink-inverse transition hover:opacity-90"
             >
               {t("apply")}
             </button>
@@ -114,7 +114,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
         >
           <input
             type="checkbox"
-            className="peer h-4 w-4 rounded bg-surface border-line-strong text-ink focus:ring-ink focus:ring-offset-0 transition-all checked:bg-ink checked:border-ink"
+            className="peer h-4 w-4 rounded bg-surface border-line-strong text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 transition-all checked:bg-zinc-900 checked:border-zinc-900"
             checked={searchParams.get("in_stock") === "1"}
             onChange={(event) =>
               apply((params) => {
@@ -140,7 +140,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
                   <label className="flex cursor-pointer items-center gap-3 text-ink">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-line-strong text-ink focus:ring-ink"
+                      className="h-4 w-4 rounded border-line-strong text-zinc-900 focus:ring-zinc-900"
                       checked={selectedBrands.has(brand.slug)}
                       onChange={() => apply((params) => toggleSetParam(params, "brand", brand.slug))}
                     />
@@ -167,7 +167,7 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
                   <label className="flex cursor-pointer items-center gap-3 text-ink">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-line-strong text-ink focus:ring-ink"
+                      className="h-4 w-4 rounded border-line-strong text-zinc-900 focus:ring-zinc-900"
                       checked={selectedAttrs.get(attribute.slug)?.has(value) ?? false}
                       onChange={() => apply((params) => toggleSetParam(params, `attr[${attribute.slug}]`, value))}
                     />

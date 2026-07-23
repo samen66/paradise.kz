@@ -64,7 +64,7 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-[1160px] px-8 pb-16 pt-7">
-        <div className="flex flex-col items-center gap-3.5 rounded-3xl border border-line bg-white px-8 py-[72px] text-center">
+        <div className="flex flex-col items-center gap-3.5 rounded-3xl border border-line bg-card px-8 py-[72px] text-center">
           <div
             className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-amber-50 text-[30px]"
             aria-hidden="true"
@@ -122,7 +122,7 @@ export default function CartPage() {
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-3.5">
           {showProgress && (
-            <div className="rounded-2xl border border-line bg-white px-5 py-4">
+            <div className="rounded-2xl border border-line bg-card px-5 py-4">
               <div className="mb-2.5 flex justify-between text-[13px]">
                 <span className="font-medium text-ink">
                   {t("freeDeliveryProgress", { amount: formatPrice(remaining, locale) })}
@@ -148,7 +148,7 @@ export default function CartPage() {
             return (
               <div
                 key={item.productId}
-                className="grid grid-cols-[104px_1fr_auto] items-center gap-5 rounded-[20px] border border-line bg-white p-5 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_8px_24px_rgba(28,26,23,0.04)] max-sm:grid-cols-[80px_1fr] max-sm:gap-4"
+                className="grid grid-cols-[104px_1fr_auto] items-center gap-5 rounded-[20px] border border-line bg-card p-5 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_8px_24px_rgba(28,26,23,0.04)] max-sm:grid-cols-[80px_1fr] max-sm:gap-4"
               >
                 <Link
                   href={href}
@@ -193,7 +193,7 @@ export default function CartPage() {
                     <div className="flex items-center gap-1 rounded-xl border border-line bg-surface p-1">
                       <button
                         type="button"
-                        className="h-8 w-8 cursor-pointer rounded-lg border-none bg-white text-base text-ink hover:bg-panel"
+                        className="h-8 w-8 cursor-pointer rounded-lg border-none bg-card text-base text-ink hover:bg-panel"
                         onClick={() => setQuantity(item.productId, item.quantity - 1)}
                       >
                         −
@@ -203,7 +203,7 @@ export default function CartPage() {
                       </span>
                       <button
                         type="button"
-                        className="h-8 w-8 cursor-pointer rounded-lg border-none bg-white text-base text-ink hover:bg-panel"
+                        className="h-8 w-8 cursor-pointer rounded-lg border-none bg-card text-base text-ink hover:bg-panel"
                         onClick={() => setQuantity(item.productId, item.quantity + 1)}
                       >
                         +
@@ -247,8 +247,8 @@ export default function CartPage() {
           </Link>
         </div>
 
-        <div className="sticky top-24 flex flex-col gap-3.5">
-          <div className="rounded-[20px] border border-line bg-white p-6 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_16px_40px_rgba(28,26,23,0.07)]">
+        <div className="lg:sticky lg:top-[180px] flex flex-col gap-3.5">
+          <div className="rounded-[20px] border border-line bg-card p-6 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_16px_40px_rgba(28,26,23,0.07)]">
             <h2 className="m-0 mb-4 font-display text-[19px] font-bold text-ink">
               {t("total")}
             </h2>
@@ -260,7 +260,7 @@ export default function CartPage() {
               />
               <button
                 type="button"
-                className="cursor-pointer rounded-xl border border-line bg-white px-4 py-2.5 font-inherit text-[13px] font-semibold text-ink hover:bg-surface"
+                className="cursor-pointer rounded-xl border border-line bg-card px-4 py-2.5 font-inherit text-[13px] font-semibold text-ink hover:bg-surface"
               >
                 {t("apply")}
               </button>
@@ -297,7 +297,7 @@ export default function CartPage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[20px] border border-line bg-white px-5 py-4 text-[13px] text-muted-hover">
+          <div className="flex flex-col gap-3 rounded-[20px] border border-line bg-card px-5 py-4 text-[13px] text-muted-hover">
             <div className="flex items-center gap-2.5">
               <span>🚚</span>
               <span>{t("deliveryTerms")}</span>

@@ -32,6 +32,8 @@ Route::get('/user', function (Request $request) {
 // instead guarded by a shared secret inside the controller.
 Route::post('/moysklad/webhook', MoySkladWebhookController::class);
 
+Route::post('/kaspi/webhook', \App\Http\Controllers\Api\Public\KaspiWebhookController::class);
+
 // Public: registration needs the warehouse list before the client has a token.
 Route::get('/stores', [StoreController::class, 'index']);
 

@@ -27,6 +27,9 @@ class CatalogSetting extends Model
         'whatsapp_url',
         'instagram_url',
         'b2b_default_min_order_qty',
+        'whatsapp_api_url',
+        'whatsapp_api_key',
+        'whatsapp_instance_id',
     ];
 
     /**

@@ -33,7 +33,7 @@ export function CategoryIcons({ categories }: { categories: Category[] }) {
             href={`/catalog/${category.slug}`}
             className="group flex w-24 sm:w-28 flex-shrink-0 flex-col items-center gap-3 snap-start"
           >
-            <div className="grid aspect-square w-full place-items-center rounded-full bg-white text-3xl sm:text-4xl transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md border border-line/50">
+            <div className="grid aspect-square w-full place-items-center rounded-full bg-card text-3xl sm:text-4xl transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md border border-line/50">
               {icon}
             </div>
             <span className="line-clamp-2 text-center text-sm font-medium text-ink">

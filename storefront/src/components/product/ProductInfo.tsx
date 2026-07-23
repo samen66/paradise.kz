@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Product, ProductVariant } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
@@ -18,6 +19,13 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
   const t = useTranslations("product");
   const tCommon = useTranslations("common");
 
+  const variants = product.variants ?? [];
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    variants.length > 0 && variants[0].in_stock ? variants[0].id : null
+  );
+
+  const selectedVariant = variants.find(v => v.id === selectedVariantId) || null;
+
   const discountPercent =
     product.old_price && product.price && product.old_price > product.price
       ? Math.round((1 - product.price / product.old_price) * 100)
@@ -27,8 +35,15 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
   const ratingAvg = 4.7;
   const reviewsCount = 128;
 
-  const variants = product.variants ?? [];
   const brandName = product.brand?.name ?? null;
+
+  // Use variant stock if selected
+  const displayStock = selectedVariant ? selectedVariant.stock : product.stock;
+  const inStock = selectedVariant ? selectedVariant.in_stock : product.in_stock;
+
+  // Since variants in our system do not have their own prices, price remains product.price
+  // If they do in the future, we would update it here:
+  // const price = selectedVariant?.price ?? product.price;
 
   return (
     <div className="flex flex-col gap-4">
@@ -37,10 +52,12 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
         {/* Badges */}
         <div className="mb-3.5 flex gap-1.5">
           {discountPercent ? <Badge variant="sale">-{discountPercent}%</Badge> : null}
-          {product.in_stock && product.stock !== undefined ? (
+          {inStock && displayStock !== undefined ? (
             <Badge variant="mint">
-              {tCommon("inStock")} — {product.stock} шт
+              {tCommon("inStock")} — {displayStock} шт
             </Badge>
+          ) : !inStock ? (
+            <Badge variant="sale">Нет в наличии</Badge>
           ) : null}
         </div>
 
@@ -83,11 +100,19 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
         {variants.length > 0 ? (
           <div className="mt-5">
             <div className="mb-2 text-[13px] font-semibold text-ink">{t("colorLabel")}</div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {variants.map((v: ProductVariant) => (
-                <Chip key={v.id} active={v.in_stock}>
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVariantId(v.id)}
+                  className={`px-3 py-1.5 text-sm rounded-full border transition ${
+                    selectedVariantId === v.id
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-surface text-ink hover:border-ink/50"
+                  } ${!v.in_stock ? "opacity-50 line-through" : ""}`}
+                >
                   {v.name}
-                </Chip>
+                </button>
               ))}
             </div>
           </div>
@@ -96,7 +121,9 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
         {/* Actions */}
         <div className="mt-5 flex items-stretch gap-2.5">
           <div className="flex-1">
-            {product.in_stock ? <AddToCartButton product={product} /> : null}
+            {inStock ? (
+              <AddToCartButton product={selectedVariant ? { ...product, id: selectedVariant.id, name: `${product.name} (${selectedVariant.name})` } : product} />
+            ) : null}
           </div>
           <FavoriteButton productId={product.id} className="!h-12 !w-12" />
         </div>

@@ -36,11 +36,13 @@ export class ApiValidationError extends ApiError {
   }
 }
 
-interface ApiOptions {
+interface ApiOptions extends RequestInit {
   locale?: string;
   /** ISR revalidation window in seconds; false disables caching. */
   revalidate?: number | false;
-  searchParams?: Record<string, string | number | undefined>;
+  searchParams?: Record<string, string | number | boolean | undefined>;
+  tags?: string[];
+  requireB2bAuth?: boolean;
   /** Sanctum bearer token for account endpoints. */
   token?: string | null;
 }

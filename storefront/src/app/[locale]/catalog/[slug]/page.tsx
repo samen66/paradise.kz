@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { tValue } from "@/lib/format";
 import { CatalogView, type CatalogSearchParams } from "@/components/CatalogView";
 import { Link } from "@/i18n/navigation";
+import { CategoryIcons } from "@/components/CategoryIcons";
 import type { Category } from "@/lib/types";
 
 async function fetchCategory(slug: string, locale: string): Promise<Category | null> {
@@ -74,6 +75,12 @@ export default async function CategoryPage({
           { label: tValue(category.name, locale) },
         ]}
       />
+
+      {category.children && category.children.length > 0 ? (
+        <div className="mb-4">
+          <CategoryIcons categories={category.children} />
+        </div>
+      ) : null}
 
       <CatalogView
         locale={locale}

@@ -51,6 +51,8 @@ export interface Product {
   barcodes: string[];
   attributes: Record<string, unknown>;
   description?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
   variants?: ProductVariant[];
   characteristics?: ProductCharacteristic[];
 }

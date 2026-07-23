@@ -10,6 +10,8 @@ function SuccessContent() {
   const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const [number, setNumber] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fromQuery = searchParams.get("number");
@@ -20,7 +22,14 @@ function SuccessContent() {
     try {
       const stored = sessionStorage.getItem("last-order");
       if (stored) {
-        setNumber((JSON.parse(stored) as { number?: string }).number ?? null);
+        const orderData = JSON.parse(stored) as { 
+          number?: string; 
+          payment_method?: string; 
+          payment_url?: string; 
+        };
+        setNumber(orderData.number ?? null);
+        setPaymentMethod(orderData.payment_method ?? null);
+        setPaymentUrl(orderData.payment_url ?? null);
       }
     } catch {
       // sessionStorage unavailable — the generic message still renders.
@@ -56,6 +65,21 @@ function SuccessContent() {
         ) : null}
 
         <p className="mt-4 text-sm text-muted">{t("successText")}</p>
+
+        {paymentMethod === 'kaspi' && paymentUrl && (
+          <div className="mt-8 rounded-xl border border-[#F14635] bg-[#F14635]/5 p-5">
+            <h3 className="mb-2 font-medium text-[#F14635]">Оплата заказа</h3>
+            <p className="mb-4 text-sm text-ink/70">
+              Вы выбрали оплату через Kaspi Pay. Пожалуйста, завершите оплату для подтверждения заказа.
+            </p>
+            <a
+              href={paymentUrl}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F14635] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-[#F14635]/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F14635]"
+            >
+              Оплатить в Kaspi
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">

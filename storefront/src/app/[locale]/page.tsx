@@ -40,9 +40,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       <Link
         href="/ai-design"
-        className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] overflow-hidden rounded-[22px] bg-ink shadow-[0_1px_2px_rgba(28,26,23,0.04),0_18px_44px_rgba(28,26,23,0.10)]"
+        className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] overflow-hidden rounded-[22px] bg-inverse shadow-[0_1px_2px_rgba(28,26,23,0.04),0_18px_44px_rgba(28,26,23,0.10)]"
       >
-        <div className="flex flex-col justify-center gap-3 px-8 py-9 sm:px-10 text-white">
+        <div className="flex flex-col justify-center gap-3 px-8 py-9 sm:px-10 text-ink-inverse">
           <span
             className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white"
             style={{ background: "linear-gradient(135deg,#c8372f,#e8894f)" }}
@@ -55,7 +55,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <h2 className="font-display text-2xl sm:text-3xl font-extrabold leading-tight tracking-tight">
             {tHome("aiDesignTitle")}
           </h2>
-          <p className="max-w-[460px] text-[15px] leading-relaxed text-white/70">{tHome("aiDesignText")}</p>
+          <p className="max-w-[460px] text-[15px] leading-relaxed opacity-70">{tHome("aiDesignText")}</p>
           <span className="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-ink">
             {tHome("aiDesignCta")} →
           </span>
@@ -66,7 +66,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         />
       </Link>
 
-      <section className="rounded-2xl border border-line bg-white p-5 sm:p-6 shadow-sm">
+      <section className="rounded-2xl border border-line bg-card p-5 sm:p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span
@@ -135,10 +135,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       ))}
 
       <section className="grid gap-6 sm:grid-cols-2">
-        <div className="flex flex-col items-start gap-3 rounded-2xl bg-ink p-8 sm:p-10 text-white">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/60">{tHome("b2bLabel")}</span>
+        <div className="flex flex-col items-start gap-3 rounded-2xl bg-inverse p-8 sm:p-10 text-ink-inverse">
+          <span className="text-xs font-semibold uppercase tracking-wider opacity-60">{tHome("b2bLabel")}</span>
           <h3 className="font-display text-2xl font-bold leading-tight tracking-tight">{tHome("b2bTitle")}</h3>
-          <p className="max-w-md text-sm leading-relaxed text-white/70">{tHome("b2bText")}</p>
+          <p className="max-w-md text-sm leading-relaxed opacity-70">{tHome("b2bText")}</p>
           <NextLink
             href="/b2b/register"
             className="mt-2 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-ink transition-colors hover:bg-white/90"
@@ -164,7 +164,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <p className="text-ink/80 leading-relaxed max-w-[700px] mx-auto mb-8 font-medium">
           {tHome("heroText")}
         </p>
-        <Link href="/catalog" className="inline-block bg-ink text-white px-6 py-3 rounded-xl font-medium hover:bg-ink/90 transition-colors">
+        <Link href="/catalog" className="inline-block bg-inverse text-ink-inverse px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity">
           {tHome("goToCatalog")}
         </Link>
       </section>

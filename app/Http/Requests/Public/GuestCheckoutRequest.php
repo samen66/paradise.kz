@@ -36,6 +36,7 @@ class GuestCheckoutRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'payment_method' => ['required', 'string', 'in:kaspi,cash'],
             'comment' => ['nullable', 'string', 'max:1000'],
 
             'delivery' => ['nullable', 'array'],
@@ -79,6 +80,8 @@ class GuestCheckoutRequest extends FormRequest
             'delivery.city.required' => 'Укажите город доставки.',
             'delivery.street.required' => 'Укажите улицу доставки.',
             'delivery.building.required' => 'Укажите дом.',
+            'payment_method.required' => 'Выберите способ оплаты.',
+            'payment_method.in' => 'Выбран недопустимый способ оплаты.',
         ];
     }
 }

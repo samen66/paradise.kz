@@ -17,7 +17,11 @@ class OrdersTable
     /** @var array<string, string> */
     private const STATUS_LABELS = [
         'pending' => 'В обработке',
-        'synced' => 'Отправлен',
+        'confirmed' => 'Подтверждён',
+        'in_delivery' => 'В доставке',
+        'completed' => 'Выполнен',
+        'cancelled' => 'Отменён',
+        'synced' => 'Отправлен в систему',
         'failed' => 'Ошибка',
     ];
 
@@ -52,9 +56,37 @@ class OrdersTable
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => self::STATUS_LABELS[$state] ?? $state)
                     ->color(fn (string $state): string => match ($state) {
+                        'confirmed' => 'info',
+                        'in_delivery' => 'info',
+                        'completed' => 'success',
                         'synced' => 'success',
+                        'cancelled' => 'gray',
                         'failed' => 'danger',
                         default => 'warning',
+                    }),
+                TextColumn::make('payment_method')
+                    ->label('Оплата')
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'kaspi' => 'Kaspi Pay',
+                        'card' => 'Карта',
+                        'cash' => 'Наличными',
+                        default => 'Не выбран',
+                    }),
+                TextColumn::make('payment_status')
+                    ->label('Статус оплаты')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'paid' => 'Оплачен',
+                        'unpaid' => 'Не оплачен',
+                        'cancelled' => 'Отменён',
+                        'failed' => 'Ошибка',
+                        default => $state ?? '—',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'paid' => 'success',
+                        'unpaid' => 'warning',
+                        'cancelled', 'failed' => 'danger',
+                        default => 'gray',
                     }),
                 TextColumn::make('total')
                     ->label('Сумма')
@@ -91,6 +123,23 @@ class OrdersTable
 
                         Notification::make()
                             ->title('Заказ поставлен в очередь на отправку в учётную систему')
+                            ->success()
+                            ->send();
+                    }),
+                Action::make('changeStatus')
+                    ->label('Изменить статус')
+                    ->icon('heroicon-o-arrow-path-rounded-square')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('status')
+                            ->label('Новый статус')
+                            ->options(self::STATUS_LABELS)
+                            ->required(),
+                    ])
+                    ->action(function (Order $record, array $data): void {
+                        $record->update(['status' => $data['status']]);
+
+                        Notification::make()
+                            ->title("Статус изменён на «" . (self::STATUS_LABELS[$data['status']] ?? $data['status']) . "»")
                             ->success()
                             ->send();
                     }),

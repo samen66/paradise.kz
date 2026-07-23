@@ -1,39 +1,91 @@
 @import "tailwindcss";
 
 @theme {
-  /* Typography — wired to next/font variables set on <html> in layout.tsx */
+  /* Typography */
   --font-sans: var(--font-golos), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-src), var(--font-golos), ui-sans-serif, sans-serif;
 
   /* Surfaces */
-  --color-surface: #f5f3f1; /* page background — warm off-white */
-  --color-panel: #efe7dd; /* cream hero / accent panels */
-  --color-card: #efeae4; /* product photo backdrop — slightly warm gray */
+  --color-surface: var(--bg-surface);
+  --color-panel: var(--bg-panel);
+  --color-card: var(--bg-card);
 
   /* Ink & text */
-  --color-ink: #404040; /* primary text + dark buttons (never pure black) */
-  --color-ink-hover: #2a2a2a;
-  --color-muted: #6b655f; /* secondary / label text (WCAG AA compliant) */
+  --color-ink: var(--text-ink);
+  --color-ink-hover: var(--text-ink-hover);
+  --color-muted: var(--text-muted);
+  --color-inverse: var(--bg-inverse);
+  --color-ink-inverse: var(--text-ink-inverse);
 
   /* Lines */
-  --color-line: #e4ded6; /* subtle borders & dividers */
-  --color-line-strong: #c4c4c4;
+  --color-line: var(--border-line);
+  --color-line-strong: var(--border-line-strong);
 
   /* Accents */
-  --color-mint: #d8f0e2; /* "новинка" / eco badge background */
-  --color-mint-ink: #1f7a4d; /* text on mint */
-  --color-sale: #e5482d; /* discount badge background */
-  --color-sale-ink: #ffffff;
+  --color-mint: var(--accent-mint);
+  --color-mint-ink: var(--accent-mint-ink);
+  --color-sale: var(--accent-sale);
+  --color-sale-ink: var(--accent-sale-ink);
 
   /* Product page accents */
-  --color-star: #f5a623; /* review star fill */
-  --color-star-empty: #e5e1da;
-  --color-red-600: #c8372f; /* showroom pin, accent links */
+  --color-star: var(--accent-star);
+  --color-star-empty: var(--accent-star-empty);
+  --color-red-600: var(--accent-red-600);
 
-  /* Legacy alias — existing `text-brand` usages resolve to ink, matching the
-     restrained near-black link style of the reference design. */
-  --color-brand: #404040;
-  --color-brand-dark: #2a2a2a;
+  /* Legacy alias */
+  --color-brand: var(--text-ink);
+  --color-brand-dark: var(--text-ink-hover);
+}
+
+@layer base {
+  :root {
+    --bg-surface: #f5f3f1;
+    --bg-panel: #efe7dd;
+    --bg-card: #efeae4;
+    
+    --text-ink: #404040;
+    --text-ink-hover: #2a2a2a;
+    --text-muted: #8b857f;
+    --bg-inverse: #404040;
+    --text-ink-inverse: #ffffff;
+    
+    --border-line: #e4ded6;
+    --border-line-strong: #c4c4c4;
+    
+    --accent-mint: #d8f0e2;
+    --accent-mint-ink: #1f7a4d;
+    --accent-sale: #e5482d;
+    --accent-sale-ink: #ffffff;
+    
+    --accent-star: #f5a623;
+    --accent-star-empty: #e5e1da;
+    --accent-red-600: #c8372f;
+  }
+  
+  .dark {
+    /* Modern Dark (Premium) */
+    --bg-surface: #050506;
+    --bg-panel: #0a0a0c;
+    --bg-card: #18181c;
+    
+    --text-ink: #EDEDEF;
+    --text-ink-hover: #ffffff;
+    --text-muted: #A1A1A8;
+    --bg-inverse: #ffffff;
+    --text-ink-inverse: #050506;
+    
+    --border-line: rgba(255, 255, 255, 0.08);
+    --border-line-strong: rgba(255, 255, 255, 0.15);
+    
+    --accent-mint: #1a4f32;
+    --accent-mint-ink: #d8f0e2;
+    --accent-sale: #e5482d;
+    --accent-sale-ink: #ffffff;
+    
+    --accent-star: #f5a623;
+    --accent-star-empty: #333338;
+    --accent-red-600: #e04037;
+  }
 }
 
 body {

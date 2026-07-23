@@ -12,6 +12,7 @@ import { tValue } from "@/lib/format";
 import { Badge } from "./ui/Badge";
 import { FavoriteButton } from "./FavoriteButton";
 import { AddToCartButton } from "./AddToCartButton";
+import { StarRating } from "./StarRating";
 
 export type CatalogSearchParams = Record<string, string | string[] | undefined>;
 
@@ -109,7 +110,7 @@ export async function CatalogView({
             <Link
               key={child.id}
               href={`/catalog/${child.slug}`}
-              className="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink transition hover:border-ink"
+              className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:border-ink"
             >
               {tValue(child.name, locale)}
             </Link>
@@ -126,23 +127,39 @@ export async function CatalogView({
         {products.data.length === 0 ? (
           <div className="rounded-2xl bg-surface py-16 text-center text-muted">{t("empty")}</div>
         ) : (
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4 items-start">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5 items-start">
             {products.data.map((product) => {
               const discountPercent = product.old_price && product.price && product.old_price > product.price
                 ? Math.round((1 - product.price / product.old_price) * 100)
                 : null;
               
+              // Mock rating for prototype alignment (will be replaced by API)
+              const mockRating = 4.7;
+              const mockReviewsCount = 128;
+              
               return (
-                <div key={product.id} className="relative flex flex-col gap-2.5">
+                <div key={product.id} className="relative flex flex-col">
                   {(product.is_new || discountPercent) && (
                     <div className="absolute left-3 top-3 z-20 flex flex-row gap-1.5 pointer-events-none">
                       {product.is_new && <Badge variant="mint">{tCommon("newArrival")}</Badge>}
                       {discountPercent ? <Badge variant="sale">-{discountPercent}%</Badge> : null}
                     </div>
                   )}
-                  <FavoriteButton productId={product.id} className="absolute right-3 top-3 z-30" />
+                  <div className="absolute right-3 top-3 z-20">
+                    <FavoriteButton productId={product.id} />
+                  </div>
+                  
                   <ProductCard product={product} showOverlay={false} showAddToCart={false} />
-                  <AddToCartButton product={product} />
+                  
+                  <div className="mt-2 flex items-center gap-1.5 px-1">
+                    <StarRating rating={mockRating} size={14} />
+                    <span className="text-[12px] font-semibold text-ink">{mockRating.toFixed(1).replace(".", ",")}</span>
+                    <span className="text-[12px] text-muted">({mockReviewsCount})</span>
+                  </div>
+                  
+                  <div className="mt-2">
+                    <AddToCartButton product={product} />
+                  </div>
                 </div>
               );
             })}

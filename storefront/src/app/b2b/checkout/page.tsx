@@ -295,7 +295,7 @@ export default function B2BCheckoutPage() {
           </section>
         </div>
 
-        <aside className="rounded-2xl border border-line bg-white p-5 sm:p-6 lg:sticky lg:top-4">
+        <aside className="rounded-2xl border border-line bg-white p-5 sm:p-6 lg:sticky lg:top-[120px]">
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between text-muted">
               <span>{t("subtotal")}</span>

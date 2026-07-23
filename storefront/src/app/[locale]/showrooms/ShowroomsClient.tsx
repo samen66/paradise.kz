@@ -318,7 +318,7 @@ export function ShowroomsClient() {
           )}
         </div>
 
-        <div className="sticky top-[150px]">
+        <div className="lg:sticky lg:top-[180px]">
           <div className="relative h-[672px] overflow-hidden rounded-2xl border border-line bg-[#e9ebe6] shadow-[0_1px_2px_rgba(28,26,23,0.04),0_16px_40px_rgba(28,26,23,0.07)]">
             {/* Fake SVG Map Background */}
             <svg viewBox="0 0 456 672" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">

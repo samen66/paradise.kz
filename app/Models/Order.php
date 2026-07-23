@@ -21,6 +21,25 @@ class Order extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_CONFIRMED = 'confirmed';
+
+    public const STATUS_IN_DELIVERY = 'in_delivery';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
+    /** @var list<string> */
+    public const ALL_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_CONFIRMED,
+        self::STATUS_IN_DELIVERY,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED,
+        self::STATUS_SYNCED,
+        self::STATUS_FAILED,
+    ];
+
     public const DELIVERY_PICKUP = 'pickup';
 
     public const DELIVERY_DELIVERY = 'delivery';
@@ -33,6 +52,8 @@ class Order extends Model
         'total',
         'comment',
         'contact_email',
+        'payment_method',
+        'payment_status',
         'delivery_method',
         'delivery_cost',
         'address_id',

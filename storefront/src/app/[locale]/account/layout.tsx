@@ -51,7 +51,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   return (
     <div className="max-w-[1200px] mx-auto px-8 py-7 pb-16">
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8 items-start">
-        <aside className="sticky top-24 flex flex-col gap-[18px]">
+        <aside className="lg:sticky lg:top-[180px] flex flex-col gap-[18px]">
           <div className="bg-white border border-line rounded-[20px] p-5 flex gap-3.5 items-center">
             <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center font-display font-bold text-[17px] text-ink shrink-0">
               {userInitials}

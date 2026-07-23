@@ -14,7 +14,7 @@ const pageTitleClasses =
   "mb-6 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-[34px] leading-tight";
 
 const primaryCtaClasses =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-medium text-white transition hover:bg-ink-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-medium text-ink-inverse transition hover:bg-ink-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 export default function B2BCartPage() {
   const t = useTranslations("cart");
@@ -94,7 +94,7 @@ export default function B2BCartPage() {
             return (
               <li
                 key={product.id}
-                className="flex gap-4 rounded-2xl border border-line bg-white p-4 sm:gap-5 sm:p-5"
+                className="flex gap-4 rounded-2xl border border-line bg-card p-4 sm:gap-5 sm:p-5"
               >
                 <Link
                   href={href}
@@ -171,7 +171,7 @@ export default function B2BCartPage() {
           })}
         </ul>
 
-        <aside className="rounded-2xl border border-line bg-white p-5 sm:p-6 lg:sticky lg:top-4">
+        <aside className="rounded-2xl border border-line bg-white p-5 sm:p-6 lg:sticky lg:top-[120px]">
           <div className="flex items-center justify-between text-sm text-muted">
             <span>{tCheckout("subtotal")}</span>
             <span className="text-ink">{formatPrice(subtotal, "ru")}</span>

@@ -17,8 +17,8 @@ export function Chip({
       onClick={onClick}
       className={`rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
         active
-          ? "border-ink bg-ink text-white"
-          : "border-line bg-white text-ink hover:border-ink"
+          ? "border-inverse bg-inverse text-ink-inverse"
+          : "border-line bg-surface text-ink hover:border-ink"
       } ${className}`}
     >
       {children}

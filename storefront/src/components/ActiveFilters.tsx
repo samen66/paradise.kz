@@ -62,7 +62,7 @@ export function ActiveFilters({
             <button
               type="button"
               onClick={() => removeFilter(key)}
-              className="grid h-5 w-5 place-items-center rounded-full text-muted hover:bg-white hover:text-ink transition"
+              className="grid h-5 w-5 place-items-center rounded-full text-muted hover:bg-card hover:text-ink transition"
               aria-label="Удалить"
             >
               ✕

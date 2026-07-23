@@ -27,12 +27,21 @@ function LoginForm() {
   const isLogin = mode === "login";
 
   async function verify() {
+    const isEmail = phone.includes("@");
+    if (!isEmail) {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length !== 11 || !digits.startsWith("7")) {
+        setError("Введите корректный номер телефона (напр. +7 777 123 45 67) или email");
+        return;
+      }
+    }
+
     setBusy(true);
     setError(null);
     try {
       const response = await apiPost<{ token: string; user: ApiUser }>("/public/auth/otp/verify", {
         phone,
-        code: code || "0000", // dummy code if we're simulating password for now
+        code,
       });
       setSession(response.token, response.user);
       document.cookie = `laravel_session=${response.token}; path=/; max-age=86400`;
@@ -45,7 +54,7 @@ function LoginForm() {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-line-strong";
+    "w-full rounded-xl border border-line bg-transparent px-3 py-2.5 text-ink outline-none focus:border-line-strong";
 
   const perks = [
     { icon: "📦", title: "История заказов", text: "Статусы доставки, повтор заказа в один клик и электронные чеки." },
@@ -54,7 +63,7 @@ function LoginForm() {
   ];
 
   return (
-    <div className="-mx-4 -mt-8 sm:-mx-6 sm:-mt-8 lg:-mx-10 lg:-mt-8 flex min-h-[calc(100vh-70px)] flex-col md:flex-row items-stretch bg-white">
+    <div className="-mx-4 -mt-8 sm:-mx-6 sm:-mt-8 lg:-mx-10 lg:-mt-8 flex min-h-[calc(100vh-70px)] flex-col md:flex-row items-stretch bg-surface">
       {/* Left Column (Form) */}
       <div className="flex flex-1 items-center justify-center p-8 sm:p-12">
         <div className="w-full max-w-[420px]">
@@ -67,11 +76,11 @@ function LoginForm() {
               : "Одна минута — и покупки станут быстрее."}
           </p>
 
-          <div className="mb-7 grid grid-cols-2 gap-1 rounded-full bg-[#f0eee9] p-1">
+          <div className="mb-7 grid grid-cols-2 gap-1 rounded-full bg-panel p-1">
             <button
               onClick={() => setMode("login")}
               className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-                isLogin ? "bg-white text-ink shadow-sm" : "bg-transparent text-muted"
+                isLogin ? "bg-surface text-ink shadow-sm" : "bg-transparent text-muted"
               }`}
             >
               Вход
@@ -79,7 +88,7 @@ function LoginForm() {
             <button
               onClick={() => setMode("register")}
               className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-                !isLogin ? "bg-white text-ink shadow-sm" : "bg-transparent text-muted"
+                !isLogin ? "bg-surface text-ink shadow-sm" : "bg-transparent text-muted"
               }`}
             >
               Регистрация
@@ -104,6 +113,7 @@ function LoginForm() {
                   onChange={(event) => setPhone(event.target.value)}
                   placeholder="+7 (___) ___-__-__"
                   autoFocus
+                  required
                   className={inputClass}
                 />
               </label>
@@ -119,6 +129,7 @@ function LoginForm() {
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
                   placeholder="••••••••"
+                  required
                   className={inputClass}
                 />
               </label>
@@ -146,6 +157,7 @@ function LoginForm() {
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Как к вам обращаться"
                   autoFocus
+                  required
                   className={inputClass}
                 />
               </label>
@@ -156,6 +168,7 @@ function LoginForm() {
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
                   placeholder="+7 (___) ___-__-__"
+                  required
                   className={inputClass}
                 />
               </label>
@@ -166,6 +179,7 @@ function LoginForm() {
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
                   placeholder="Минимум 8 символов"
+                  required
                   className={inputClass}
                 />
               </label>
@@ -194,7 +208,7 @@ function LoginForm() {
             <span className="text-xs text-muted">или</span>
             <div className="h-px flex-1 bg-line"></div>
           </div>
-          <button className="flex w-full items-center justify-center gap-2.5 rounded-full border border-line bg-white p-3 text-sm font-semibold text-ink transition-colors hover:bg-surface">
+          <button className="flex w-full items-center justify-center gap-2.5 rounded-full border border-line bg-transparent p-3 text-sm font-semibold text-ink transition-colors hover:bg-panel">
             <span className="flex h-5 w-5 items-center justify-center rounded-[5px] bg-[#c8372f] text-[12px] font-bold text-white">
               K
             </span>
@@ -204,7 +218,7 @@ function LoginForm() {
       </div>
 
       {/* Right Column (Perks) */}
-      <div className="flex flex-1 items-center justify-center bg-[#f6efe3] p-8 sm:p-12">
+      <div className="flex flex-1 items-center justify-center bg-panel p-8 sm:p-12">
         <div className="flex max-w-[440px] flex-col gap-7">
           <h2 className="font-display text-[28px] font-bold leading-tight tracking-tight text-ink">
             Личный кабинет — это удобно
@@ -212,7 +226,7 @@ function LoginForm() {
           <div className="flex flex-col gap-4">
             {perks.map((perk, i) => (
               <div key={i} className="flex items-start gap-3.5">
-                <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-white text-[17px] shadow-[0_1px_2px_rgba(28,26,23,0.06)]">
+                <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-surface text-[17px] shadow-sm">
                   {perk.icon}
                 </div>
                 <div>

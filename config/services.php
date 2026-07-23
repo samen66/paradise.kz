@@ -19,7 +19,19 @@ return [
     ],
 
     'resend' => [
-        'key' => env('RESEND_API_KEY'),
+        'key' => env('RESEND_KEY'),
+    ],
+
+    'kaspi' => [
+        'payment_base_url' => env('KASPI_PAYMENT_BASE_URL', 'https://kaspi.kz/pay'),
+        'webhook_secret' => env('KASPI_WEBHOOK_SECRET'),
+        'merchant_id' => env('KASPI_MERCHANT_ID'),
+    ],
+
+    'whatsapp' => [
+        'api_url' => env('WHATSAPP_API_URL'),
+        'api_key' => env('WHATSAPP_API_KEY'),
+        'instance_id' => env('WHATSAPP_INSTANCE_ID'),
     ],
 
     'ses' => [

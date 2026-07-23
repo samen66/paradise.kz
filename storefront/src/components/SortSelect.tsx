@@ -21,7 +21,7 @@ export function SortSelect({ isB2B }: { isB2B?: boolean }) {
           params.delete("page");
           router.push(`${pathname}?${params.toString()}`);
         }}
-        className="rounded-full border border-line bg-white px-4 py-2 text-ink outline-none focus:border-line-strong"
+        className="rounded-full border border-line bg-surface px-4 py-2 text-ink outline-none focus:border-line-strong"
       >
         <option value="name">{t("sortName")}</option>
         {!isB2B && <option value="price">{t("sortPriceAsc")}</option>}

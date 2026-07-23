@@ -70,12 +70,19 @@ export function AddToCartB2BButton({ product }: { product: Product }) {
           +
         </button>
       </div>
-      <button 
-        onClick={handleAdd}
-        className="flex-1 py-4 rounded-xl bg-ink text-white font-medium hover:bg-ink/90 transition text-center"
-      >
-        В корзину
-      </button>
+      <div className="flex-1 flex flex-col">
+        <button 
+          onClick={handleAdd}
+          className="w-full py-4 rounded-xl bg-ink text-white font-medium hover:bg-ink/90 transition text-center"
+        >
+          В корзину
+        </button>
+        {minQty > 1 && (
+          <p className="text-xs text-muted text-center mt-2">
+            Минимальный заказ: {minQty} шт
+          </p>
+        )}
+      </div>
     </div>
   );
 }

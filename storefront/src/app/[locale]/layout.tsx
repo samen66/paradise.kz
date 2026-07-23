@@ -10,6 +10,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AIAssistant } from "@/components/AIAssistant";
 import { ToastContainer } from "@/components/ui/Toast";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "../globals.css";
 
 const golos = Golos_Text({
@@ -74,15 +75,17 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={`${golos.variable} ${manrope.variable}`} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
-        <NextIntlClientProvider>
-          <Header categories={categories} settings={settings} />
-          <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-10">
-            {children}
-          </main>
-          <Footer settings={settings} categories={categories} />
-          <AIAssistant />
-          <ToastContainer />
-        </NextIntlClientProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <NextIntlClientProvider>
+            <Header categories={categories} settings={settings} />
+            <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-10">
+              {children}
+            </main>
+            <Footer settings={settings} categories={categories} />
+            <AIAssistant />
+            <ToastContainer />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

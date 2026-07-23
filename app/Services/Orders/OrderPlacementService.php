@@ -111,6 +111,7 @@ class OrderPlacementService
         ?string $email,
         array $items,
         int $storeId,
+        string $paymentMethod,
         ?string $comment = null,
         ?array $delivery = null,
     ): Order {
@@ -134,6 +135,8 @@ class OrderPlacementService
             $order = $guest->orders()->create([
                 'store_id' => $store->id,
                 'status' => Order::STATUS_PENDING,
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'unpaid',
                 'total' => $subtotal + $deliveryAttributes['delivery_cost'],
                 'comment' => $comment,
                 'contact_email' => $email,
@@ -162,6 +165,7 @@ class OrderPlacementService
         User $user,
         array $items,
         int $storeId,
+        string $paymentMethod,
         ?string $comment = null,
         ?array $delivery = null,
         ?string $contactEmail = null,
@@ -175,6 +179,8 @@ class OrderPlacementService
             $order = $user->orders()->create([
                 'store_id' => $store->id,
                 'status' => Order::STATUS_PENDING,
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'unpaid',
                 'total' => $subtotal + $deliveryAttributes['delivery_cost'],
                 'comment' => $comment,
                 'contact_email' => $contactEmail,

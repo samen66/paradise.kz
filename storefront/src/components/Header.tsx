@@ -6,6 +6,7 @@ import { SearchBox } from "./SearchBox";
 import { CartBadge } from "./CartBadge";
 import { AccountLink } from "./AccountLink";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { MegaMenu } from "./MegaMenu";
 import { HeaderBurger } from "./HeaderBurger";
 
@@ -23,7 +24,7 @@ export async function Header({
   const phone = settings?.contacts.phone;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur-md">
       <div className="hidden bg-surface text-xs text-muted sm:block">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-2 sm:px-6 lg:px-10">
           <div className="flex gap-4">
@@ -39,6 +40,7 @@ export async function Header({
                 {phone}
               </a>
             ) : null}
+            <ThemeToggle />
             <LocaleSwitcher />
           </div>
         </div>
