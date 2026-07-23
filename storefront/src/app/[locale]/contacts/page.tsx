@@ -59,9 +59,9 @@ export default async function ContactsPage({
   const { contacts, stores } = settings;
 
   return (
-    <div className="mx-auto max-w-[720px] px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[720px]">
       <Breadcrumbs items={[{ label: page?.title ?? "Контакты" }]} />
-      <h1 className="mb-6 mt-6 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-[34px] leading-tight">
+      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-[34px] leading-tight">
         {page?.title ?? "Контакты"}
       </h1>
 
