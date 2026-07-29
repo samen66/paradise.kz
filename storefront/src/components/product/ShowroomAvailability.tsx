@@ -4,24 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Portal } from "@/components/ui/Portal";
 
-export interface ShowroomData {
-  id: number;
-  name: string;
-  slug: string;
-  city: string;
-  district: string;
-  address: string;
-  landmark: string;
-  status: "high" | "low" | "out";
-  qty: number;
-}
+import type { ProductShowroom } from "@/lib/types";
 
 interface ShowroomAvailabilityProps {
-  showrooms: ShowroomData[];
+  showrooms: ProductShowroom[];
 }
 
 export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
-  const [mapSr, setMapSr] = useState<ShowroomData | null>(null);
+  const [mapSr, setMapSr] = useState<ProductShowroom | null>(null);
 
   if (!showrooms || showrooms.length === 0) return null;
 
@@ -58,19 +48,20 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
 
         <div className="flex flex-col">
           {showrooms.map((sr) => {
-            const meta = getStatusMeta(sr.status, sr.qty);
+            const status = sr.stock >= 5 ? "high" : (sr.stock > 0 ? "low" : "out");
+            const meta = getStatusMeta(status, sr.stock);
             return (
               <div
-                key={sr.id}
+                key={sr.store.id}
                 className="flex flex-wrap items-center justify-between gap-4 border-t border-line py-4 first:border-0"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <Link
-                      href={`/showrooms/${sr.slug}`}
+                      href={`/showrooms/${sr.store.id}`}
                       className="text-[15px] font-semibold text-ink decoration-2 hover:underline"
                     >
-                      {sr.name}
+                      {sr.store.name}
                     </Link>
                     <span
                       className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold"
@@ -89,7 +80,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                       <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.7" />
                     </svg>
                     <span>
-                      {sr.city} · {sr.district} · {sr.address}
+                      {sr.store.address || "Адрес не указан"}
                     </span>
                   </div>
                 </div>
@@ -107,7 +98,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                     Показать на карте
                   </button>
                   <Link
-                    href={`/showrooms/${sr.slug}`}
+                    href={`/showrooms/${sr.store.id}`}
                     className="inline-flex items-center rounded-full bg-ink px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-ink-hover"
                   >
                     Подробнее
@@ -138,10 +129,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
             >
               <div className="flex items-start justify-between gap-3 px-5 py-4 pb-3.5">
                 <div>
-                  <h3 className="m-0 font-display text-lg font-bold leading-tight text-ink">{mapSr.name}</h3>
-                  <div className="mt-0.5 text-[13px] text-muted">
-                    {mapSr.city} · {mapSr.district}
-                  </div>
+                  <h3 className="m-0 font-display text-lg font-bold leading-tight text-ink">{mapSr.store.name}</h3>
                 </div>
                 <button
                   type="button"
@@ -186,13 +174,12 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                     <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.7" />
                   </svg>
                   <span>
-                    <b className="font-semibold text-ink">{mapSr.address}</b>
-                    {mapSr.landmark ? ` · ${mapSr.landmark}` : ""}
+                    <b className="font-semibold text-ink">{mapSr.store.address}</b>
                   </span>
                 </div>
                 <div className="flex gap-2.5">
                   <a
-                    href={`https://2gis.kz/almaty/search/${encodeURIComponent(mapSr.address)}`}
+                    href={`https://2gis.kz/almaty/search/${encodeURIComponent(mapSr.store.address || mapSr.store.name)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-1 items-center justify-center rounded-xl bg-red-600 px-3 py-3 text-sm font-bold text-white transition hover:bg-red-700"
@@ -200,7 +187,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                     Построить маршрут
                   </a>
                   <Link
-                    href={`/showrooms/${mapSr.slug}`}
+                    href={`/showrooms/${mapSr.store.id}`}
                     className="flex flex-1 items-center justify-center rounded-xl border border-line bg-white px-3 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-neutral-50"
                   >
                     Страница шоурума

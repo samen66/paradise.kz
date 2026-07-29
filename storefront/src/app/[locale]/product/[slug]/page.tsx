@@ -11,21 +11,8 @@ import { ProductDescription } from "@/components/product/ProductDescription";
 import { ProductCharacteristics } from "@/components/product/ProductCharacteristics";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { SimilarProducts } from "@/components/product/SimilarProducts";
-import { ShowroomAvailability, type ShowroomData } from "@/components/product/ShowroomAvailability";
+import { ShowroomAvailability } from "@/components/product/ShowroomAvailability";
 import { ProductShorts } from "@/components/product/ProductShorts";
-
-// ── Mock Data (until API supports these fields) ──────────────────────────────
-const MOCK_SHOWROOMS: ShowroomData[] = [
-  { id: 1, name: "Гипермаркет на Райымбека", slug: "hyper", city: "Алматы", district: "Алмалинский", address: "пр. Райымбека, 212", landmark: "напротив ТЦ Максима", status: "high", qty: 6 },
-  { id: 2, name: "ТЦ Мега", slug: "mega", city: "Алматы", district: "Бостандыкский", address: "ул. Розыбакиева, 247а", landmark: "2 этаж", status: "low", qty: 2 }
-];
-
-const MOCK_SHORTS = [
-  { id: 1, cover: "https://picsum.photos/seed/sofa-milan-reel/300/500", handle: "@Mebel BRO", views: "12,4 тыс.", href: "#" },
-  { id: 2, cover: "https://picsum.photos/seed/sofa-milan-detail/300/500", handle: "@Paradise.kz", views: "8,1 тыс.", href: "#" },
-  { id: 3, cover: "https://picsum.photos/seed/sofa-milan-room/300/500", handle: "@InteriorKZ", views: "5,6 тыс.", href: "#" },
-  { id: 4, cover: "https://picsum.photos/seed/sofa-milan-fabric/300/500", handle: "@Mebel BRO", views: "3,2 тыс.", href: "#" }
-];
 
 // ── Data fetching ───────────────────────────────────────────────────────────
 
@@ -191,9 +178,11 @@ export default async function ProductPage({
               <ProductCharacteristics characteristics={characteristics} />
             ) : null}
 
-            <ShowroomAvailability showrooms={MOCK_SHOWROOMS} />
+            {(product.showrooms && product.showrooms.length > 0) ? (
+              <ShowroomAvailability showrooms={product.showrooms} />
+            ) : null}
 
-            <ProductReviews />
+            <ProductReviews product={product} />
           </div>
         </div>
 
@@ -204,9 +193,9 @@ export default async function ProductPage({
       </div>
 
       {/* Video Shorts */}
-      {MOCK_SHORTS.length > 0 ? (
+      {(product.shorts && product.shorts.length > 0) ? (
         <div className="mt-14">
-          <ProductShorts shorts={MOCK_SHORTS} />
+          <ProductShorts shorts={product.shorts} />
         </div>
       ) : null}
 

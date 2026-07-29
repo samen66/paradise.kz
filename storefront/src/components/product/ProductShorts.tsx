@@ -1,13 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
-interface ProductShort {
-  id: number;
-  cover: string;
-  handle: string;
-  views: string;
-  href: string;
-}
+import type { ProductShort } from "@/lib/types";
 
 interface ProductShortsProps {
   shorts: ProductShort[];
@@ -32,12 +26,14 @@ export function ProductShorts({ shorts }: ProductShortsProps) {
         {shorts.map((short) => (
           <Link
             key={short.id}
-            href={short.href}
+            href={short.video_url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative block aspect-[9/16] w-[172px] shrink-0 overflow-hidden rounded-2xl bg-black shadow-[0_8px_24px_rgba(28,26,23,0.12)]"
           >
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-              style={{ backgroundImage: `url(${short.cover})` }}
+              style={{ backgroundImage: `url(${short.thumbnail_url || "https://picsum.photos/seed/placeholder/300/500"})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent to-[46%]" />
             <span className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 transition-colors group-hover:bg-red-600/90">
@@ -47,13 +43,13 @@ export function ProductShorts({ shorts }: ProductShortsProps) {
             </span>
             <div className="absolute bottom-3 left-3 right-3 text-white">
               <div className="text-[13px] font-bold drop-shadow-md">
-                {short.handle}
+                {short.title || "@Paradise.kz"}
               </div>
               <div className="mt-0.5 flex items-center gap-1.5 text-[12px] opacity-90 drop-shadow-md">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                {short.views}
+                Смотреть
               </div>
             </div>
           </Link>

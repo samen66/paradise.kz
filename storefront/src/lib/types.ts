@@ -28,6 +28,30 @@ export interface ProductVariant {
   in_stock: boolean;
 }
 
+export interface ProductReview {
+  id: number;
+  name: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ProductShort {
+  id: number;
+  video_url: string;
+  thumbnail_url: string | null;
+  title: string | null;
+}
+
+export interface ProductShowroom {
+  store: {
+    id: number;
+    name: string;
+    address: string | null;
+  };
+  stock: number;
+}
+
 export interface Product {
   id: number;
   external_id: string;
@@ -55,6 +79,11 @@ export interface Product {
   seo_description?: string | null;
   variants?: ProductVariant[];
   characteristics?: ProductCharacteristic[];
+  rating?: number;
+  reviews_count?: number;
+  reviews?: ProductReview[];
+  shorts?: ProductShort[];
+  showrooms?: ProductShowroom[];
 }
 
 export interface Category {

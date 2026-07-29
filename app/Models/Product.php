@@ -60,6 +60,8 @@ class Product extends Model implements HasMedia
         'b2b_min_order_qty',
         'compare_at_price',
         'is_new_arrival',
+        'is_composite',
+        'parent_id',
     ];
 
     /**
@@ -78,6 +80,7 @@ class Product extends Model implements HasMedia
             'barcodes' => 'array',
             'attributes' => 'array',
             'is_active' => 'boolean',
+            'is_composite' => 'boolean',
             'synced_at' => 'datetime',
             'b2b_min_order_qty' => 'integer',
             'compare_at_price' => 'integer',
@@ -230,6 +233,22 @@ class Product extends Model implements HasMedia
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    /**
+     * @return HasMany<ProductReview, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * @return HasMany<ProductShort, $this>
+     */
+    public function shorts(): HasMany
+    {
+        return $this->hasMany(ProductShort::class);
     }
 
     /**

@@ -44,6 +44,7 @@ class GuestCheckoutTest extends TestCase
             'name' => 'Айгерим Сатпаева',
             'phone' => '+77011234567',
             'email' => 'aigerim@example.com',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 2]],
             'comment' => 'Позвонить перед доставкой',
@@ -78,6 +79,7 @@ class GuestCheckoutTest extends TestCase
         $this->postJson('/api/public/checkout', [
             'name' => 'Гость',
             'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertCreated();
@@ -98,6 +100,7 @@ class GuestCheckoutTest extends TestCase
         $this->postJson('/api/public/checkout', [
             'name' => 'Гость',
             'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 4]],
         ])->assertCreated();
@@ -117,6 +120,7 @@ class GuestCheckoutTest extends TestCase
         $this->postJson('/api/public/checkout', [
             'name' => 'Гость',
             'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertStatus(422)
@@ -135,6 +139,7 @@ class GuestCheckoutTest extends TestCase
         $response = $this->postJson('/api/public/checkout', [
             'name' => 'Гость',
             'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 5]],
         ])->assertStatus(422)
@@ -150,7 +155,7 @@ class GuestCheckoutTest extends TestCase
     {
         $this->postJson('/api/public/checkout', [])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'phone', 'store_id', 'items']);
+            ->assertJsonValidationErrors(['name', 'phone', 'store_id', 'items', 'payment_method']);
     }
 
     #[Test]
@@ -163,6 +168,7 @@ class GuestCheckoutTest extends TestCase
         $this->postJson('/api/public/checkout', [
             'name' => 'Гость',
             'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertCreated();
@@ -179,6 +185,7 @@ class GuestCheckoutTest extends TestCase
 
         $response = $this->postJson('/api/public/checkout', [
             'name' => 'Гость', 'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertCreated();
@@ -199,6 +206,7 @@ class GuestCheckoutTest extends TestCase
 
         $response = $this->postJson('/api/public/checkout', [
             'name' => 'Гость', 'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'delivery' => [
@@ -225,6 +233,7 @@ class GuestCheckoutTest extends TestCase
 
         $this->postJson('/api/public/checkout', [
             'name' => 'Гость', 'phone' => '+77011112233',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'delivery' => ['method' => 'delivery'],
@@ -232,5 +241,25 @@ class GuestCheckoutTest extends TestCase
             ->assertJsonValidationErrors(['delivery.city', 'delivery.street', 'delivery.building']);
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    #[Test]
+    public function checkout_with_kaspi_returns_payment_url(): void
+    {
+        $store = Store::factory()->create();
+        $product = Product::factory()->create(['retail_price' => 50_000]);
+        $this->stockAt($store, $product, 5);
+
+        $response = $this->postJson('/api/public/checkout', [
+            'name' => 'Гость',
+            'phone' => '+77011112233',
+            'payment_method' => 'kaspi',
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertCreated();
+
+        $order = Order::query()->latest('id')->first();
+        $expectedUrl = config('services.kaspi.payment_base_url').'?order='.$order->number;
+        $response->assertJsonPath('payment_url', $expectedUrl);
     }
 }

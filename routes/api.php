@@ -34,8 +34,7 @@ Route::post('/moysklad/webhook', MoySkladWebhookController::class);
 
 Route::post('/kaspi/webhook', \App\Http\Controllers\Api\Public\KaspiWebhookController::class);
 
-// Public: registration needs the warehouse list before the client has a token.
-Route::get('/stores', [StoreController::class, 'index']);
+
 
 Route::prefix('auth')->group(function () {
     // Self-registration is temporarily disabled for the 2026-07-02 release;
@@ -77,12 +76,14 @@ Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
 // pricing, only the public (ungrouped) catalog. See VisibilityService and
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
+    Route::get('/stores', [\App\Http\Controllers\Api\Public\StoreController::class, 'index']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);
     // {product} is a slug or a numeric id — resolved in the controller.
     Route::get('/products/{product}', [PublicProductController::class, 'show']);
     Route::get('/facets', FacetController::class);
+    Route::post('/products/{product}/reviews', [\App\Http\Controllers\Api\Public\ProductReviewController::class, 'store']);
 
     Route::get('/home', HomeController::class);
     Route::get('/pages', [PageController::class, 'index']);
@@ -111,6 +112,7 @@ Route::prefix('account')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/orders', [AccountOrderController::class, 'index']);
     Route::get('/orders/{order}', [AccountOrderController::class, 'show']);
+    Route::patch('/orders/{order}/cancel', [AccountOrderController::class, 'cancel']);
 
     // Same self-scoped controller the B2B portal uses.
     Route::get('/addresses', [AddressController::class, 'index']);

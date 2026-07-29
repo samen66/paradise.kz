@@ -1,5 +1,16 @@
 {
-  "cookies": [],
+  "cookies": [
+    {
+      "name": "laravel_session",
+      "value": "test-session-cookie-123",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
   "origins": [
     {
       "origin": "http://localhost:3000",

@@ -55,7 +55,7 @@ test('Vibe Check с эмуляцией корзины и авто-исправл
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-2.0-flash',
     contents: [prompt, imagePart],
     config: {
       // Заставляем модель отвечать строго по схеме для автоматического парсинга

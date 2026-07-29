@@ -76,6 +76,38 @@ class ProductResource extends JsonResource
                 'attributeValues',
                 fn (): array => $this->characteristicsPayload(),
             ),
+            'rating' => $this->whenLoaded('reviews', fn() => (float) $this->reviews->where('is_approved', true)->avg('rating')),
+            'reviews_count' => $this->whenLoaded('reviews', fn() => $this->reviews->where('is_approved', true)->count()),
+            'reviews' => $this->when(
+                (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('reviews'),
+                fn (): array => $this->reviews->where('is_approved', true)->map(fn ($r) => [
+                    'id' => $r->id,
+                    'name' => $r->name,
+                    'rating' => $r->rating,
+                    'comment' => $r->comment,
+                    'created_at' => $r->created_at->toIso8601String(),
+                ])->values()->all(),
+            ),
+            'shorts' => $this->when(
+                (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('shorts'),
+                fn (): array => $this->shorts->sortBy('sort_order')->map(fn ($s) => [
+                    'id' => $s->id,
+                    'video_url' => $s->video_url,
+                    'thumbnail_url' => $s->thumbnail_url,
+                    'title' => $s->title,
+                ])->values()->all(),
+            ),
+            'showrooms' => $this->when(
+                (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('storeStocks'),
+                fn (): array => $this->storeStocks->filter(fn ($s) => $s->stock > 0)->map(fn ($s) => [
+                    'store' => [
+                        'id' => $s->store->id,
+                        'name' => $s->store->name,
+                        'address' => $s->store->address,
+                    ],
+                    'stock' => (float) $s->stock,
+                ])->values()->all(),
+            ),
         ];
     }
 

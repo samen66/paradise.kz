@@ -39,4 +39,21 @@ class OrderController extends Controller
 
         return new OrderResource($order->load(['items', 'store', 'address']));
     }
+
+    public function cancel(Request $request, Order $order): \Illuminate\Http\JsonResponse
+    {
+        if ($order->user_id !== $request->user()->id) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        if ($order->status !== Order::STATUS_PENDING) {
+            return response()->json([
+                'message' => 'Only pending orders can be cancelled',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $order->update(['status' => Order::STATUS_CANCELLED]);
+
+        return response()->json(['message' => 'Order cancelled']);
+    }
 }

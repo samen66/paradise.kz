@@ -46,6 +46,7 @@ class RetailCheckoutTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/public/checkout', [
             'name' => $user->name,
             'phone' => $user->phone,
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertCreated();
@@ -76,6 +77,7 @@ class RetailCheckoutTest extends TestCase
         $this->actingAs($user, 'sanctum')->postJson('/api/public/checkout', [
             'name' => $user->name,
             'phone' => $user->phone,
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'delivery' => ['method' => Order::DELIVERY_DELIVERY, 'address_id' => $address->id],
@@ -99,6 +101,7 @@ class RetailCheckoutTest extends TestCase
         $this->actingAs($user, 'sanctum')->postJson('/api/public/checkout', [
             'name' => $user->name,
             'phone' => $user->phone,
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'delivery' => ['method' => Order::DELIVERY_DELIVERY, 'address_id' => $foreignAddress->id],
@@ -117,6 +120,7 @@ class RetailCheckoutTest extends TestCase
         $this->actingAs($b2b, 'sanctum')->postJson('/api/public/checkout', [
             'name' => 'Куплю как физлицо',
             'phone' => '+77015550000',
+            'payment_method' => 'cash',
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
         ])->assertCreated();

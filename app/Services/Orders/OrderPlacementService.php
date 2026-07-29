@@ -120,7 +120,7 @@ class OrderPlacementService
         $subtotal = $this->totalFor($lines);
         $deliveryAttributes = $this->resolveDelivery(null, $delivery, $subtotal);
 
-        return DB::transaction(function () use ($name, $phone, $email, $store, $comment, $subtotal, $lines, $products, $deliveryAttributes): Order {
+        return DB::transaction(function () use ($name, $phone, $email, $store, $comment, $subtotal, $lines, $products, $deliveryAttributes, $paymentMethod): Order {
             $guest = User::create([
                 'name' => $name,
                 'email' => 'guest-'.Str::uuid().'@guest.paradise.kz',
@@ -175,7 +175,7 @@ class OrderPlacementService
         $subtotal = $this->totalFor($lines);
         $deliveryAttributes = $this->resolveDelivery($user, $delivery, $subtotal);
 
-        return DB::transaction(function () use ($user, $store, $comment, $contactEmail, $subtotal, $lines, $products, $deliveryAttributes): Order {
+        return DB::transaction(function () use ($user, $store, $comment, $contactEmail, $subtotal, $lines, $products, $deliveryAttributes, $paymentMethod): Order {
             $order = $user->orders()->create([
                 'store_id' => $store->id,
                 'status' => Order::STATUS_PENDING,

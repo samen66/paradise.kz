@@ -81,7 +81,7 @@ class CatalogSettings extends Page
                     TextInput::make('instagram_url')
                         ->label('Ссылка Instagram')
                         ->url(),
-                    \Filament\Forms\Components\Section::make('Интеграция с WhatsApp (API)')
+                    \Filament\Schemas\Components\Section::make('Интеграция с WhatsApp (API)')
                         ->description('Настройки для автоматической отправки уведомлений о статусе заказа.')
                         ->schema([
                             TextInput::make('whatsapp_api_url')
