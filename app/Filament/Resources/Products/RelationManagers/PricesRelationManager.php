@@ -31,10 +31,13 @@ class PricesRelationManager extends RelationManager
                     ->preload()
                     ->required(),
                 TextInput::make('price')
-                    ->label('Цена (тиын)')
+                    ->label('Цена (₸)')
                     ->numeric()
                     ->required()
-                    ->minValue(0),
+                    ->minValue(0)
+                    ->step('0.01')
+                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null)
+                    ->dehydrateStateUsing(fn ($state) => $state !== null ? (int)round((float)$state * 100) : null),
             ]);
     }
 
@@ -44,7 +47,11 @@ class PricesRelationManager extends RelationManager
             ->recordTitleAttribute('price')
             ->columns([
                 TextColumn::make('priceType.name')->label('Тип цены')->searchable(),
-                TextColumn::make('price')->label('Цена (тиын)')->numeric()->sortable(),
+                TextColumn::make('price')
+                    ->label('Цена (₸)')
+                    ->numeric()
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((float)$state / 100, 2, '.', '') : null),
             ])
             ->filters([])
             ->headerActions([

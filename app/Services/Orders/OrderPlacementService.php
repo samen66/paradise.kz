@@ -318,7 +318,8 @@ class OrderPlacementService
                 $this->reject($index, "Товар «{$product->name}» недоступен для заказа.");
             }
 
-            $availableStock = (float) ($stockByProductId[$product->id] ?? 0);
+            $storeStock = (float) ($stockByProductId[$product->id] ?? 0);
+            $availableStock = $storeStock > 0 ? $storeStock : (float) $product->stock;
 
             if ($quantity > $availableStock) {
                 $this->reject($index, "Товара «{$product->name}» недостаточно на складе «{$store->name}».");
@@ -367,7 +368,8 @@ class OrderPlacementService
                 $this->reject($index, "Товар «{$product->name}» недоступен для заказа.");
             }
 
-            $availableStock = (float) ($stockByProductId[$product->id] ?? 0);
+            $storeStock = (float) ($stockByProductId[$product->id] ?? 0);
+            $availableStock = $storeStock > 0 ? $storeStock : (float) $product->stock;
 
             if ($quantity > $availableStock) {
                 $this->reject($index, "Товара «{$product->name}» недостаточно на складе «{$store->name}».");

@@ -100,9 +100,13 @@ export function ProductCard({ product, isB2B = false, showOverlay = true, showAd
         </div>
 
         {product.in_stock ? (
-          product.stock !== undefined && product.stock > 0 && (
+          product.stock !== undefined && product.stock > 0 ? (
             <div className="mt-2 text-[13px] text-green-600 font-medium">
               {t("inStock")}: {product.stock} шт.
+            </div>
+          ) : (
+            <div className="mt-2 text-[13px] text-green-600 font-medium">
+              {t("inStock")}
             </div>
           )
         ) : (

@@ -35,7 +35,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
 
   return (
     <>
-      <section className="mt-6 rounded-[20px] border border-line bg-white p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] sm:px-8">
+      <section className="mt-6 rounded-[20px] border border-line bg-white dark:bg-card p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] dark:shadow-none sm:px-8">
         <div className="mb-1 flex items-baseline gap-3">
           <h2 className="font-display text-xl font-bold text-ink">Есть в наличии в шоурумах</h2>
           <span className="text-sm text-muted">
@@ -89,7 +89,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                   <button
                     type="button"
                     onClick={() => setMapSr(sr)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2.5 text-[13px] font-semibold text-ink transition hover:border-ink hover:bg-neutral-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white dark:bg-surface px-3.5 py-2.5 text-[13px] font-semibold text-ink transition hover:border-ink hover:bg-neutral-50 dark:hover:bg-white/5"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4z" stroke="var(--color-red-600,#c8372f)" strokeWidth="1.6" strokeLinejoin="round" />
@@ -124,7 +124,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
             onClick={() => setMapSr(null)}
           >
             <div
-              className="w-full max-w-md overflow-hidden rounded-[20px] bg-white shadow-2xl"
+              className="w-full max-w-md overflow-hidden rounded-[20px] bg-white dark:bg-panel shadow-2xl dark:shadow-none"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3 px-5 py-4 pb-3.5">
@@ -135,7 +135,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                   type="button"
                   onClick={() => setMapSr(null)}
                   aria-label="Закрыть"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-white transition hover:bg-neutral-50"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-white dark:bg-surface transition hover:bg-neutral-50 dark:hover:bg-white/5"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -188,7 +188,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                   </a>
                   <Link
                     href={`/showrooms/${mapSr.store.id}`}
-                    className="flex flex-1 items-center justify-center rounded-xl border border-line bg-white px-3 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-neutral-50"
+                    className="flex flex-1 items-center justify-center rounded-xl border border-line bg-white dark:bg-surface px-3 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-neutral-50 dark:hover:bg-white/5"
                   >
                     Страница шоурума
                   </Link>

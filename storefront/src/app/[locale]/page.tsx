@@ -22,8 +22,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   const tHome = await getTranslations("home");
   const [home, categories] = await Promise.all([
-    apiGet<{ data: HomeData }>("/public/home", { locale, revalidate: 300 }),
-    apiGet<{ data: Category[] }>("/public/categories", { locale, revalidate: 300 }),
+    apiGet<{ data: HomeData }>("/public/home", { locale, revalidate: 300, tags: ["products", "home"] }),
+    apiGet<{ data: Category[] }>("/public/categories", { locale, revalidate: 300, tags: ["categories"] }),
   ]);
   const rootCategories = categories.data.filter((category) => category.parent_id === null);
 

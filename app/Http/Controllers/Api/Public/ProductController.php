@@ -66,11 +66,16 @@ class ProductController extends Controller
                 }),
                 AllowedFilter::callback('attr', $this->attributeFilter(...)),
                 AllowedFilter::callback('in_stock', function (Builder $query, mixed $value) use ($store): void {
-                    if (filter_var($value, FILTER_VALIDATE_BOOLEAN) && $store !== null) {
-                        $query->whereIn('products.id', ProductStoreStock::query()
-                            ->select('product_id')
-                            ->where('store_id', $store->id)
-                            ->where('stock', '>', 0));
+                    if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                        $query->where(function ($q) use ($store) {
+                            $q->where('products.stock', '>', 0);
+                            if ($store !== null) {
+                                $q->orWhereIn('products.id', ProductStoreStock::query()
+                                    ->select('product_id')
+                                    ->where('store_id', $store->id)
+                                    ->where('stock', '>', 0));
+                            }
+                        });
                     }
                 }),
             )

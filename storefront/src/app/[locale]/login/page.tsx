@@ -14,26 +14,35 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const setSession = useAuth((state) => state.setSession);
 
-  // Original state logic
   const [phone, setPhone] = useState("+7");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<"phone" | "code">("phone");
 
-  // New state logic
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
+  async function requestCode() {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length !== 11 || !digits.startsWith("7")) {
+      setError("Введите корректный номер телефона (напр. +7 777 123 45 67)");
+      return;
+    }
 
-  const isLogin = mode === "login";
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost("/public/auth/otp/request", { phone });
+      setStep("code");
+    } catch (e) {
+      setError(e instanceof ApiValidationError ? e.messages.join(" ") : "Ошибка. Попробуйте ещё раз.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  async function verify() {
-    const isEmail = phone.includes("@");
-    if (!isEmail) {
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length !== 11 || !digits.startsWith("7")) {
-        setError("Введите корректный номер телефона (напр. +7 777 123 45 67) или email");
-        return;
-      }
+  async function verifyCode() {
+    if (code.length < 4) {
+      setError("Код состоит из 4 цифр.");
+      return;
     }
 
     setBusy(true);
@@ -47,7 +56,7 @@ function LoginForm() {
       document.cookie = `laravel_session=${response.token}; path=/; max-age=86400`;
       router.push(searchParams.get("next") ?? "/account/orders");
     } catch (e) {
-      setError(e instanceof ApiValidationError ? e.messages.join(" ") : "Ошибка. Попробуйте ещё раз.");
+      setError(e instanceof ApiValidationError ? e.messages.join(" ") : "Неверный код. Попробуйте ещё раз.");
     } finally {
       setBusy(false);
     }
@@ -68,47 +77,28 @@ function LoginForm() {
       <div className="flex flex-1 items-center justify-center p-8 sm:p-12">
         <div className="w-full max-w-[420px]">
           <h1 className="mb-2 font-display text-3xl font-bold tracking-tight text-ink">
-            {isLogin ? "С возвращением" : "Создайте аккаунт"}
+            {step === "phone" ? "Вход или регистрация" : "Введите код"}
           </h1>
           <p className="mb-7 text-sm text-muted">
-            {isLogin
-              ? "Войдите, чтобы видеть заказы, избранное и адреса доставки."
-              : "Одна минута — и покупки станут быстрее."}
+            {step === "phone"
+              ? "Войдите или создайте аккаунт, чтобы видеть заказы, избранное и адреса доставки."
+              : `Код отправлен на номер ${phone}`}
           </p>
-
-          <div className="mb-7 grid grid-cols-2 gap-1 rounded-full bg-panel p-1">
-            <button
-              onClick={() => setMode("login")}
-              className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-                isLogin ? "bg-surface text-ink shadow-sm" : "bg-transparent text-muted"
-              }`}
-            >
-              Вход
-            </button>
-            <button
-              onClick={() => setMode("register")}
-              className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-                !isLogin ? "bg-surface text-ink shadow-sm" : "bg-transparent text-muted"
-              }`}
-            >
-              Регистрация
-            </button>
-          </div>
 
           {error ? <p className="mb-4 text-sm text-sale">{error}</p> : null}
 
-          {isLogin ? (
+          {step === "phone" ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void verify();
+                void requestCode();
               }}
               className="flex flex-col gap-4"
             >
               <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-ink">Телефон или e-mail</span>
+                <span className="text-[13px] font-semibold text-ink">Телефон</span>
                 <input
-                  type="text"
+                  type="tel"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
                   placeholder="+7 (___) ___-__-__"
@@ -117,19 +107,32 @@ function LoginForm() {
                   className={inputClass}
                 />
               </label>
+              <button
+                type="submit"
+                disabled={busy}
+                className="mt-1 w-full rounded-xl bg-ink py-3 font-medium text-white transition hover:bg-ink-hover disabled:opacity-50"
+              >
+                Получить код
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void verifyCode();
+              }}
+              className="flex flex-col gap-4"
+            >
               <label className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[13px] font-semibold text-ink">Пароль</span>
-                  <a href="#" className="text-[13px] text-muted hover:text-ink">
-                    Забыли пароль?
-                  </a>
-                </div>
+                <span className="text-[13px] font-semibold text-ink">Код из SMS</span>
                 <input
-                  type="password"
+                  type="text"
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
-                  placeholder="••••••••"
+                  placeholder="1234"
+                  autoFocus
                   required
+                  maxLength={4}
                   className={inputClass}
                 />
               </label>
@@ -140,66 +143,13 @@ function LoginForm() {
               >
                 Войти
               </button>
-            </form>
-          ) : (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void verify();
-              }}
-              className="flex flex-col gap-4"
-            >
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-ink">Имя</span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Как к вам обращаться"
-                  autoFocus
-                  required
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-ink">Телефон</span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="+7 (___) ___-__-__"
-                  required
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-ink">Пароль</span>
-                <input
-                  type="password"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  placeholder="Минимум 8 символов"
-                  required
-                  className={inputClass}
-                />
-              </label>
               <button
-                type="submit"
-                disabled={busy}
-                className="mt-1 w-full rounded-xl bg-ink py-3 font-medium text-white transition hover:bg-ink-hover disabled:opacity-50"
+                type="button"
+                onClick={() => setStep("phone")}
+                className="text-sm text-muted hover:text-ink mt-2"
               >
-                Создать аккаунт
+                Изменить номер
               </button>
-              <p className="text-center text-xs leading-relaxed text-muted">
-                Нажимая «Создать аккаунт», вы соглашаетесь с{" "}
-                <a href="#" className="hover:text-ink">
-                  условиями сервиса
-                </a>{" "}
-                и{" "}
-                <a href="#" className="hover:text-ink">
-                  политикой конфиденциальности
-                </a>
-              </p>
             </form>
           )}
 

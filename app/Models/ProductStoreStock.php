@@ -14,6 +14,8 @@ class ProductStoreStock extends Model
     /** @use HasFactory<ProductStoreStockFactory> */
     use HasFactory;
 
+    protected $touches = ['product'];
+
     /** Eloquent would otherwise guess `product_store_stocks` (double-plural). */
     protected $table = 'product_store_stock';
 

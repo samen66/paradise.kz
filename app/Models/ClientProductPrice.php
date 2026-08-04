@@ -14,6 +14,8 @@ class ClientProductPrice extends Model
     /** @use HasFactory<ClientProductPriceFactory> */
     use HasFactory;
 
+    protected $touches = ['product'];
+
     protected $fillable = [
         'user_id',
         'product_id',

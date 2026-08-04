@@ -36,10 +36,13 @@ class ItemsRelationManager extends RelationManager
                     ->required()
                     ->minValue(0.001),
                 TextInput::make('unit_cost')
-                    ->label('Себестоимость (тиын)')
+                    ->label('Себестоимость (₸)')
                     ->numeric()
                     ->required()
-                    ->minValue(0),
+                    ->minValue(0)
+                    ->step('0.01')
+                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null)
+                    ->dehydrateStateUsing(fn ($state) => $state !== null ? (int)round((float)$state * 100) : null),
             ]);
     }
 
@@ -50,7 +53,11 @@ class ItemsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('product.name')->label('Товар')->searchable(),
                 TextColumn::make('quantity')->label('Количество')->numeric(),
-                TextColumn::make('unit_cost')->label('Себестоимость (тиын)')->numeric()->sortable(),
+                TextColumn::make('unit_cost')
+                    ->label('Себестоимость (₸)')
+                    ->numeric()
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((float)$state / 100, 2, '.', '') : null),
             ])
             ->filters([])
             ->headerActions([

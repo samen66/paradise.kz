@@ -96,12 +96,13 @@ export default function CheckoutPage() {
     [validation],
   );
 
-  if (!mounted) {
-    return null;
-  }
+  useEffect(() => {
+    if (mounted && items.length === 0) {
+      router.replace("/cart");
+    }
+  }, [mounted, items.length, router]);
 
-  if (items.length === 0) {
-    router.replace("/cart");
+  if (!mounted || items.length === 0) {
     return null;
   }
 

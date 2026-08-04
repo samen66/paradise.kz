@@ -32,9 +32,10 @@ class PublicProductPresenter
         $stocks = $this->stockForMany($store, $products);
         $showStockQuantity = CatalogSetting::current()->show_stock_quantity;
 
-        $products->each(function (Product $product) use ($prices, $stocks, $showStockQuantity): void {
+        $products->each(function (Product $product) use ($store, $prices, $stocks, $showStockQuantity): void {
             $product->resolved_price = $prices[$product->id] ?? null;
-            $product->resolved_stock = $stocks[$product->id] ?? 0;
+            $storeStock = $stocks[$product->id] ?? 0;
+            $product->resolved_stock = $storeStock > 0 ? $storeStock : (float) $product->stock;
             $product->show_stock_quantity = $showStockQuantity;
         });
     }

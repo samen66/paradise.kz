@@ -12,7 +12,6 @@ import { tValue } from "@/lib/format";
 import { Badge } from "./ui/Badge";
 import { FavoriteButton } from "./FavoriteButton";
 import { AddToCartButton } from "./AddToCartButton";
-import { StarRating } from "./StarRating";
 
 export type CatalogSearchParams = Record<string, string | string[] | undefined>;
 
@@ -75,11 +74,13 @@ export async function CatalogView({
     apiGet<Paginated<Product>>("/public/products", {
       locale,
       revalidate: 120,
+      tags: ["products"],
       searchParams: toApiParams(searchParams, categorySlug),
     }),
     apiGet<Facets>("/public/facets", {
       locale,
       revalidate: 300,
+      tags: ["products"],
       searchParams: categorySlug ? { category: categorySlug } : {},
     }),
   ]);
@@ -133,10 +134,6 @@ export async function CatalogView({
                 ? Math.round((1 - product.price / product.old_price) * 100)
                 : null;
               
-              // Mock rating for prototype alignment (will be replaced by API)
-              const mockRating = 4.7;
-              const mockReviewsCount = 128;
-              
               return (
                 <div key={product.id} className="relative flex flex-col">
                   {(product.is_new || discountPercent) && (
@@ -150,12 +147,6 @@ export async function CatalogView({
                   </div>
                   
                   <ProductCard product={product} showOverlay={false} showAddToCart={false} />
-                  
-                  <div className="mt-2 flex items-center gap-1.5 px-1">
-                    <StarRating rating={mockRating} size={14} />
-                    <span className="text-[12px] font-semibold text-ink">{mockRating.toFixed(1).replace(".", ",")}</span>
-                    <span className="text-[12px] text-muted">({mockReviewsCount})</span>
-                  </div>
                   
                   <div className="mt-2">
                     <AddToCartButton product={product} />

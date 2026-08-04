@@ -14,6 +14,8 @@ class ProductPrice extends Model
     /** @use HasFactory<ProductPriceFactory> */
     use HasFactory;
 
+    protected $touches = ['product'];
+
     protected $fillable = [
         'product_id',
         'price_type_id',

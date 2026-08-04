@@ -66,7 +66,7 @@ async function request<T>(method: string, path: string, body: unknown, options: 
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     ...(method === "GET"
-      ? { next: { revalidate: options.revalidate ?? 300 } }
+      ? { next: { revalidate: options.revalidate ?? 300, ...(options.tags?.length ? { tags: options.tags } : {}) } }
       : { cache: "no-store" as const }),
   });
 

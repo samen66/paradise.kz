@@ -47,6 +47,9 @@ return [
         ],
     ],
 
-
+    'storefront' => [
+        'url' => env('STOREFRONT_URL', 'http://localhost:3000'),
+        'revalidation_secret' => env('STOREFRONT_REVALIDATION_SECRET'),
+    ],
 
 ];

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductMobileHeader } from "@/components/product/ProductMobileHeader";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { apiGet, ApiError } from "@/lib/api";
@@ -21,6 +22,7 @@ async function fetchProduct(slug: string, locale: string): Promise<Product | nul
     const response = await apiGet<{ data: Product }>(`/public/products/${slug}`, {
       locale,
       revalidate: 120,
+      tags: ["products", `product-${slug}`],
     });
 
     return response.data;
@@ -41,6 +43,7 @@ async function fetchSimilar(productId: number, categoryId: number | null, locale
     const response = await apiGet<{ data: Product[] }>("/public/products", {
       locale,
       revalidate: 300,
+      tags: ["products"],
       searchParams: params,
     });
     // Exclude the current product
@@ -56,6 +59,7 @@ async function fetchCategory(categoryId: number | null, locale: string): Promise
     const response = await apiGet<{ data: Category }>(`/public/categories/${categoryId}`, {
       locale,
       revalidate: 300,
+      tags: ["categories"],
     });
     return response.data;
   } catch {
@@ -157,38 +161,42 @@ export default async function ProductPage({
   const descriptionText = tValue(product.description, locale)?.replace(/<[^>]*>/g, "") || null;
 
   return (
-    <div>
+    <div className="pb-24 lg:pb-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Breadcrumbs */}
       <Breadcrumbs items={crumbs} />
 
       {/* Main two-column grid */}
-      <div className="mt-3 grid items-start gap-10 lg:grid-cols-[1.25fr_1fr]">
-        {/* Left column: gallery + content sections */}
-        <div>
+      <ProductMobileHeader product={product} />
+
+      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-x-10 gap-y-2 lg:gap-y-0">
+        
+        {/* Gallery */}
+        <div className="order-1 lg:order-1 lg:col-start-1 lg:row-start-1">
           <ProductGallery images={product.images} alt={tValue(product.name, locale)} />
-
-          <div className="mt-9 flex flex-col gap-6">
-            {descriptionText ? (
-              <ProductDescription description={descriptionText} />
-            ) : null}
-
-            {characteristics.length > 0 ? (
-              <ProductCharacteristics characteristics={characteristics} />
-            ) : null}
-
-            {(product.showrooms && product.showrooms.length > 0) ? (
-              <ShowroomAvailability showrooms={product.showrooms} />
-            ) : null}
-
-            <ProductReviews product={product} />
-          </div>
         </div>
 
-        {/* Right column: sticky purchase sidebar */}
-        <div className="lg:sticky lg:top-[180px]">
+        {/* Purchase Sidebar */}
+        <div className="order-2 lg:order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-[180px] z-10">
           <ProductInfo product={product} locale={locale} />
+        </div>
+
+        {/* Content sections (Description, Characteristics, Reviews) */}
+        <div className="order-3 lg:order-3 lg:col-start-1 lg:row-start-2 mt-6 lg:mt-9 flex flex-col gap-6">
+          {descriptionText ? (
+            <ProductDescription description={descriptionText} />
+          ) : null}
+
+          {characteristics.length > 0 ? (
+            <ProductCharacteristics characteristics={characteristics} />
+          ) : null}
+
+          {(product.showrooms && product.showrooms.length > 0) ? (
+            <ShowroomAvailability showrooms={product.showrooms} />
+          ) : null}
+
+          <ProductReviews product={product} />
         </div>
       </div>
 

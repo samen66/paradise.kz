@@ -84,7 +84,7 @@ export function ProductReviews({ product }: { product: Product }) {
   return (
     <section
       id="reviews"
-      className="scroll-mt-[130px] rounded-[20px] border border-line bg-white p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)]"
+      className="scroll-mt-[130px] rounded-[20px] border border-line bg-white dark:bg-card p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] dark:shadow-none"
     >
       {/* Header */}
       <div className="mb-[22px] flex items-baseline gap-3">
@@ -169,14 +169,14 @@ export function ProductReviews({ product }: { product: Product }) {
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
           placeholder={t("yourName")}
-          className="mb-3 block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-ink"
+          className="mb-3 block w-full rounded-xl border border-line bg-white dark:bg-surface px-3.5 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-ink"
         />
         <textarea
           value={formText}
           onChange={(e) => setFormText(e.target.value)}
           placeholder={t("reviewPlaceholder")}
           rows={3}
-          className="mb-3.5 block w-full resize-y rounded-xl border border-line bg-white px-3.5 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-ink"
+          className="mb-3.5 block w-full resize-y rounded-xl border border-line bg-white dark:bg-surface px-3.5 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-ink"
         />
         <div className="flex items-center gap-3.5">
           <Button
@@ -205,7 +205,7 @@ export function ProductReviews({ product }: { product: Product }) {
                 className={`whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold transition ${
                   active
                     ? "border-ink bg-ink text-white"
-                    : "border-line bg-white text-muted hover:border-ink"
+                    : "border-line bg-white dark:bg-surface text-muted hover:border-ink"
                 }`}
               >
                 {f.label}
@@ -219,7 +219,7 @@ export function ProductReviews({ product }: { product: Product }) {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="cursor-pointer rounded-[10px] border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none"
+            className="cursor-pointer rounded-[10px] border border-line bg-white dark:bg-surface px-3 py-2 text-[13px] text-ink outline-none"
           >
             <option value="new">{t("sortNew")}</option>
             <option value="high">{t("sortHigh")}</option>

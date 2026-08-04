@@ -9,9 +9,11 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use App\Models\Product;
 
 class ProductForm
 {
@@ -54,6 +56,17 @@ class ProductForm
                             ]),
                     ]),
 
+                Section::make(__('admin.sections.media'))
+                    ->schema([
+                        SpatieMediaLibraryFileUpload::make(Product::IMAGE_COLLECTION)
+                            ->label(__('admin.fields.images'))
+                            ->collection(Product::IMAGE_COLLECTION)
+                            ->multiple()
+                            ->reorderable()
+                            ->image()
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make(__('admin.sections.prices_and_stock'))
                     ->schema([
                         Grid::make(3)
@@ -68,26 +81,30 @@ class ProductForm
                                 TextInput::make('retail_price')
                                     ->label(__('admin.fields.retail_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
-                                    ->numeric(),
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_tenge'))
+                                    ->numeric()
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null),
                                 TextInput::make('b2b_price')
                                     ->label(__('admin.fields.b2b_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
-                                    ->numeric(),
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_tenge'))
+                                    ->numeric()
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null),
                             ]),
                         Grid::make(3)
                             ->schema([
                                 TextInput::make('purchase_price')
                                     ->label(__('admin.fields.purchase_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
-                                    ->numeric(),
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_tenge'))
+                                    ->numeric()
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null),
                                 TextInput::make('min_price')
                                     ->label(__('admin.fields.min_price'))
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_kopecks'))
-                                    ->numeric(),
+                                    ->helperText(__('admin.helpers.erp_readonly').' '.__('admin.helpers.in_tenge'))
+                                    ->numeric()
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null),
                                 TextInput::make('b2b_min_order_qty')
                                     ->label(__('admin.fields.b2b_min_order_qty'))
                                     ->helperText(__('admin.helpers.b2b_min_qty'))
@@ -96,8 +113,10 @@ class ProductForm
                             ]),
                         TextInput::make('compare_at_price')
                             ->label(__('admin.fields.compare_at_price'))
-                            ->helperText(__('admin.helpers.compare_at_price').' '.__('admin.helpers.in_kopecks'))
-                            ->numeric(),
+                            ->helperText(__('admin.helpers.compare_at_price').' '.__('admin.helpers.in_tenge'))
+                            ->numeric()
+                            ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null)
+                            ->dehydrateStateUsing(fn ($state) => $state !== null ? (int)round((float)$state * 100) : null),
                     ]),
 
                 Section::make(__('admin.sections.dimensions'))

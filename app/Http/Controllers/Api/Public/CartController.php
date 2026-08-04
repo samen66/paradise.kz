@@ -63,7 +63,8 @@ class CartController extends Controller
             $quantity = (float) $item['quantity'];
             $product = $products->get($productId);
             $price = $prices[$productId] ?? null;
-            $stock = (float) ($stocks[$productId] ?? 0);
+            $storeStock = (float) ($stocks[$productId] ?? 0);
+            $stock = $storeStock > 0 ? $storeStock : (float) $product?->stock;
 
             $problem = match (true) {
                 $product === null, ! $publiclyVisibleIds->has($productId) => 'unavailable',
