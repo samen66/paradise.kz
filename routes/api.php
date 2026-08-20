@@ -124,3 +124,10 @@ Route::prefix('account')->middleware('auth:sanctum')->group(function () {
     Route::put('/favorites/{product}', [FavoriteController::class, 'store']);
     Route::delete('/favorites/{product}', [FavoriteController::class, 'destroy']);
 });
+
+// Admin Panel API
+Route::prefix('admin')
+    ->middleware(['auth:sanctum', 'role:admin|manager'])
+    ->group(function () {
+        Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
+    });
