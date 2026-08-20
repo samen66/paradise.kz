@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 use Illuminate\Support\Facades\DB;
+use App\Http\Requests\Admin\ProductSaveRequest;
 
 class ProductController extends Controller
 {
@@ -37,26 +38,30 @@ class ProductController extends Controller
         return response()->json(['data' => $product]);
     }
 
-    public function update(Request $request, $id)
+    public function store(ProductSaveRequest $request)
+    {
+        $validated = $request->validated();
+        
+        $product = DB::transaction(function () use ($validated, $request) {
+            $product = Product::create($validated);
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $product->addMedia($image)->toMediaCollection(Product::IMAGE_COLLECTION ?? 'images');
+                }
+            }
+            
+            return $product;
+        });
+
+        return response()->json(['data' => $product->load(['media', 'category', 'brand'])], 201);
+    }
+
+    public function update(ProductSaveRequest $request, $id)
     {
         $product = Product::findOrFail($id);
         
-        $validated = $request->validate([
-            'name' => 'required|array',
-            'name.ru' => 'required|string|max:255',
-            'name.kk' => 'nullable|string|max:255',
-            'description' => 'nullable|array',
-            'description.ru' => 'nullable|string',
-            'description.kk' => 'nullable|string',
-            'category_id' => 'nullable|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            'retail_price' => 'nullable|integer|min:0',
-            'b2b_price' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
-            'is_new_arrival' => 'boolean',
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:5120',
-        ]);
+        $validated = $request->validated();
 
         DB::transaction(function () use ($product, $validated, $request) {
             $product->update($validated);
