@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ProductMobileHeader } from "@/components/product/ProductMobileHeader";
 import { notFound } from "next/navigation";
+import Script from "next/script";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { apiGet, ApiError } from "@/lib/api";
 import { tValue } from "@/lib/format";
@@ -14,6 +15,8 @@ import { ProductReviews } from "@/components/product/ProductReviews";
 import { SimilarProducts } from "@/components/product/SimilarProducts";
 import { ShowroomAvailability } from "@/components/product/ShowroomAvailability";
 import { ProductShorts } from "@/components/product/ProductShorts";
+import { TrustStrip } from "@/components/product/TrustStrip";
+import { ProductTabsNav } from "@/components/product/ProductTabsNav";
 
 // ── Data fetching ───────────────────────────────────────────────────────────
 
@@ -160,42 +163,83 @@ export default async function ProductPage({
   // Plain-text description for the description section (strip HTML if present)
   const descriptionText = tValue(product.description, locale)?.replace(/<[^>]*>/g, "") || null;
 
+  // Category name for sidebar header
+  const categoryDisplayName = category ? tValue(category.name, locale) : null;
+
   return (
     <div className="pb-24 lg:pb-0">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Script
+        id="product-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* Breadcrumbs */}
       <Breadcrumbs items={crumbs} />
 
-      {/* Main two-column grid */}
+      {/* Mobile header (hidden on desktop) */}
       <ProductMobileHeader product={product} />
 
-      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-x-10 gap-y-2 lg:gap-y-0">
+      {/* ═══ Hero block: Gallery + Sidebar (two-column) ═══ */}
+      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-x-14 gap-y-2 lg:gap-y-0 items-start">
         
         {/* Gallery */}
-        <div className="order-1 lg:order-1 lg:col-start-1 lg:row-start-1">
+        <div>
           <ProductGallery images={product.images} alt={tValue(product.name, locale)} />
+
+          {/* Trust strip under gallery (desktop only) */}
+          <div className="hidden lg:block">
+            <TrustStrip />
+          </div>
         </div>
 
-        {/* Purchase Sidebar */}
-        <div className="order-2 lg:order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-[180px] z-10">
-          <ProductInfo product={product} locale={locale} />
+        {/* Purchase Sidebar (sticky) */}
+        <div className="lg:sticky lg:top-[150px] z-10">
+          <ProductInfo product={product} locale={locale} categoryName={categoryDisplayName} />
         </div>
+      </div>
 
-        {/* Content sections (Description, Characteristics, Reviews) */}
-        <div className="order-3 lg:order-3 lg:col-start-1 lg:row-start-2 mt-6 lg:mt-9 flex flex-col gap-6">
-          {descriptionText ? (
+      {/* Trust strip (mobile — full width) */}
+      <div className="lg:hidden mt-6">
+        <TrustStrip />
+      </div>
+
+      {/* ═══ Tabs navigation (sticky) ═══ */}
+      <div className="mt-10 lg:mt-14">
+        <ProductTabsNav 
+          reviewCount={product.reviews_count ?? product.reviews?.length}
+          hasAbout={!!descriptionText}
+          hasSpecs={characteristics.length > 0}
+          hasShowrooms={!!(product.showrooms && product.showrooms.length > 0)}
+        />
+      </div>
+
+      {/* ═══ Content sections (full-width, below hero) ═══ */}
+      <div className="mt-8 lg:mt-10 flex flex-col gap-8 lg:gap-10">
+
+        {/* Description */}
+        {descriptionText ? (
+          <section id="about" className="scroll-mt-[200px]">
             <ProductDescription description={descriptionText} />
-          ) : null}
+          </section>
+        ) : null}
 
-          {characteristics.length > 0 ? (
+        {/* Characteristics */}
+        {characteristics.length > 0 ? (
+          <section id="specs" className="scroll-mt-[200px]">
             <ProductCharacteristics characteristics={characteristics} />
-          ) : null}
+          </section>
+        ) : null}
 
-          {(product.showrooms && product.showrooms.length > 0) ? (
+        {/* Showroom availability */}
+        {(product.showrooms && product.showrooms.length > 0) ? (
+          <section id="showrooms" className="scroll-mt-[200px]">
             <ShowroomAvailability showrooms={product.showrooms} />
-          ) : null}
+          </section>
+        ) : null}
 
+        {/* Reviews — component already has id="reviews" internally */}
+        <div className="scroll-mt-[200px]">
           <ProductReviews product={product} />
         </div>
       </div>

@@ -35,7 +35,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
 
   return (
     <>
-      <section className="mt-6 rounded-[20px] border border-line bg-white dark:bg-card p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] dark:shadow-none sm:px-8">
+      <section className="rounded-[20px] border border-line bg-white dark:bg-card p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] dark:shadow-none sm:px-8">
         <div className="mb-1 flex items-baseline gap-3">
           <h2 className="font-display text-xl font-bold text-ink">Есть в наличии в шоурумах</h2>
           <span className="text-sm text-muted">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import Image from "next/image";
 import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +19,7 @@ function initials(name: string): string {
 
 export function ProductReviews({ product }: { product: Product }) {
   const t = useTranslations("product");
+  const format = useFormatter();
 
   // Review form state
   const [formRating, setFormRating] = useState(0);
@@ -249,7 +250,9 @@ export function ProductReviews({ product }: { product: Product }) {
                   {/* Author line */}
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className="text-[15px] font-bold text-ink">{authorName}</span>
-                    <span className="ml-auto text-[13px] text-muted">{new Date(rv.created_at).toLocaleDateString()}</span>
+                    <span className="ml-auto text-[13px] text-muted">
+                      {format.dateTime(new Date(rv.created_at), { dateStyle: "short" })}
+                    </span>
                   </div>
 
                   {/* Stars */}
