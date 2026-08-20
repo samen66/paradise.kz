@@ -334,7 +334,7 @@ class OrderPlacementService
             $products[$product->id] = $product;
             $lines[] = [
                 'product_id' => $product->id,
-                'external_product_id' => $product->external_id,
+                'external_product_id' => $product->externalMapping?->external_id,
                 'name' => $product->name,
                 'quantity' => $quantity,
                 'price' => $price,
@@ -384,7 +384,7 @@ class OrderPlacementService
             $products[$product->id] = $product;
             $lines[] = [
                 'product_id' => $product->id,
-                'external_product_id' => $product->external_id,
+                'external_product_id' => $product->externalMapping?->external_id,
                 'name' => $product->name,
                 'quantity' => $quantity,
                 'price' => $price,

@@ -61,8 +61,7 @@ class TranslatableSyncTest extends TestCase
     #[Test]
     public function a_resync_updates_ru_but_preserves_the_kk_translation(): void
     {
-        $product = Product::factory()->create([
-            'external_id' => 'prod-1',
+        $product = Product::factory()->erpSynced('prod-1')->create([
             'name' => 'Диван',
             'description' => 'Описание',
         ]);
@@ -74,7 +73,7 @@ class TranslatableSyncTest extends TestCase
 
         (new SyncProductsJob)->handle(app(MoySkladService::class));
 
-        $product = Product::query()->where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::query()->whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
 
         $this->assertSame('Диван (новое имя)', $product->getTranslation('name', 'ru'));
         $this->assertSame('Диван (kk)', $product->getTranslation('name', 'kk'));
@@ -89,7 +88,7 @@ class TranslatableSyncTest extends TestCase
 
         (new SyncProductsJob)->handle(app(MoySkladService::class));
 
-        $product = Product::query()->where('external_id', 'prod-9')->firstOrFail();
+        $product = Product::query()->whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-9'))->firstOrFail();
 
         $this->assertSame('Новый товар', $product->name);
         $this->assertSame(['ru' => 'Новый товар'], $product->getTranslations('name'));

@@ -6,10 +6,12 @@ namespace App\Jobs\Catalog;
 
 use App\Contracts\Catalog\CatalogSource;
 use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Support\Translations;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Mirror the ERP's catalog products into the local products table.
@@ -57,8 +59,8 @@ class SyncProductsJob implements ShouldQueue
                 'volume' => $product->volume,
                 'country' => $product->country,
                 'supplier' => $product->supplier,
-                'barcodes' => json_encode($product->barcodes, JSON_UNESCAPED_UNICODE),
-                'attributes' => json_encode($product->attributes, JSON_UNESCAPED_UNICODE),
+                'barcodes' => $product->barcodes,
+                'erp_attributes' => $product->attributes,
                 // Insert default only — excluded from the update set below.
                 'is_active' => true,
                 'synced_at' => $now,
@@ -86,59 +88,117 @@ class SyncProductsJob implements ShouldQueue
      */
     private function flush(array $batch): void
     {
-        $batch = $this->mergeTranslatables($batch);
+        $source = $batch[0]['source'];
+        $externalIds = array_column($batch, 'external_id');
 
-        // `is_active` is intentionally absent here: on UPDATE it must keep the
-        // local value; it is only written when the row is first INSERTed.
-        Product::query()->upsert(
-            $batch,
-            ['source', 'external_id'],
-            [
-                'external_folder_id',
-                'name',
-                'code',
-                'article',
-                'description',
-                'retail_price',
-                'b2b_price',
-                'purchase_price',
-                'min_price',
-                'uom',
-                'weight',
-                'volume',
-                'country',
-                'supplier',
-                'barcodes',
-                'attributes',
-                'synced_at',
-            ],
-        );
-    }
-
-    /**
-     * `name`/`description` are translatable JSON columns, but the ERP only
-     * supplies ru content. Merge each row's ru value into the translations
-     * already stored for that product so a re-sync never wipes admin-authored
-     * kk translations. One extra SELECT per batch.
-     *
-     * @param  array<int, array<string, mixed>>  $batch
-     * @return array<int, array<string, mixed>>
-     */
-    private function mergeTranslatables(array $batch): array
-    {
-        $existing = Product::query()
-            ->toBase()
-            ->where('source', $batch[0]['source'])
-            ->whereIn('external_id', array_column($batch, 'external_id'))
-            ->get(['external_id', 'name', 'description'])
+        $existingMappings = ProductExternalMapping::query()
+            ->with('product:id,name,description')
+            ->where('source', $source)
+            ->whereIn('external_id', $externalIds)
+            ->get()
             ->keyBy('external_id');
 
-        foreach ($batch as &$row) {
-            $current = $existing[$row['external_id']] ?? null;
-            $row['name'] = Translations::mergeRu($current->name ?? null, $row['name']);
-            $row['description'] = Translations::mergeRu($current->description ?? null, $row['description']);
-        }
+        $productsToUpsert = [];
+        $mappingsToUpsert = [];
+        $now = Carbon::now();
 
-        return $batch;
+        DB::transaction(function () use ($batch, $existingMappings, $now, &$productsToUpsert, &$mappingsToUpsert) {
+            foreach ($batch as $row) {
+                $mapping = $existingMappings->get($row['external_id']);
+                
+                $name = Translations::mergeRu($mapping?->product?->getRawOriginal('name'), $row['name']);
+                $description = Translations::mergeRu($mapping?->product?->getRawOriginal('description'), $row['description']);
+                
+                if ($mapping === null) {
+                    // New product
+                    $product = Product::query()->create([
+                        'name' => json_decode($name, true),
+                        'code' => $row['code'],
+                        'article' => $row['article'],
+                        'description' => json_decode($description, true),
+                        'retail_price' => $row['retail_price'],
+                        'b2b_price' => $row['b2b_price'],
+                        'purchase_price' => $row['purchase_price'],
+                        'min_price' => $row['min_price'],
+                        'uom' => $row['uom'],
+                        'weight' => $row['weight'],
+                        'volume' => $row['volume'],
+                        'country' => $row['country'],
+                        'supplier' => $row['supplier'],
+                        'is_active' => $row['is_active'],
+                    ]);
+                    
+                    $mappingsToUpsert[] = [
+                        'product_id' => $product->id,
+                        'source' => $row['source'],
+                        'external_id' => $row['external_id'],
+                        'external_folder_id' => $row['external_folder_id'],
+                        'synced_at' => $row['synced_at'],
+                        'barcodes' => json_encode($row['barcodes'], JSON_UNESCAPED_UNICODE),
+                        'erp_attributes' => json_encode($row['erp_attributes'], JSON_UNESCAPED_UNICODE),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                } else {
+                    // Existing product
+                    $productsToUpsert[] = [
+                        'id' => $mapping->product_id,
+                        'name' => $name,
+                        'code' => $row['code'],
+                        'article' => $row['article'],
+                        'description' => $description,
+                        'retail_price' => $row['retail_price'],
+                        'b2b_price' => $row['b2b_price'],
+                        'purchase_price' => $row['purchase_price'],
+                        'min_price' => $row['min_price'],
+                        'uom' => $row['uom'],
+                        'weight' => $row['weight'],
+                        'volume' => $row['volume'],
+                        'country' => $row['country'],
+                        'supplier' => $row['supplier'],
+                    ];
+                    
+                    $mappingsToUpsert[] = [
+                        'product_id' => $mapping->product_id,
+                        'source' => $row['source'],
+                        'external_id' => $row['external_id'],
+                        'external_folder_id' => $row['external_folder_id'],
+                        'synced_at' => $row['synced_at'],
+                        'barcodes' => json_encode($row['barcodes'], JSON_UNESCAPED_UNICODE),
+                        'erp_attributes' => json_encode($row['erp_attributes'], JSON_UNESCAPED_UNICODE),
+                        'created_at' => clone $mapping->created_at, // pass by value
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            if ($productsToUpsert !== []) {
+                Product::query()->upsert($productsToUpsert, ['id'], [
+                    'name',
+                    'code',
+                    'article',
+                    'description',
+                    'retail_price',
+                    'b2b_price',
+                    'purchase_price',
+                    'min_price',
+                    'uom',
+                    'weight',
+                    'volume',
+                    'country',
+                    'supplier',
+                ]);
+            }
+            
+            if ($mappingsToUpsert !== []) {
+                ProductExternalMapping::query()->upsert($mappingsToUpsert, ['source', 'external_id'], [
+                    'external_folder_id',
+                    'synced_at',
+                    'barcodes',
+                    'erp_attributes',
+                    'updated_at',
+                ]);
+            }
+        });
     }
 }

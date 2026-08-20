@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Catalog;
 
 use App\Contracts\Catalog\CatalogSource;
-use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Models\ProductStoreStock;
 use App\Models\Store;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -58,7 +58,7 @@ class SyncStockJob implements ShouldQueue
         }
 
         $sourceKey = $source->key();
-        $productIds = Product::query()->where('source', $sourceKey)->pluck('id', 'external_id');
+        $productIds = ProductExternalMapping::query()->where('source', $sourceKey)->pluck('product_id', 'external_id');
         $storeIds = Store::query()->where('source', $sourceKey)->pluck('id', 'external_id');
 
         $touchedProductIds = [];

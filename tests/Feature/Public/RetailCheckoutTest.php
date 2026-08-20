@@ -38,7 +38,7 @@ class RetailCheckoutTest extends TestCase
     public function an_authenticated_retail_customer_gets_the_order_on_their_account(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
         $this->stockAt($store, $product, 10);
 
         $user = User::factory()->retail()->create();
@@ -63,7 +63,7 @@ class RetailCheckoutTest extends TestCase
     public function a_saved_address_is_honoured_for_delivery(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
         $this->stockAt($store, $product, 10);
 
         $user = User::factory()->retail()->create();
@@ -92,7 +92,7 @@ class RetailCheckoutTest extends TestCase
     public function a_foreign_saved_address_is_rejected(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
         $this->stockAt($store, $product, 10);
 
         $user = User::factory()->retail()->create();
@@ -112,7 +112,7 @@ class RetailCheckoutTest extends TestCase
     public function a_b2b_token_still_goes_through_the_guest_path(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
         $this->stockAt($store, $product, 10);
 
         $b2b = User::factory()->b2b()->approved()->create();

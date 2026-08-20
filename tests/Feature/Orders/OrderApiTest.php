@@ -59,8 +59,8 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $a = Product::factory()->create(['name' => 'Диван', 'b2b_price' => 200_000]);
-        $b = Product::factory()->create(['name' => 'Стол', 'b2b_price' => 50_000]);
+        $a = Product::factory()->erpSynced()->create(['name' => 'Диван', 'b2b_price' => 200_000]);
+        $b = Product::factory()->erpSynced()->create(['name' => 'Стол', 'b2b_price' => 50_000]);
         $this->stockAt($store, $a, 10);
         $this->stockAt($store, $b, 10);
 
@@ -90,7 +90,7 @@ class OrderApiTest extends TestCase
         // Per-client snapshot prices persisted in kopecks.
         $this->assertDatabaseHas('order_items', [
             'product_id' => $a->id,
-            'external_product_id' => $a->external_id,
+            'external_product_id' => $a->externalMapping->external_id,
             'name' => 'Диван',
             'price' => 200_000,
         ]);
@@ -115,7 +115,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 200_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/orders', [
@@ -139,7 +139,7 @@ class OrderApiTest extends TestCase
         $store = Store::factory()->create();
 
         // Restricted to a group the user is not in → not visible.
-        $hidden = Product::factory()->create(['name' => 'Скрытый']);
+        $hidden = Product::factory()->erpSynced()->create(['name' => 'Скрытый']);
         $hidden->catalogGroups()->attach(CatalogGroup::factory()->create());
         $this->stockAt($store, $hidden, 10);
 
@@ -160,7 +160,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create(['name' => 'Алматы']);
-        $product = Product::factory()->create(['name' => 'Стул', 'b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['name' => 'Стул', 'b2b_price' => 50_000]);
         $this->stockAt($store, $product, 3);
 
         $response = $this->postJson('/api/orders', [
@@ -183,7 +183,7 @@ class OrderApiTest extends TestCase
 
         $chosenStore = Store::factory()->create();
         $otherStore = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($otherStore, $product, 10);
         $this->stockAt($chosenStore, $product, 0);
 
@@ -202,7 +202,7 @@ class OrderApiTest extends TestCase
         $user = $this->approvedClient();
         Sanctum::actingAs($user);
 
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
 
         $this->postJson('/api/orders', [
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
@@ -219,7 +219,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->inactive()->create();
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
         $this->stockAt($store, $product, 10);
 
         $this->postJson('/api/orders', [
@@ -249,7 +249,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/orders', [
@@ -323,7 +323,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($store, $product, 10);
 
         $response = $this->postJson('/api/orders', [
@@ -358,7 +358,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create(['name' => 'Астана']);
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($store, $product, 5); // real FIFO batch: 5 units.
 
         // Simulate the cached projection drifting ahead of the ledger (e.g. a
@@ -395,7 +395,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 100_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]);
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/orders', [
@@ -418,7 +418,7 @@ class OrderApiTest extends TestCase
         $address = Address::factory()->for($user)->create(['city' => 'Алматы', 'street' => 'Абая', 'building' => '10']);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 100_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]);
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/orders', [
@@ -445,7 +445,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/orders', [
@@ -473,7 +473,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 100_000]); // subtotal = 1000 ₸ = threshold
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]); // subtotal = 1000 ₸ = threshold
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/orders', [
@@ -493,7 +493,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/orders', [
@@ -516,7 +516,7 @@ class OrderApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['b2b_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/orders', [

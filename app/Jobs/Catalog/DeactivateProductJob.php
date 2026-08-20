@@ -25,8 +25,10 @@ class DeactivateProductJob implements ShouldQueue
     public function handle(): void
     {
         Product::query()
-            ->where('source', (string) config('erp.provider'))
-            ->where('external_id', $this->externalId)
+            ->whereHas('externalMapping', function ($query) {
+                $query->where('source', (string) config('erp.provider'))
+                    ->where('external_id', $this->externalId);
+            })
             ->update(['is_active' => false]);
     }
 }

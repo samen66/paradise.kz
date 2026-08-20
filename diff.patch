@@ -1,0 +1,1309 @@
+diff --git a/app/Filament/Resources/Products/Schemas/ProductForm.php b/app/Filament/Resources/Products/Schemas/ProductForm.php
+index 10d25f6..f66c447 100644
+--- a/app/Filament/Resources/Products/Schemas/ProductForm.php
++++ b/app/Filament/Resources/Products/Schemas/ProductForm.php
+@@ -139,45 +139,49 @@ public static function configure(Schema $schema): Schema
+ 
+                 Section::make(__('admin.sections.erp_sync'))
+                     ->schema([
+-                        Grid::make(2)
++                        \Filament\Schemas\Components\Group::make()
++                            ->relationship('externalMapping')
+                             ->schema([
+-                                TextInput::make('source')
+-                                    ->label(__('admin.fields.source'))
++                                Grid::make(2)
++                                    ->schema([
++                                        TextInput::make('source')
++                                            ->label(__('admin.fields.source'))
++                                            ->disabled()
++                                            ->required(),
++                                        TextInput::make('external_id')
++                                            ->label(__('admin.fields.external_id'))
++                                            ->disabled()
++                                            ->required(),
++                                        TextInput::make('external_folder_id')
++                                            ->label(__('admin.fields.external_folder_id'))
++                                            ->disabled(),
++                                        TextInput::make('code')
++                                            ->label(__('admin.fields.code'))
++                                            ->disabled(),
++                                        TextInput::make('article')
++                                            ->label(__('admin.fields.article'))
++                                            ->disabled(),
++                                        TextInput::make('country')
++                                            ->label(__('admin.fields.country'))
++                                            ->disabled(),
++                                        TextInput::make('supplier')
++                                            ->label(__('admin.fields.supplier'))
++                                            ->disabled(),
++                                        DateTimePicker::make('synced_at')
++                                            ->label(__('admin.fields.synced_at'))
++                                            ->disabled(),
++                                    ]),
++                                TagsInput::make('barcodes')
++                                    ->label(__('admin.fields.barcodes'))
+                                     ->disabled()
+-                                    ->required(),
+-                                TextInput::make('external_id')
+-                                    ->label(__('admin.fields.external_id'))
++                                    ->columnSpanFull(),
++                                KeyValue::make('attributes')
++                                    ->label(__('admin.fields.attributes'))
+                                     ->disabled()
+-                                    ->required(),
+-                                TextInput::make('external_folder_id')
+-                                    ->label(__('admin.fields.external_folder_id'))
+-                                    ->disabled(),
+-                                TextInput::make('code')
+-                                    ->label(__('admin.fields.code'))
+-                                    ->disabled(),
+-                                TextInput::make('article')
+-                                    ->label(__('admin.fields.article'))
+-                                    ->disabled(),
+-                                TextInput::make('country')
+-                                    ->label(__('admin.fields.country'))
+-                                    ->disabled(),
+-                                TextInput::make('supplier')
+-                                    ->label(__('admin.fields.supplier'))
+-                                    ->disabled(),
+-                                DateTimePicker::make('synced_at')
+-                                    ->label(__('admin.fields.synced_at'))
+-                                    ->disabled(),
++                                    ->keyLabel('Name')
++                                    ->valueLabel('Value')
++                                    ->columnSpanFull(),
+                             ]),
+-                        TagsInput::make('barcodes')
+-                            ->label(__('admin.fields.barcodes'))
+-                            ->disabled()
+-                            ->columnSpanFull(),
+-                        KeyValue::make('attributes')
+-                            ->label(__('admin.fields.attributes'))
+-                            ->disabled()
+-                            ->keyLabel('Name')
+-                            ->valueLabel('Value')
+-                            ->columnSpanFull(),
+                     ])->collapsed(),
+             ]);
+     }
+diff --git a/app/Http/Controllers/Api/ProductController.php b/app/Http/Controllers/Api/ProductController.php
+index 9aaf25f..89bb8b1 100644
+--- a/app/Http/Controllers/Api/ProductController.php
++++ b/app/Http/Controllers/Api/ProductController.php
+@@ -47,7 +47,7 @@ public function index(Request $request): AnonymousResourceCollection
+ 
+         $products = QueryBuilder::for($this->visibility->visibleProductQuery($user)->with('media'))
+             ->allowedFilters(
+-                AllowedFilter::exact('category', 'external_folder_id'),
++                AllowedFilter::exact('category', 'externalMapping.external_folder_id'),
+                 AllowedFilter::callback('search', $this->searchFilter(...)),
+                 AllowedFilter::callback('brand', $this->brandFilter(...)),
+                 AllowedFilter::callback('attr', $this->attributeFilter(...)),
+diff --git a/app/Http/Resources/ProductResource.php b/app/Http/Resources/ProductResource.php
+index 6338a86..9ee603e 100644
+--- a/app/Http/Resources/ProductResource.php
++++ b/app/Http/Resources/ProductResource.php
+@@ -31,7 +31,7 @@ public function toArray(Request $request): array
+ 
+         return [
+             'id' => $this->id,
+-            'external_id' => $this->external_id,
++            'external_id' => $this->externalMapping?->external_id,
+             'name' => $this->name,
+             'slug' => $this->slug,
+             'code' => $this->code,
+@@ -52,13 +52,13 @@ public function toArray(Request $request): array
+             'old_price' => $this->majorComparePrice(),
+             'is_new' => (bool) $this->is_new_arrival,
+             'b2b_min_order_qty' => $this->resource->effectiveB2bMinOrderQty(),
+-            'external_folder_id' => $this->external_folder_id,
++            'external_folder_id' => $this->externalMapping?->external_folder_id,
+             // Mirrored ERP data so the B2B site never has to call the ERP at
+             // read time. `barcodes`/`attributes` are JSON-cast on the model.
+             'country' => $this->country,
+             'supplier' => $this->supplier,
+-            'barcodes' => $this->barcodes ?? [],
+-            'attributes' => $this->attributes ?? [],
++            'barcodes' => $this->externalMapping?->barcodes ?? [],
++            'attributes' => $this->externalMapping?->erp_attributes ?? [],
+             // `description` and `variants` are only included on the detail
+             // endpoint, flagged by the controller via the transient
+             // `with_description` attribute.
+diff --git a/app/Jobs/Catalog/DeactivateProductJob.php b/app/Jobs/Catalog/DeactivateProductJob.php
+index a2b3ae8..82278d6 100644
+--- a/app/Jobs/Catalog/DeactivateProductJob.php
++++ b/app/Jobs/Catalog/DeactivateProductJob.php
+@@ -25,8 +25,10 @@ public function __construct(
+     public function handle(): void
+     {
+         Product::query()
+-            ->where('source', (string) config('erp.provider'))
+-            ->where('external_id', $this->externalId)
++            ->whereHas('externalMapping', function ($query) {
++                $query->where('source', (string) config('erp.provider'))
++                    ->where('external_id', $this->externalId);
++            })
+             ->update(['is_active' => false]);
+     }
+ }
+diff --git a/app/Jobs/Catalog/SyncProductImagesJob.php b/app/Jobs/Catalog/SyncProductImagesJob.php
+index 3127c4d..f57a028 100644
+--- a/app/Jobs/Catalog/SyncProductImagesJob.php
++++ b/app/Jobs/Catalog/SyncProductImagesJob.php
+@@ -39,8 +39,10 @@ public function __construct(
+     public function handle(CatalogSource $source): void
+     {
+         $product = Product::query()
+-            ->where('source', $this->source)
+-            ->where('external_id', $this->externalId)
++            ->whereHas('externalMapping', function ($query) {
++                $query->where('source', $this->source)
++                    ->where('external_id', $this->externalId);
++            })
+             ->first();
+ 
+         if ($product === null) {
+diff --git a/app/Jobs/Catalog/SyncProductVariantsJob.php b/app/Jobs/Catalog/SyncProductVariantsJob.php
+index 12ed55a..bf4c148 100644
+--- a/app/Jobs/Catalog/SyncProductVariantsJob.php
++++ b/app/Jobs/Catalog/SyncProductVariantsJob.php
+@@ -5,7 +5,7 @@
+ namespace App\Jobs\Catalog;
+ 
+ use App\Contracts\Catalog\CatalogSource;
+-use App\Models\Product;
++use App\Models\ProductExternalMapping;
+ use App\Models\ProductVariant;
+ use Illuminate\Contracts\Queue\ShouldQueue;
+ use Illuminate\Foundation\Queue\Queueable;
+@@ -37,7 +37,7 @@ public function handle(CatalogSource $source): void
+     {
+         $now = Carbon::now();
+         $sourceKey = $source->key();
+-        $productIds = Product::query()->where('source', $sourceKey)->pluck('id', 'external_id');
++        $productIds = ProductExternalMapping::query()->where('source', $sourceKey)->pluck('product_id', 'external_id');
+         $batch = [];
+ 
+         foreach ($source->productVariants($this->changedSince) as $variant) {
+diff --git a/app/Jobs/Catalog/SyncProductsJob.php b/app/Jobs/Catalog/SyncProductsJob.php
+index d188563..6ac03a1 100644
+--- a/app/Jobs/Catalog/SyncProductsJob.php
++++ b/app/Jobs/Catalog/SyncProductsJob.php
+@@ -6,10 +6,12 @@
+ 
+ use App\Contracts\Catalog\CatalogSource;
+ use App\Models\Product;
++use App\Models\ProductExternalMapping;
+ use App\Support\Translations;
+ use Illuminate\Contracts\Queue\ShouldQueue;
+ use Illuminate\Foundation\Queue\Queueable;
+ use Illuminate\Support\Carbon;
++use Illuminate\Support\Facades\DB;
+ 
+ /**
+  * Mirror the ERP's catalog products into the local products table.
+@@ -57,8 +59,8 @@ public function handle(CatalogSource $source): void
+                 'volume' => $product->volume,
+                 'country' => $product->country,
+                 'supplier' => $product->supplier,
+-                'barcodes' => json_encode($product->barcodes, JSON_UNESCAPED_UNICODE),
+-                'attributes' => json_encode($product->attributes, JSON_UNESCAPED_UNICODE),
++                'barcodes' => $product->barcodes,
++                'erp_attributes' => $product->attributes,
+                 // Insert default only — excluded from the update set below.
+                 'is_active' => true,
+                 'synced_at' => $now,
+@@ -86,59 +88,117 @@ public function handle(CatalogSource $source): void
+      */
+     private function flush(array $batch): void
+     {
+-        $batch = $this->mergeTranslatables($batch);
+-
+-        // `is_active` is intentionally absent here: on UPDATE it must keep the
+-        // local value; it is only written when the row is first INSERTed.
+-        Product::query()->upsert(
+-            $batch,
+-            ['source', 'external_id'],
+-            [
+-                'external_folder_id',
+-                'name',
+-                'code',
+-                'article',
+-                'description',
+-                'retail_price',
+-                'b2b_price',
+-                'purchase_price',
+-                'min_price',
+-                'uom',
+-                'weight',
+-                'volume',
+-                'country',
+-                'supplier',
+-                'barcodes',
+-                'attributes',
+-                'synced_at',
+-            ],
+-        );
+-    }
+-
+-    /**
+-     * `name`/`description` are translatable JSON columns, but the ERP only
+-     * supplies ru content. Merge each row's ru value into the translations
+-     * already stored for that product so a re-sync never wipes admin-authored
+-     * kk translations. One extra SELECT per batch.
+-     *
+-     * @param  array<int, array<string, mixed>>  $batch
+-     * @return array<int, array<string, mixed>>
+-     */
+-    private function mergeTranslatables(array $batch): array
+-    {
+-        $existing = Product::query()
+-            ->toBase()
+-            ->where('source', $batch[0]['source'])
+-            ->whereIn('external_id', array_column($batch, 'external_id'))
+-            ->get(['external_id', 'name', 'description'])
++        $source = $batch[0]['source'];
++        $externalIds = array_column($batch, 'external_id');
++
++        $existingMappings = ProductExternalMapping::query()
++            ->with('product:id,name,description')
++            ->where('source', $source)
++            ->whereIn('external_id', $externalIds)
++            ->get()
+             ->keyBy('external_id');
+ 
+-        foreach ($batch as &$row) {
+-            $current = $existing[$row['external_id']] ?? null;
+-            $row['name'] = Translations::mergeRu($current->name ?? null, $row['name']);
+-            $row['description'] = Translations::mergeRu($current->description ?? null, $row['description']);
+-        }
++        $productsToUpsert = [];
++        $mappingsToUpsert = [];
++        $now = Carbon::now();
++
++        DB::transaction(function () use ($batch, $existingMappings, $now, &$productsToUpsert, &$mappingsToUpsert) {
++            foreach ($batch as $row) {
++                $mapping = $existingMappings->get($row['external_id']);
++                
++                $name = Translations::mergeRu($mapping?->product?->getRawOriginal('name'), $row['name']);
++                $description = Translations::mergeRu($mapping?->product?->getRawOriginal('description'), $row['description']);
++                
++                if ($mapping === null) {
++                    // New product
++                    $product = Product::query()->create([
++                        'name' => json_decode($name, true),
++                        'code' => $row['code'],
++                        'article' => $row['article'],
++                        'description' => json_decode($description, true),
++                        'retail_price' => $row['retail_price'],
++                        'b2b_price' => $row['b2b_price'],
++                        'purchase_price' => $row['purchase_price'],
++                        'min_price' => $row['min_price'],
++                        'uom' => $row['uom'],
++                        'weight' => $row['weight'],
++                        'volume' => $row['volume'],
++                        'country' => $row['country'],
++                        'supplier' => $row['supplier'],
++                        'is_active' => $row['is_active'],
++                    ]);
++                    
++                    $mappingsToUpsert[] = [
++                        'product_id' => $product->id,
++                        'source' => $row['source'],
++                        'external_id' => $row['external_id'],
++                        'external_folder_id' => $row['external_folder_id'],
++                        'synced_at' => $row['synced_at'],
++                        'barcodes' => json_encode($row['barcodes'], JSON_UNESCAPED_UNICODE),
++                        'erp_attributes' => json_encode($row['erp_attributes'], JSON_UNESCAPED_UNICODE),
++                        'created_at' => $now,
++                        'updated_at' => $now,
++                    ];
++                } else {
++                    // Existing product
++                    $productsToUpsert[] = [
++                        'id' => $mapping->product_id,
++                        'name' => $name,
++                        'code' => $row['code'],
++                        'article' => $row['article'],
++                        'description' => $description,
++                        'retail_price' => $row['retail_price'],
++                        'b2b_price' => $row['b2b_price'],
++                        'purchase_price' => $row['purchase_price'],
++                        'min_price' => $row['min_price'],
++                        'uom' => $row['uom'],
++                        'weight' => $row['weight'],
++                        'volume' => $row['volume'],
++                        'country' => $row['country'],
++                        'supplier' => $row['supplier'],
++                    ];
++                    
++                    $mappingsToUpsert[] = [
++                        'product_id' => $mapping->product_id,
++                        'source' => $row['source'],
++                        'external_id' => $row['external_id'],
++                        'external_folder_id' => $row['external_folder_id'],
++                        'synced_at' => $row['synced_at'],
++                        'barcodes' => json_encode($row['barcodes'], JSON_UNESCAPED_UNICODE),
++                        'erp_attributes' => json_encode($row['erp_attributes'], JSON_UNESCAPED_UNICODE),
++                        'created_at' => clone $mapping->created_at, // pass by value
++                        'updated_at' => $now,
++                    ];
++                }
++            }
+ 
+-        return $batch;
++            if ($productsToUpsert !== []) {
++                Product::query()->upsert($productsToUpsert, ['id'], [
++                    'name',
++                    'code',
++                    'article',
++                    'description',
++                    'retail_price',
++                    'b2b_price',
++                    'purchase_price',
++                    'min_price',
++                    'uom',
++                    'weight',
++                    'volume',
++                    'country',
++                    'supplier',
++                ]);
++            }
++            
++            if ($mappingsToUpsert !== []) {
++                ProductExternalMapping::query()->upsert($mappingsToUpsert, ['source', 'external_id'], [
++                    'external_folder_id',
++                    'synced_at',
++                    'barcodes',
++                    'erp_attributes',
++                    'updated_at',
++                ]);
++            }
++        });
+     }
+ }
+diff --git a/app/Jobs/Catalog/SyncSingleProductJob.php b/app/Jobs/Catalog/SyncSingleProductJob.php
+index c68a958..54b675c 100644
+--- a/app/Jobs/Catalog/SyncSingleProductJob.php
++++ b/app/Jobs/Catalog/SyncSingleProductJob.php
+@@ -6,10 +6,12 @@
+ 
+ use App\Contracts\Catalog\CatalogSource;
+ use App\Models\Product;
++use App\Models\ProductExternalMapping;
+ use App\Support\Translations;
+ use Illuminate\Contracts\Queue\ShouldQueue;
+ use Illuminate\Foundation\Queue\Queueable;
+ use Illuminate\Support\Carbon;
++use Illuminate\Support\Facades\DB;
+ 
+ /**
+  * Mirror a single ERP product into the local products table, triggered by a
+@@ -38,59 +40,69 @@ public function handle(CatalogSource $source): void
+ 
+         $sourceKey = $source->key();
+ 
+-        // Translatable JSON columns: merge the ERP's ru content into any
+-        // existing translations so admin-authored kk values survive re-syncs.
+-        $current = Product::query()
+-            ->toBase()
++        $mapping = ProductExternalMapping::query()
++            ->with('product:id,name,description')
+             ->where('source', $sourceKey)
+             ->where('external_id', $product->externalId)
+-            ->first(['name', 'description']);
++            ->first();
+ 
+-        Product::query()->upsert(
+-            [[
+-                'source' => $sourceKey,
+-                'external_id' => $product->externalId,
+-                'external_folder_id' => $product->externalFolderId,
+-                'name' => Translations::mergeRu($current->name ?? null, $product->name),
+-                'code' => $product->code,
+-                'article' => $product->article,
+-                'description' => Translations::mergeRu($current->description ?? null, $product->description),
+-                'retail_price' => $product->retailPrice,
+-                'b2b_price' => $product->b2bPrice,
+-                'purchase_price' => $product->purchasePrice,
+-                'min_price' => $product->minPrice,
+-                'uom' => $product->uom,
+-                'weight' => $product->weight,
+-                'volume' => $product->volume,
+-                'country' => $product->country,
+-                'supplier' => $product->supplier,
+-                'barcodes' => json_encode($product->barcodes, JSON_UNESCAPED_UNICODE),
+-                'attributes' => json_encode($product->attributes, JSON_UNESCAPED_UNICODE),
+-                // Insert default only — excluded from the update set below.
+-                'is_active' => true,
+-                'synced_at' => Carbon::now(),
+-            ]],
+-            ['source', 'external_id'],
+-            [
+-                'external_folder_id',
+-                'name',
+-                'code',
+-                'article',
+-                'description',
+-                'retail_price',
+-                'b2b_price',
+-                'purchase_price',
+-                'min_price',
+-                'uom',
+-                'weight',
+-                'volume',
+-                'country',
+-                'supplier',
+-                'barcodes',
+-                'attributes',
+-                'synced_at',
+-            ],
+-        );
++        $name = Translations::mergeRu($mapping?->product?->getRawOriginal('name'), $product->name);
++        $description = Translations::mergeRu($mapping?->product?->getRawOriginal('description'), $product->description);
++
++        $now = Carbon::now();
++
++        DB::transaction(function () use ($mapping, $product, $name, $description, $sourceKey, $now) {
++            if ($mapping === null) {
++                $localProduct = Product::query()->create([
++                    'name' => json_decode($name, true),
++                    'code' => $product->code,
++                    'article' => $product->article,
++                    'description' => json_decode($description, true),
++                    'retail_price' => $product->retailPrice,
++                    'b2b_price' => $product->b2bPrice,
++                    'purchase_price' => $product->purchasePrice,
++                    'min_price' => $product->minPrice,
++                    'uom' => $product->uom,
++                    'weight' => $product->weight,
++                    'volume' => $product->volume,
++                    'country' => $product->country,
++                    'supplier' => $product->supplier,
++                    'is_active' => true,
++                ]);
++
++                $localProduct->externalMapping()->create([
++                    'source' => $sourceKey,
++                    'external_id' => $product->externalId,
++                    'external_folder_id' => $product->externalFolderId,
++                    'synced_at' => $now,
++                    'barcodes' => $product->barcodes,
++                    'erp_attributes' => $product->attributes,
++                ]);
++            } else {
++                $mapping->product->update([
++                    'name' => json_decode($name, true),
++                    'code' => $product->code,
++                    'article' => $product->article,
++                    'description' => json_decode($description, true),
++                    'retail_price' => $product->retailPrice,
++                    'b2b_price' => $product->b2bPrice,
++                    'purchase_price' => $product->purchasePrice,
++                    'min_price' => $product->minPrice,
++                    'uom' => $product->uom,
++                    'weight' => $product->weight,
++                    'volume' => $product->volume,
++                    'country' => $product->country,
++                    'supplier' => $product->supplier,
++                ]);
++
++                $mapping->update([
++                    'external_folder_id' => $product->externalFolderId,
++                    'synced_at' => $now,
++                    'barcodes' => $product->barcodes,
++                    'erp_attributes' => $product->attributes,
++                ]);
++            }
++        });
+ 
+         if ($product->images !== []) {
+             SyncProductImagesJob::dispatch($sourceKey, $product->externalId, $product->images);
+diff --git a/app/Jobs/Catalog/SyncStockJob.php b/app/Jobs/Catalog/SyncStockJob.php
+index d318148..d7d038b 100644
+--- a/app/Jobs/Catalog/SyncStockJob.php
++++ b/app/Jobs/Catalog/SyncStockJob.php
+@@ -5,7 +5,7 @@
+ namespace App\Jobs\Catalog;
+ 
+ use App\Contracts\Catalog\CatalogSource;
+-use App\Models\Product;
++use App\Models\ProductExternalMapping;
+ use App\Models\ProductStoreStock;
+ use App\Models\Store;
+ use Illuminate\Contracts\Queue\ShouldQueue;
+@@ -58,7 +58,7 @@ public function handle(CatalogSource $source): void
+         }
+ 
+         $sourceKey = $source->key();
+-        $productIds = Product::query()->where('source', $sourceKey)->pluck('id', 'external_id');
++        $productIds = ProductExternalMapping::query()->where('source', $sourceKey)->pluck('product_id', 'external_id');
+         $storeIds = Store::query()->where('source', $sourceKey)->pluck('id', 'external_id');
+ 
+         $touchedProductIds = [];
+diff --git a/app/Models/Product.php b/app/Models/Product.php
+index 344b27c..b1f3f19 100644
+--- a/app/Models/Product.php
++++ b/app/Models/Product.php
+@@ -13,6 +13,7 @@
+ use Illuminate\Database\Eloquent\Relations\HasMany;
+ use Illuminate\Support\Str;
+ use Spatie\Image\Enums\Fit;
++use Illuminate\Database\Eloquent\Relations\HasOne;
+ use Spatie\MediaLibrary\HasMedia;
+ use Spatie\MediaLibrary\InteractsWithMedia;
+ use Spatie\MediaLibrary\MediaCollections\Models\Media;
+@@ -33,9 +34,6 @@ class Product extends Model implements HasMedia
+     public array $translatable = ['name', 'description'];
+ 
+     protected $fillable = [
+-        'source',
+-        'external_id',
+-        'external_folder_id',
+         'category_id',
+         'brand_id',
+         'name',
+@@ -53,15 +51,9 @@ class Product extends Model implements HasMedia
+         'volume',
+         'country',
+         'supplier',
+-        'barcodes',
+-        'attributes',
+         'is_active',
+-        'synced_at',
+-        'b2b_min_order_qty',
+-        'compare_at_price',
+         'is_new_arrival',
+-        'is_composite',
+-        'parent_id',
++        'b2b_min_order_qty',
+     ];
+ 
+     /**
+@@ -72,19 +64,13 @@ protected function casts(): array
+         return [
+             'retail_price' => 'integer',
+             'b2b_price' => 'integer',
+-            'purchase_price' => 'integer',
+             'min_price' => 'integer',
+             'stock' => 'decimal:3',
+             'weight' => 'decimal:3',
+             'volume' => 'decimal:3',
+-            'barcodes' => 'array',
+-            'attributes' => 'array',
+             'is_active' => 'boolean',
+-            'is_composite' => 'boolean',
+-            'synced_at' => 'datetime',
+-            'b2b_min_order_qty' => 'integer',
+-            'compare_at_price' => 'integer',
+             'is_new_arrival' => 'boolean',
++            'b2b_min_order_qty' => 'integer',
+         ];
+     }
+ 
+@@ -136,11 +122,19 @@ public function registerMediaConversions(?Media $media = null): void
+     }
+ 
+     /**
+-     * @return BelongsTo<ProductFolder, $this>
++     * @return HasOne<ProductExternalMapping, $this>
++     */
++    public function externalMapping(): HasOne
++    {
++        return $this->hasOne(ProductExternalMapping::class);
++    }
++
++    /**
++     * Whether this product was imported from an external ERP.
+      */
+-    public function folder(): BelongsTo
++    public function isErpSynced(): bool
+     {
+-        return $this->belongsTo(ProductFolder::class, 'external_folder_id', 'external_id');
++        return $this->externalMapping !== null;
+     }
+ 
+     /**
+diff --git a/app/Services/Orders/OrderPlacementService.php b/app/Services/Orders/OrderPlacementService.php
+index 47011d4..a2bbae8 100644
+--- a/app/Services/Orders/OrderPlacementService.php
++++ b/app/Services/Orders/OrderPlacementService.php
+@@ -334,7 +334,7 @@ private function buildLines(User $user, Store $store, array $items): array
+             $products[$product->id] = $product;
+             $lines[] = [
+                 'product_id' => $product->id,
+-                'external_product_id' => $product->external_id,
++                'external_product_id' => $product->externalMapping?->external_id,
+                 'name' => $product->name,
+                 'quantity' => $quantity,
+                 'price' => $price,
+@@ -384,7 +384,7 @@ private function buildGuestLines(Store $store, array $items): array
+             $products[$product->id] = $product;
+             $lines[] = [
+                 'product_id' => $product->id,
+-                'external_product_id' => $product->external_id,
++                'external_product_id' => $product->externalMapping?->external_id,
+                 'name' => $product->name,
+                 'quantity' => $quantity,
+                 'price' => $price,
+diff --git a/database/factories/ProductFactory.php b/database/factories/ProductFactory.php
+index 5276eea..10b0611 100644
+--- a/database/factories/ProductFactory.php
++++ b/database/factories/ProductFactory.php
+@@ -24,9 +24,6 @@ public function definition(): array
+         $retail = fake()->numberBetween(50_000, 500_000); // kopecks
+ 
+         return [
+-            'source' => 'moysklad',
+-            'external_id' => (string) Str::uuid(),
+-            'external_folder_id' => null,
+             'name' => fake()->words(3, true),
+             'code' => (string) fake()->unique()->numerify('#####'),
+             'article' => fake()->bothify('ART-####'),
+@@ -36,10 +33,22 @@ public function definition(): array
+             'stock' => fake()->numberBetween(0, 50),
+             'uom' => 'шт',
+             'is_active' => true,
+-            'synced_at' => now(),
+         ];
+     }
+ 
++    /**
++     * Product with an ERP external mapping (simulates МойСклад sync).
++     */
++    public function erpSynced(?string $externalId = null): static
++    {
++        return $this->afterCreating(function (Product $product) use ($externalId): void {
++            \App\Models\ProductExternalMapping::factory()->create(array_filter([
++                'product_id' => $product->id,
++                'external_id' => $externalId,
++            ]));
++        });
++    }
++
+     public function inactive(): static
+     {
+         return $this->state(fn (array $attributes) => ['is_active' => false]);
+diff --git a/tests/Feature/Admin/AdminPagesRenderTest.php b/tests/Feature/Admin/AdminPagesRenderTest.php
+index 866d365..9038588 100644
+--- a/tests/Feature/Admin/AdminPagesRenderTest.php
++++ b/tests/Feature/Admin/AdminPagesRenderTest.php
+@@ -67,11 +67,13 @@ public function the_product_edit_page_and_variants_relation_manager_render(): vo
+         // Mirrored ERP fields: barcodes/attributes (JSON) feed TagsInput/KeyValue,
+         // and the variant feeds the relation manager — render to catch misconfig.
+         $product = Product::factory()->create([
+-            'barcodes' => ['4600000000017'],
+-            'attributes' => ['Материал' => 'дерево'],
+             'country' => 'Казахстан',
+             'supplier' => 'ТОО Поставщик',
+         ]);
++        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
++            'barcodes' => ['4600000000017'],
++            'erp_attributes' => ['Материал' => 'дерево'],
++        ]));
+         ProductVariant::factory()->for($product)->create([
+             'characteristics' => ['Цвет' => 'красный'],
+             'barcodes' => ['4600000000024'],
+diff --git a/tests/Feature/Admin/CatalogAdminTest.php b/tests/Feature/Admin/CatalogAdminTest.php
+index a00cbda..dcb73c4 100644
+--- a/tests/Feature/Admin/CatalogAdminTest.php
++++ b/tests/Feature/Admin/CatalogAdminTest.php
+@@ -66,7 +66,7 @@ public function the_price_type_list_page_renders(): void
+     #[Test]
+     public function the_prices_relation_manager_renders_and_can_add_a_price(): void
+     {
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+         $priceType = PriceType::factory()->b2b()->create();
+         ProductPrice::factory()->for($product)->for($priceType, 'priceType')->create(['price' => 123_456]);
+ 
+@@ -101,7 +101,7 @@ public function a_category_can_be_created_with_a_parent(): void
+     #[Test]
+     public function the_product_edit_page_and_attribute_values_relation_manager_render(): void
+     {
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+         $attribute = Attribute::factory()->create(['name' => 'Материал']);
+         AttributeValue::factory()->for($product)->for($attribute)->create(['value' => 'Дерево']);
+ 
+@@ -118,7 +118,7 @@ public function assigning_a_category_and_brand_to_a_product_persists(): void
+     {
+         $category = Category::factory()->create();
+         $brand = Brand::factory()->create();
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+ 
+         Livewire::test(EditProduct::class, ['record' => $product->getRouteKey()])
+             ->fillForm([
+diff --git a/tests/Feature/Catalog/CatalogApiTest.php b/tests/Feature/Catalog/CatalogApiTest.php
+index f52f734..43e12bb 100644
+--- a/tests/Feature/Catalog/CatalogApiTest.php
++++ b/tests/Feature/Catalog/CatalogApiTest.php
+@@ -263,8 +263,10 @@ public function category_filter_narrows_results(): void
+         Sanctum::actingAs($user);
+ 
+         $folder = ProductFolder::factory()->create();
+-        $inFolder = Product::factory()->create(['external_folder_id' => $folder->external_id]);
+-        Product::factory()->create(['external_folder_id' => null]);
++        $inFolder = Product::factory()->create();
++        $inFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => $folder->external_id]));
++        $notInFolder = Product::factory()->create();
++        $notInFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => null]));
+ 
+         $response = $this->getJson('/api/products?filter[category]='.$folder->external_id)->assertOk();
+ 
+@@ -316,9 +318,11 @@ public function product_detail_exposes_mirrored_barcodes_attributes_and_variants
+             'b2b_price' => 150_000,
+             'country' => 'Казахстан',
+             'supplier' => 'ТОО Поставщик',
+-            'barcodes' => ['4600000000017'],
+-            'attributes' => ['Материал' => 'дерево'],
+         ]);
++        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
++            'barcodes' => ['4600000000017'],
++            'erp_attributes' => ['Материал' => 'дерево'],
++        ]));
+ 
+         ProductVariant::factory()->for($product)->create([
+             'name' => 'красный',
+diff --git a/tests/Feature/MoySklad/SyncProductImagesJobTest.php b/tests/Feature/MoySklad/SyncProductImagesJobTest.php
+index e9c511f..e973a31 100644
+--- a/tests/Feature/MoySklad/SyncProductImagesJobTest.php
++++ b/tests/Feature/MoySklad/SyncProductImagesJobTest.php
+@@ -57,7 +57,7 @@ private function image(string $id, int $size = 14052, ?string $updated = '2026-0
+     public function it_downloads_and_stores_new_images_with_custom_properties(): void
+     {
+         $this->fakeDownloads();
+-        $product = Product::factory()->create(['external_id' => 'prod-1']);
++        $product = Product::factory()->erpSynced('prod-1')->create();
+ 
+         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1'), $this->image('img-2')]))
+             ->handle($this->source());
+@@ -73,14 +73,15 @@ public function it_downloads_and_stores_new_images_with_custom_properties(): voi
+         $this->assertTrue(
+             Storage::disk(config('media-library.disk_name'))->exists($media->first()->getPathRelativeToRoot()),
+         );
+-        Http::assertSentCount(2);
++        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
++        $this->assertSame(2, $downloads);
+     }
+ 
+     #[Test]
+     public function it_skips_unchanged_images_on_resync(): void
+     {
+         $this->fakeDownloads();
+-        $product = Product::factory()->create(['external_id' => 'prod-1']);
++        $product = Product::factory()->erpSynced('prod-1')->create();
+ 
+         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1')]))->handle($this->source());
+         $firstMediaId = $product->fresh()->getMedia(Product::IMAGE_COLLECTION)->first()->id;
+@@ -91,14 +92,15 @@ public function it_skips_unchanged_images_on_resync(): void
+         $media = $product->fresh()->getMedia(Product::IMAGE_COLLECTION);
+         $this->assertCount(1, $media);
+         $this->assertSame($firstMediaId, $media->first()->id, 'unchanged media must not be recreated');
+-        Http::assertSentCount(1);
++        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
++        $this->assertSame(1, $downloads);
+     }
+ 
+     #[Test]
+     public function it_replaces_an_image_whose_size_changed(): void
+     {
+         $this->fakeDownloads();
+-        $product = Product::factory()->create(['external_id' => 'prod-1']);
++        $product = Product::factory()->erpSynced('prod-1')->create();
+ 
+         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1', size: 100)]))->handle($this->source());
+         $firstMediaId = $product->fresh()->getMedia(Product::IMAGE_COLLECTION)->first()->id;
+@@ -109,14 +111,15 @@ public function it_replaces_an_image_whose_size_changed(): void
+         $this->assertCount(1, $media);
+         $this->assertNotSame($firstMediaId, $media->first()->id, 'stale media must be replaced');
+         $this->assertSame(200, $media->first()->getCustomProperty('size'));
+-        Http::assertSentCount(2);
++        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
++        $this->assertSame(2, $downloads);
+     }
+ 
+     #[Test]
+     public function it_deletes_media_for_images_removed_in_moysklad(): void
+     {
+         $this->fakeDownloads();
+-        $product = Product::factory()->create(['external_id' => 'prod-1']);
++        $product = Product::factory()->erpSynced('prod-1')->create();
+ 
+         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1'), $this->image('img-2')]))
+             ->handle($this->source());
+@@ -136,6 +139,7 @@ public function it_is_a_noop_when_the_product_is_missing(): void
+ 
+         (new SyncProductImagesJob('moysklad', 'does-not-exist', [$this->image('img-1')]))->handle($this->source());
+ 
+-        Http::assertSentCount(0);
++        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
++        $this->assertSame(0, $downloads);
+     }
+ }
+diff --git a/tests/Feature/MoySklad/SyncTest.php b/tests/Feature/MoySklad/SyncTest.php
+index de94860..c5daa73 100644
+--- a/tests/Feature/MoySklad/SyncTest.php
++++ b/tests/Feature/MoySklad/SyncTest.php
+@@ -154,14 +154,14 @@ public function it_upserts_products_with_b2b_price_in_kopecks_and_synced_at(): v
+ 
+         $this->assertDatabaseCount('products', 1);
+ 
+-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+ 
+         $this->assertSame('Диван Люкс', $product->name);
+         $this->assertSame(180000, $product->b2b_price);
+         $this->assertSame(250000, $product->retail_price);
+-        $this->assertSame('folder-2', $product->external_folder_id);
++        $this->assertSame('folder-2', $product->externalMapping->external_folder_id);
+         $this->assertTrue($product->is_active);
+-        $this->assertNotNull($product->synced_at);
++        $this->assertNotNull($product->externalMapping->synced_at);
+     }
+ 
+     #[Test]
+@@ -198,8 +198,7 @@ public function product_resync_does_not_reset_a_manually_disabled_is_active(): v
+     {
+         // Admin hid this product locally (source-of-truth rule: a re-sync must
+         // not flip is_active back to visible).
+-        Product::factory()->inactive()->create([
+-            'external_id' => 'prod-1',
++        Product::factory()->erpSynced('prod-1')->inactive()->create([
+             'name' => 'Старое имя',
+             'b2b_price' => 100000,
+         ]);
+@@ -212,7 +211,7 @@ public function product_resync_does_not_reset_a_manually_disabled_is_active(): v
+ 
+         (new SyncProductsJob)->handle(app(MoySkladService::class));
+ 
+-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+ 
+         // Synced fields updated...
+         $this->assertSame('Новое имя', $product->name);
+@@ -228,8 +227,7 @@ public function product_resync_does_not_reset_a_manually_assigned_category_or_br
+         // folder tree — a re-sync must not touch or clear it).
+         $category = Category::factory()->create();
+         $brand = Brand::factory()->create();
+-        Product::factory()->create([
+-            'external_id' => 'prod-1',
++        Product::factory()->erpSynced('prod-1')->create([
+             'name' => 'Старое имя',
+             'category_id' => $category->id,
+             'brand_id' => $brand->id,
+@@ -243,7 +241,7 @@ public function product_resync_does_not_reset_a_manually_assigned_category_or_br
+ 
+         (new SyncProductsJob)->handle(app(MoySkladService::class));
+ 
+-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+ 
+         // Synced field updated...
+         $this->assertSame('Новое имя', $product->name);
+@@ -264,7 +262,7 @@ public function single_product_sync_fetches_one_product_and_upserts_it(): void
+         (new SyncSingleProductJob('prod-1'))->handle(app(MoySkladService::class));
+ 
+         $this->assertDatabaseCount('products', 1);
+-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+         $this->assertSame('Диван Люкс', $product->name);
+         $this->assertSame(180000, $product->b2b_price);
+         $this->assertTrue($product->is_active);
+@@ -273,8 +271,7 @@ public function single_product_sync_fetches_one_product_and_upserts_it(): void
+     #[Test]
+     public function single_product_sync_preserves_a_manually_disabled_is_active(): void
+     {
+-        Product::factory()->inactive()->create([
+-            'external_id' => 'prod-1',
++        Product::factory()->erpSynced('prod-1')->inactive()->create([
+             'name' => 'Старое имя',
+             'b2b_price' => 100000,
+         ]);
+@@ -287,7 +284,7 @@ public function single_product_sync_preserves_a_manually_disabled_is_active(): v
+ 
+         (new SyncSingleProductJob('prod-1'))->handle(app(MoySkladService::class));
+ 
+-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+         $this->assertSame('Новое имя', $product->name);
+         $this->assertFalse($product->is_active);
+     }
+@@ -295,11 +292,11 @@ public function single_product_sync_preserves_a_manually_disabled_is_active(): v
+     #[Test]
+     public function deactivate_product_job_hides_the_local_mirror(): void
+     {
+-        Product::factory()->create(['external_id' => 'prod-1', 'is_active' => true]);
++        Product::factory()->erpSynced('prod-1')->create(['is_active' => true]);
+ 
+         (new DeactivateProductJob('prod-1'))->handle();
+ 
+-        $this->assertFalse(Product::where('external_id', 'prod-1')->firstOrFail()->is_active);
++        $this->assertFalse(Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail()->is_active);
+     }
+ 
+     #[Test]
+@@ -343,9 +340,9 @@ public function store_resync_does_not_reset_a_manually_disabled_is_active(): voi
+     #[Test]
+     public function stock_job_upserts_per_store_stock_and_recomputes_the_aggregate(): void
+     {
+-        $product1 = Product::factory()->create(['external_id' => 'prod-1', 'stock' => 0]);
+-        $product2 = Product::factory()->create(['external_id' => 'prod-2', 'stock' => 0]);
+-        $untouched = Product::factory()->create(['external_id' => 'prod-3', 'stock' => 7]);
++        $product1 = Product::factory()->erpSynced('prod-1')->create(['stock' => 0]);
++        $product2 = Product::factory()->erpSynced('prod-2')->create(['stock' => 0]);
++        $untouched = Product::factory()->erpSynced('prod-3')->create(['stock' => 7]);
+ 
+         $store1 = Store::factory()->create(['external_id' => 'store-1']);
+         $store2 = Store::factory()->create(['external_id' => 'store-2']);
+@@ -383,7 +380,7 @@ public function stock_job_upserts_per_store_stock_and_recomputes_the_aggregate()
+     #[Test]
+     public function it_upserts_variants_linked_to_their_parent_and_skips_orphans(): void
+     {
+-        $parent = Product::factory()->create(['external_id' => 'prod-1']);
++        $parent = Product::factory()->erpSynced('prod-1')->create();
+ 
+         Http::fake([
+             self::BASE.'/entity/variant*' => Http::response($this->listResponse([
+diff --git a/tests/Feature/MoySklad/TranslatableSyncTest.php b/tests/Feature/MoySklad/TranslatableSyncTest.php
+index fb31e2c..b881f11 100644
+--- a/tests/Feature/MoySklad/TranslatableSyncTest.php
++++ b/tests/Feature/MoySklad/TranslatableSyncTest.php
+@@ -61,8 +61,7 @@ private function productRow(string $id, string $name, string $description): arra
+     #[Test]
+     public function a_resync_updates_ru_but_preserves_the_kk_translation(): void
+     {
+-        $product = Product::factory()->create([
+-            'external_id' => 'prod-1',
++        $product = Product::factory()->erpSynced('prod-1')->create([
+             'name' => 'Диван',
+             'description' => 'Описание',
+         ]);
+@@ -74,7 +73,7 @@ public function a_resync_updates_ru_but_preserves_the_kk_translation(): void
+ 
+         (new SyncProductsJob)->handle(app(MoySkladService::class));
+ 
+-        $product = Product::query()->where('external_id', 'prod-1')->firstOrFail();
++        $product = Product::query()->whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
+ 
+         $this->assertSame('Диван (новое имя)', $product->getTranslation('name', 'ru'));
+         $this->assertSame('Диван (kk)', $product->getTranslation('name', 'kk'));
+@@ -89,7 +88,7 @@ public function a_brand_new_product_is_inserted_with_ru_translations(): void
+ 
+         (new SyncProductsJob)->handle(app(MoySkladService::class));
+ 
+-        $product = Product::query()->where('external_id', 'prod-9')->firstOrFail();
++        $product = Product::query()->whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-9'))->firstOrFail();
+ 
+         $this->assertSame('Новый товар', $product->name);
+         $this->assertSame(['ru' => 'Новый товар'], $product->getTranslations('name'));
+diff --git a/tests/Feature/Orders/OrderApiTest.php b/tests/Feature/Orders/OrderApiTest.php
+index d3396b4..40c9ea1 100644
+--- a/tests/Feature/Orders/OrderApiTest.php
++++ b/tests/Feature/Orders/OrderApiTest.php
+@@ -59,8 +59,8 @@ public function it_places_an_order_and_dispatches_the_push_job(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $a = Product::factory()->create(['name' => 'Диван', 'b2b_price' => 200_000]);
+-        $b = Product::factory()->create(['name' => 'Стол', 'b2b_price' => 50_000]);
++        $a = Product::factory()->erpSynced()->create(['name' => 'Диван', 'b2b_price' => 200_000]);
++        $b = Product::factory()->erpSynced()->create(['name' => 'Стол', 'b2b_price' => 50_000]);
+         $this->stockAt($store, $a, 10);
+         $this->stockAt($store, $b, 10);
+ 
+@@ -90,7 +90,7 @@ public function it_places_an_order_and_dispatches_the_push_job(): void
+         // Per-client snapshot prices persisted in kopecks.
+         $this->assertDatabaseHas('order_items', [
+             'product_id' => $a->id,
+-            'external_product_id' => $a->external_id,
++            'external_product_id' => $a->externalMapping->external_id,
+             'name' => 'Диван',
+             'price' => 200_000,
+         ]);
+@@ -115,7 +115,7 @@ public function snapshot_price_reflects_the_per_client_discount(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 200_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/orders', [
+@@ -139,7 +139,7 @@ public function ordering_an_invisible_product_is_rejected(): void
+         $store = Store::factory()->create();
+ 
+         // Restricted to a group the user is not in → not visible.
+-        $hidden = Product::factory()->create(['name' => 'Скрытый']);
++        $hidden = Product::factory()->erpSynced()->create(['name' => 'Скрытый']);
+         $hidden->catalogGroups()->attach(CatalogGroup::factory()->create());
+         $this->stockAt($store, $hidden, 10);
+ 
+@@ -160,7 +160,7 @@ public function ordering_more_than_stock_is_rejected(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create(['name' => 'Алматы']);
+-        $product = Product::factory()->create(['name' => 'Стул', 'b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['name' => 'Стул', 'b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 3);
+ 
+         $response = $this->postJson('/api/orders', [
+@@ -183,7 +183,7 @@ public function stock_at_another_store_does_not_count(): void
+ 
+         $chosenStore = Store::factory()->create();
+         $otherStore = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($otherStore, $product, 10);
+         $this->stockAt($chosenStore, $product, 0);
+ 
+@@ -202,7 +202,7 @@ public function missing_store_id_is_rejected(): void
+         $user = $this->approvedClient();
+         Sanctum::actingAs($user);
+ 
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+ 
+         $this->postJson('/api/orders', [
+             'items' => [['product_id' => $product->id, 'quantity' => 1]],
+@@ -219,7 +219,7 @@ public function inactive_store_id_is_rejected(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->inactive()->create();
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+         $this->stockAt($store, $product, 10);
+ 
+         $this->postJson('/api/orders', [
+@@ -249,7 +249,7 @@ public function unapproved_client_cannot_place_an_order(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/orders', [
+@@ -323,7 +323,7 @@ public function placing_an_order_draws_down_the_fifo_batch_and_records_a_sale_mo
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $response = $this->postJson('/api/orders', [
+@@ -358,7 +358,7 @@ public function a_stock_drift_between_the_precheck_and_the_ledger_rejects_the_or
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create(['name' => 'Астана']);
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 5); // real FIFO batch: 5 units.
+ 
+         // Simulate the cached projection drifting ahead of the ledger (e.g. a
+@@ -395,7 +395,7 @@ public function omitting_delivery_defaults_to_free_pickup(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 100_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/orders', [
+@@ -418,7 +418,7 @@ public function delivery_with_a_saved_address_snapshots_it_and_adds_the_delivery
+         $address = Address::factory()->for($user)->create(['city' => 'Алматы', 'street' => 'Абая', 'building' => '10']);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 100_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/orders', [
+@@ -445,7 +445,7 @@ public function delivery_with_a_raw_address_snapshots_it_without_linking_an_addr
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/orders', [
+@@ -473,7 +473,7 @@ public function delivery_cost_is_waived_at_or_above_the_free_threshold(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 100_000]); // subtotal = 1000 ₸ = threshold
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 100_000]); // subtotal = 1000 ₸ = threshold
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/orders', [
+@@ -493,7 +493,7 @@ public function delivery_requires_city_street_and_building_when_no_saved_address
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/orders', [
+@@ -516,7 +516,7 @@ public function a_client_cannot_deliver_to_another_clients_saved_address(): void
+         Sanctum::actingAs($user);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['b2b_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/orders', [
+diff --git a/tests/Feature/Public/GuestCheckoutTest.php b/tests/Feature/Public/GuestCheckoutTest.php
+index 65f9b6e..fa6e740 100644
+--- a/tests/Feature/Public/GuestCheckoutTest.php
++++ b/tests/Feature/Public/GuestCheckoutTest.php
+@@ -37,7 +37,7 @@ private function stockAt(Store $store, Product $product, float $stock): void
+     public function a_guest_can_check_out_without_any_account(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $response = $this->postJson('/api/public/checkout', [
+@@ -73,7 +73,7 @@ public function a_guest_can_check_out_without_any_account(): void
+     public function checkout_uses_retail_price_with_no_discount(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 150_000, 'b2b_price' => 90_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 150_000, 'b2b_price' => 90_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/public/checkout', [
+@@ -94,7 +94,7 @@ public function checkout_uses_retail_price_with_no_discount(): void
+     public function checkout_deducts_fifo_stock(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 100_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $this->postJson('/api/public/checkout', [
+@@ -113,7 +113,7 @@ public function checkout_deducts_fifo_stock(): void
+     public function b2b_grouped_products_cannot_be_checked_out_by_guests(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create();
++        $product = Product::factory()->erpSynced()->create();
+         $product->catalogGroups()->attach(CatalogGroup::factory()->create());
+         $this->stockAt($store, $product, 10);
+ 
+@@ -133,7 +133,7 @@ public function b2b_grouped_products_cannot_be_checked_out_by_guests(): void
+     public function ordering_more_than_stock_is_rejected(): void
+     {
+         $store = Store::factory()->create(['name' => 'Алматы']);
+-        $product = Product::factory()->create(['retail_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
+         $this->stockAt($store, $product, 2);
+ 
+         $response = $this->postJson('/api/public/checkout', [
+@@ -162,7 +162,7 @@ public function name_phone_store_and_items_are_required(): void
+     public function email_is_optional(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/public/checkout', [
+@@ -180,7 +180,7 @@ public function email_is_optional(): void
+     public function omitting_delivery_defaults_to_free_pickup(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 100_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/public/checkout', [
+@@ -201,7 +201,7 @@ public function a_guest_can_request_delivery_with_a_raw_address_and_is_charged_t
+         CatalogSetting::factory()->create(['delivery_price' => 150_000]);
+ 
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 100_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/public/checkout', [
+@@ -228,7 +228,7 @@ public function a_guest_can_request_delivery_with_a_raw_address_and_is_charged_t
+     public function a_guest_delivery_checkout_requires_city_street_and_building(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $this->postJson('/api/public/checkout', [
+@@ -247,7 +247,7 @@ public function a_guest_delivery_checkout_requires_city_street_and_building(): v
+     public function checkout_with_kaspi_returns_payment_url(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 50_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
+         $this->stockAt($store, $product, 5);
+ 
+         $response = $this->postJson('/api/public/checkout', [
+diff --git a/tests/Feature/Public/ProductFiltersTest.php b/tests/Feature/Public/ProductFiltersTest.php
+index c55edc0..6534b8a 100644
+--- a/tests/Feature/Public/ProductFiltersTest.php
++++ b/tests/Feature/Public/ProductFiltersTest.php
+@@ -142,8 +142,8 @@ public function a_non_filterable_attribute_matches_nothing(): void
+     public function the_in_stock_filter_keeps_only_products_available_at_the_store(): void
+     {
+         $store = Store::factory()->create(['is_default' => true]);
+-        $inStock = Product::factory()->create();
+-        $outOfStock = Product::factory()->create();
++        $inStock = Product::factory()->outOfStock()->create();
++        $outOfStock = Product::factory()->outOfStock()->create();
+         ProductStoreStock::factory()->for($inStock)->for($store)->create(['stock' => 5]);
+         ProductStoreStock::factory()->for($outOfStock)->for($store)->create(['stock' => 0]);
+ 
+diff --git a/tests/Feature/Public/RetailCheckoutTest.php b/tests/Feature/Public/RetailCheckoutTest.php
+index 348646c..52cb233 100644
+--- a/tests/Feature/Public/RetailCheckoutTest.php
++++ b/tests/Feature/Public/RetailCheckoutTest.php
+@@ -38,7 +38,7 @@ private function stockAt(Store $store, Product $product, float $stock): void
+     public function an_authenticated_retail_customer_gets_the_order_on_their_account(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $user = User::factory()->retail()->create();
+@@ -63,7 +63,7 @@ public function an_authenticated_retail_customer_gets_the_order_on_their_account
+     public function a_saved_address_is_honoured_for_delivery(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $user = User::factory()->retail()->create();
+@@ -92,7 +92,7 @@ public function a_saved_address_is_honoured_for_delivery(): void
+     public function a_foreign_saved_address_is_rejected(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $user = User::factory()->retail()->create();
+@@ -112,7 +112,7 @@ public function a_foreign_saved_address_is_rejected(): void
+     public function a_b2b_token_still_goes_through_the_guest_path(): void
+     {
+         $store = Store::factory()->create();
+-        $product = Product::factory()->create(['retail_price' => 200_000]);
++        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
+         $this->stockAt($store, $product, 10);
+ 
+         $b2b = User::factory()->b2b()->approved()->create();

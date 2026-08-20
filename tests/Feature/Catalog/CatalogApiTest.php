@@ -263,8 +263,10 @@ class CatalogApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $folder = ProductFolder::factory()->create();
-        $inFolder = Product::factory()->create(['external_folder_id' => $folder->external_id]);
-        Product::factory()->create(['external_folder_id' => null]);
+        $inFolder = Product::factory()->create();
+        $inFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => $folder->external_id]));
+        $notInFolder = Product::factory()->create();
+        $notInFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => null]));
 
         $response = $this->getJson('/api/products?filter[category]='.$folder->external_id)->assertOk();
 
@@ -316,9 +318,11 @@ class CatalogApiTest extends TestCase
             'b2b_price' => 150_000,
             'country' => 'Казахстан',
             'supplier' => 'ТОО Поставщик',
-            'barcodes' => ['4600000000017'],
-            'attributes' => ['Материал' => 'дерево'],
         ]);
+        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
+            'barcodes' => ['4600000000017'],
+            'erp_attributes' => ['Материал' => 'дерево'],
+        ]));
 
         ProductVariant::factory()->for($product)->create([
             'name' => 'красный',

@@ -67,11 +67,13 @@ class AdminPagesRenderTest extends TestCase
         // Mirrored ERP fields: barcodes/attributes (JSON) feed TagsInput/KeyValue,
         // and the variant feeds the relation manager — render to catch misconfig.
         $product = Product::factory()->create([
-            'barcodes' => ['4600000000017'],
-            'attributes' => ['Материал' => 'дерево'],
             'country' => 'Казахстан',
             'supplier' => 'ТОО Поставщик',
         ]);
+        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
+            'barcodes' => ['4600000000017'],
+            'erp_attributes' => ['Материал' => 'дерево'],
+        ]));
         ProductVariant::factory()->for($product)->create([
             'characteristics' => ['Цвет' => 'красный'],
             'barcodes' => ['4600000000024'],

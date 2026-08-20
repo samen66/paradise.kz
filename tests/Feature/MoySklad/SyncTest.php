@@ -154,14 +154,14 @@ class SyncTest extends TestCase
 
         $this->assertDatabaseCount('products', 1);
 
-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
 
         $this->assertSame('Диван Люкс', $product->name);
         $this->assertSame(180000, $product->b2b_price);
         $this->assertSame(250000, $product->retail_price);
-        $this->assertSame('folder-2', $product->external_folder_id);
+        $this->assertSame('folder-2', $product->externalMapping->external_folder_id);
         $this->assertTrue($product->is_active);
-        $this->assertNotNull($product->synced_at);
+        $this->assertNotNull($product->externalMapping->synced_at);
     }
 
     #[Test]
@@ -198,8 +198,7 @@ class SyncTest extends TestCase
     {
         // Admin hid this product locally (source-of-truth rule: a re-sync must
         // not flip is_active back to visible).
-        Product::factory()->inactive()->create([
-            'external_id' => 'prod-1',
+        Product::factory()->erpSynced('prod-1')->inactive()->create([
             'name' => 'Старое имя',
             'b2b_price' => 100000,
         ]);
@@ -212,7 +211,7 @@ class SyncTest extends TestCase
 
         (new SyncProductsJob)->handle(app(MoySkladService::class));
 
-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
 
         // Synced fields updated...
         $this->assertSame('Новое имя', $product->name);
@@ -228,8 +227,7 @@ class SyncTest extends TestCase
         // folder tree — a re-sync must not touch or clear it).
         $category = Category::factory()->create();
         $brand = Brand::factory()->create();
-        Product::factory()->create([
-            'external_id' => 'prod-1',
+        Product::factory()->erpSynced('prod-1')->create([
             'name' => 'Старое имя',
             'category_id' => $category->id,
             'brand_id' => $brand->id,
@@ -243,7 +241,7 @@ class SyncTest extends TestCase
 
         (new SyncProductsJob)->handle(app(MoySkladService::class));
 
-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
 
         // Synced field updated...
         $this->assertSame('Новое имя', $product->name);
@@ -264,7 +262,7 @@ class SyncTest extends TestCase
         (new SyncSingleProductJob('prod-1'))->handle(app(MoySkladService::class));
 
         $this->assertDatabaseCount('products', 1);
-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
         $this->assertSame('Диван Люкс', $product->name);
         $this->assertSame(180000, $product->b2b_price);
         $this->assertTrue($product->is_active);
@@ -273,8 +271,7 @@ class SyncTest extends TestCase
     #[Test]
     public function single_product_sync_preserves_a_manually_disabled_is_active(): void
     {
-        Product::factory()->inactive()->create([
-            'external_id' => 'prod-1',
+        Product::factory()->erpSynced('prod-1')->inactive()->create([
             'name' => 'Старое имя',
             'b2b_price' => 100000,
         ]);
@@ -287,7 +284,7 @@ class SyncTest extends TestCase
 
         (new SyncSingleProductJob('prod-1'))->handle(app(MoySkladService::class));
 
-        $product = Product::where('external_id', 'prod-1')->firstOrFail();
+        $product = Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail();
         $this->assertSame('Новое имя', $product->name);
         $this->assertFalse($product->is_active);
     }
@@ -295,11 +292,11 @@ class SyncTest extends TestCase
     #[Test]
     public function deactivate_product_job_hides_the_local_mirror(): void
     {
-        Product::factory()->create(['external_id' => 'prod-1', 'is_active' => true]);
+        Product::factory()->erpSynced('prod-1')->create(['is_active' => true]);
 
         (new DeactivateProductJob('prod-1'))->handle();
 
-        $this->assertFalse(Product::where('external_id', 'prod-1')->firstOrFail()->is_active);
+        $this->assertFalse(Product::whereHas('externalMapping', fn($q) => $q->where('external_id', 'prod-1'))->firstOrFail()->is_active);
     }
 
     #[Test]
@@ -343,9 +340,9 @@ class SyncTest extends TestCase
     #[Test]
     public function stock_job_upserts_per_store_stock_and_recomputes_the_aggregate(): void
     {
-        $product1 = Product::factory()->create(['external_id' => 'prod-1', 'stock' => 0]);
-        $product2 = Product::factory()->create(['external_id' => 'prod-2', 'stock' => 0]);
-        $untouched = Product::factory()->create(['external_id' => 'prod-3', 'stock' => 7]);
+        $product1 = Product::factory()->erpSynced('prod-1')->create(['stock' => 0]);
+        $product2 = Product::factory()->erpSynced('prod-2')->create(['stock' => 0]);
+        $untouched = Product::factory()->erpSynced('prod-3')->create(['stock' => 7]);
 
         $store1 = Store::factory()->create(['external_id' => 'store-1']);
         $store2 = Store::factory()->create(['external_id' => 'store-2']);
@@ -383,7 +380,7 @@ class SyncTest extends TestCase
     #[Test]
     public function it_upserts_variants_linked_to_their_parent_and_skips_orphans(): void
     {
-        $parent = Product::factory()->create(['external_id' => 'prod-1']);
+        $parent = Product::factory()->erpSynced('prod-1')->create();
 
         Http::fake([
             self::BASE.'/entity/variant*' => Http::response($this->listResponse([

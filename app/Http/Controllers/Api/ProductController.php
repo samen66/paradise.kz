@@ -47,7 +47,7 @@ class ProductController extends Controller
 
         $products = QueryBuilder::for($this->visibility->visibleProductQuery($user)->with('media'))
             ->allowedFilters(
-                AllowedFilter::exact('category', 'external_folder_id'),
+                AllowedFilter::exact('category', 'externalMapping.external_folder_id'),
                 AllowedFilter::callback('search', $this->searchFilter(...)),
                 AllowedFilter::callback('brand', $this->brandFilter(...)),
                 AllowedFilter::callback('attr', $this->attributeFilter(...)),

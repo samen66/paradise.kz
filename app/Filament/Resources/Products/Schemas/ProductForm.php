@@ -139,45 +139,49 @@ class ProductForm
 
                 Section::make(__('admin.sections.erp_sync'))
                     ->schema([
-                        Grid::make(2)
+                        \Filament\Schemas\Components\Group::make()
+                            ->relationship('externalMapping')
                             ->schema([
-                                TextInput::make('source')
-                                    ->label(__('admin.fields.source'))
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('source')
+                                            ->label(__('admin.fields.source'))
+                                            ->disabled()
+                                            ->required(),
+                                        TextInput::make('external_id')
+                                            ->label(__('admin.fields.external_id'))
+                                            ->disabled()
+                                            ->required(),
+                                        TextInput::make('external_folder_id')
+                                            ->label(__('admin.fields.external_folder_id'))
+                                            ->disabled(),
+                                        TextInput::make('code')
+                                            ->label(__('admin.fields.code'))
+                                            ->disabled(),
+                                        TextInput::make('article')
+                                            ->label(__('admin.fields.article'))
+                                            ->disabled(),
+                                        TextInput::make('country')
+                                            ->label(__('admin.fields.country'))
+                                            ->disabled(),
+                                        TextInput::make('supplier')
+                                            ->label(__('admin.fields.supplier'))
+                                            ->disabled(),
+                                        DateTimePicker::make('synced_at')
+                                            ->label(__('admin.fields.synced_at'))
+                                            ->disabled(),
+                                    ]),
+                                TagsInput::make('barcodes')
+                                    ->label(__('admin.fields.barcodes'))
                                     ->disabled()
-                                    ->required(),
-                                TextInput::make('external_id')
-                                    ->label(__('admin.fields.external_id'))
+                                    ->columnSpanFull(),
+                                KeyValue::make('attributes')
+                                    ->label(__('admin.fields.attributes'))
                                     ->disabled()
-                                    ->required(),
-                                TextInput::make('external_folder_id')
-                                    ->label(__('admin.fields.external_folder_id'))
-                                    ->disabled(),
-                                TextInput::make('code')
-                                    ->label(__('admin.fields.code'))
-                                    ->disabled(),
-                                TextInput::make('article')
-                                    ->label(__('admin.fields.article'))
-                                    ->disabled(),
-                                TextInput::make('country')
-                                    ->label(__('admin.fields.country'))
-                                    ->disabled(),
-                                TextInput::make('supplier')
-                                    ->label(__('admin.fields.supplier'))
-                                    ->disabled(),
-                                DateTimePicker::make('synced_at')
-                                    ->label(__('admin.fields.synced_at'))
-                                    ->disabled(),
+                                    ->keyLabel('Name')
+                                    ->valueLabel('Value')
+                                    ->columnSpanFull(),
                             ]),
-                        TagsInput::make('barcodes')
-                            ->label(__('admin.fields.barcodes'))
-                            ->disabled()
-                            ->columnSpanFull(),
-                        KeyValue::make('attributes')
-                            ->label(__('admin.fields.attributes'))
-                            ->disabled()
-                            ->keyLabel('Name')
-                            ->valueLabel('Value')
-                            ->columnSpanFull(),
                     ])->collapsed(),
             ]);
     }

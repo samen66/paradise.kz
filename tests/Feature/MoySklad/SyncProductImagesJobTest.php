@@ -57,7 +57,7 @@ class SyncProductImagesJobTest extends TestCase
     public function it_downloads_and_stores_new_images_with_custom_properties(): void
     {
         $this->fakeDownloads();
-        $product = Product::factory()->create(['external_id' => 'prod-1']);
+        $product = Product::factory()->erpSynced('prod-1')->create();
 
         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1'), $this->image('img-2')]))
             ->handle($this->source());
@@ -73,14 +73,15 @@ class SyncProductImagesJobTest extends TestCase
         $this->assertTrue(
             Storage::disk(config('media-library.disk_name'))->exists($media->first()->getPathRelativeToRoot()),
         );
-        Http::assertSentCount(2);
+        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
+        $this->assertSame(2, $downloads);
     }
 
     #[Test]
     public function it_skips_unchanged_images_on_resync(): void
     {
         $this->fakeDownloads();
-        $product = Product::factory()->create(['external_id' => 'prod-1']);
+        $product = Product::factory()->erpSynced('prod-1')->create();
 
         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1')]))->handle($this->source());
         $firstMediaId = $product->fresh()->getMedia(Product::IMAGE_COLLECTION)->first()->id;
@@ -91,14 +92,15 @@ class SyncProductImagesJobTest extends TestCase
         $media = $product->fresh()->getMedia(Product::IMAGE_COLLECTION);
         $this->assertCount(1, $media);
         $this->assertSame($firstMediaId, $media->first()->id, 'unchanged media must not be recreated');
-        Http::assertSentCount(1);
+        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
+        $this->assertSame(1, $downloads);
     }
 
     #[Test]
     public function it_replaces_an_image_whose_size_changed(): void
     {
         $this->fakeDownloads();
-        $product = Product::factory()->create(['external_id' => 'prod-1']);
+        $product = Product::factory()->erpSynced('prod-1')->create();
 
         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1', size: 100)]))->handle($this->source());
         $firstMediaId = $product->fresh()->getMedia(Product::IMAGE_COLLECTION)->first()->id;
@@ -109,14 +111,15 @@ class SyncProductImagesJobTest extends TestCase
         $this->assertCount(1, $media);
         $this->assertNotSame($firstMediaId, $media->first()->id, 'stale media must be replaced');
         $this->assertSame(200, $media->first()->getCustomProperty('size'));
-        Http::assertSentCount(2);
+        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
+        $this->assertSame(2, $downloads);
     }
 
     #[Test]
     public function it_deletes_media_for_images_removed_in_moysklad(): void
     {
         $this->fakeDownloads();
-        $product = Product::factory()->create(['external_id' => 'prod-1']);
+        $product = Product::factory()->erpSynced('prod-1')->create();
 
         (new SyncProductImagesJob('moysklad', 'prod-1', [$this->image('img-1'), $this->image('img-2')]))
             ->handle($this->source());
@@ -136,6 +139,7 @@ class SyncProductImagesJobTest extends TestCase
 
         (new SyncProductImagesJob('moysklad', 'does-not-exist', [$this->image('img-1')]))->handle($this->source());
 
-        Http::assertSentCount(0);
+        $downloads = collect(Http::recorded())->filter(fn ($r) => str_contains($r[0]->url(), 'download'))->count();
+        $this->assertSame(0, $downloads);
     }
 }

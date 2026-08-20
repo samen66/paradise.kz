@@ -39,8 +39,10 @@ class SyncProductImagesJob implements ShouldQueue
     public function handle(CatalogSource $source): void
     {
         $product = Product::query()
-            ->where('source', $this->source)
-            ->where('external_id', $this->externalId)
+            ->whereHas('externalMapping', function ($query) {
+                $query->where('source', $this->source)
+                    ->where('external_id', $this->externalId);
+            })
             ->first();
 
         if ($product === null) {

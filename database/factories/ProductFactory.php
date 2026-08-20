@@ -24,9 +24,6 @@ class ProductFactory extends Factory
         $retail = fake()->numberBetween(50_000, 500_000); // kopecks
 
         return [
-            'source' => 'moysklad',
-            'external_id' => (string) Str::uuid(),
-            'external_folder_id' => null,
             'name' => fake()->words(3, true),
             'code' => (string) fake()->unique()->numerify('#####'),
             'article' => fake()->bothify('ART-####'),
@@ -36,8 +33,20 @@ class ProductFactory extends Factory
             'stock' => fake()->numberBetween(0, 50),
             'uom' => 'шт',
             'is_active' => true,
-            'synced_at' => now(),
         ];
+    }
+
+    /**
+     * Product with an ERP external mapping (simulates МойСклад sync).
+     */
+    public function erpSynced(?string $externalId = null): static
+    {
+        return $this->afterCreating(function (Product $product) use ($externalId): void {
+            \App\Models\ProductExternalMapping::factory()->create(array_filter([
+                'product_id' => $product->id,
+                'external_id' => $externalId,
+            ]));
+        });
     }
 
     public function inactive(): static

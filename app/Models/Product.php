@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Image\Enums\Fit;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -33,9 +34,6 @@ class Product extends Model implements HasMedia
     public array $translatable = ['name', 'description'];
 
     protected $fillable = [
-        'source',
-        'external_id',
-        'external_folder_id',
         'category_id',
         'brand_id',
         'name',
@@ -53,15 +51,9 @@ class Product extends Model implements HasMedia
         'volume',
         'country',
         'supplier',
-        'barcodes',
-        'attributes',
         'is_active',
-        'synced_at',
-        'b2b_min_order_qty',
-        'compare_at_price',
         'is_new_arrival',
-        'is_composite',
-        'parent_id',
+        'b2b_min_order_qty',
     ];
 
     /**
@@ -72,19 +64,13 @@ class Product extends Model implements HasMedia
         return [
             'retail_price' => 'integer',
             'b2b_price' => 'integer',
-            'purchase_price' => 'integer',
             'min_price' => 'integer',
             'stock' => 'decimal:3',
             'weight' => 'decimal:3',
             'volume' => 'decimal:3',
-            'barcodes' => 'array',
-            'attributes' => 'array',
             'is_active' => 'boolean',
-            'is_composite' => 'boolean',
-            'synced_at' => 'datetime',
-            'b2b_min_order_qty' => 'integer',
-            'compare_at_price' => 'integer',
             'is_new_arrival' => 'boolean',
+            'b2b_min_order_qty' => 'integer',
         ];
     }
 
@@ -136,11 +122,19 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * @return BelongsTo<ProductFolder, $this>
+     * @return HasOne<ProductExternalMapping, $this>
      */
-    public function folder(): BelongsTo
+    public function externalMapping(): HasOne
     {
-        return $this->belongsTo(ProductFolder::class, 'external_folder_id', 'external_id');
+        return $this->hasOne(ProductExternalMapping::class);
+    }
+
+    /**
+     * Whether this product was imported from an external ERP.
+     */
+    public function isErpSynced(): bool
+    {
+        return $this->externalMapping !== null;
     }
 
     /**

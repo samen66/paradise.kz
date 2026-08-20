@@ -37,7 +37,7 @@ class GuestCheckoutTest extends TestCase
     public function a_guest_can_check_out_without_any_account(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 200_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 200_000]);
         $this->stockAt($store, $product, 10);
 
         $response = $this->postJson('/api/public/checkout', [
@@ -73,7 +73,7 @@ class GuestCheckoutTest extends TestCase
     public function checkout_uses_retail_price_with_no_discount(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 150_000, 'b2b_price' => 90_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 150_000, 'b2b_price' => 90_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/public/checkout', [
@@ -94,7 +94,7 @@ class GuestCheckoutTest extends TestCase
     public function checkout_deducts_fifo_stock(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 100_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
         $this->stockAt($store, $product, 10);
 
         $this->postJson('/api/public/checkout', [
@@ -113,7 +113,7 @@ class GuestCheckoutTest extends TestCase
     public function b2b_grouped_products_cannot_be_checked_out_by_guests(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
         $product->catalogGroups()->attach(CatalogGroup::factory()->create());
         $this->stockAt($store, $product, 10);
 
@@ -133,7 +133,7 @@ class GuestCheckoutTest extends TestCase
     public function ordering_more_than_stock_is_rejected(): void
     {
         $store = Store::factory()->create(['name' => 'Алматы']);
-        $product = Product::factory()->create(['retail_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
         $this->stockAt($store, $product, 2);
 
         $response = $this->postJson('/api/public/checkout', [
@@ -162,7 +162,7 @@ class GuestCheckoutTest extends TestCase
     public function email_is_optional(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/public/checkout', [
@@ -180,7 +180,7 @@ class GuestCheckoutTest extends TestCase
     public function omitting_delivery_defaults_to_free_pickup(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 100_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/public/checkout', [
@@ -201,7 +201,7 @@ class GuestCheckoutTest extends TestCase
         CatalogSetting::factory()->create(['delivery_price' => 150_000]);
 
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 100_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 100_000]);
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/public/checkout', [
@@ -228,7 +228,7 @@ class GuestCheckoutTest extends TestCase
     public function a_guest_delivery_checkout_requires_city_street_and_building(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $this->postJson('/api/public/checkout', [
@@ -247,7 +247,7 @@ class GuestCheckoutTest extends TestCase
     public function checkout_with_kaspi_returns_payment_url(): void
     {
         $store = Store::factory()->create();
-        $product = Product::factory()->create(['retail_price' => 50_000]);
+        $product = Product::factory()->erpSynced()->create(['retail_price' => 50_000]);
         $this->stockAt($store, $product, 5);
 
         $response = $this->postJson('/api/public/checkout', [

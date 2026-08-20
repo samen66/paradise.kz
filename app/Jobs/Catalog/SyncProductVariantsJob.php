@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Catalog;
 
 use App\Contracts\Catalog\CatalogSource;
-use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Models\ProductVariant;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -37,7 +37,7 @@ class SyncProductVariantsJob implements ShouldQueue
     {
         $now = Carbon::now();
         $sourceKey = $source->key();
-        $productIds = Product::query()->where('source', $sourceKey)->pluck('id', 'external_id');
+        $productIds = ProductExternalMapping::query()->where('source', $sourceKey)->pluck('product_id', 'external_id');
         $batch = [];
 
         foreach ($source->productVariants($this->changedSince) as $variant) {

@@ -6,10 +6,12 @@ namespace App\Jobs\Catalog;
 
 use App\Contracts\Catalog\CatalogSource;
 use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Support\Translations;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Mirror a single ERP product into the local products table, triggered by a
@@ -38,59 +40,69 @@ class SyncSingleProductJob implements ShouldQueue
 
         $sourceKey = $source->key();
 
-        // Translatable JSON columns: merge the ERP's ru content into any
-        // existing translations so admin-authored kk values survive re-syncs.
-        $current = Product::query()
-            ->toBase()
+        $mapping = ProductExternalMapping::query()
+            ->with('product:id,name,description')
             ->where('source', $sourceKey)
             ->where('external_id', $product->externalId)
-            ->first(['name', 'description']);
+            ->first();
 
-        Product::query()->upsert(
-            [[
-                'source' => $sourceKey,
-                'external_id' => $product->externalId,
-                'external_folder_id' => $product->externalFolderId,
-                'name' => Translations::mergeRu($current->name ?? null, $product->name),
-                'code' => $product->code,
-                'article' => $product->article,
-                'description' => Translations::mergeRu($current->description ?? null, $product->description),
-                'retail_price' => $product->retailPrice,
-                'b2b_price' => $product->b2bPrice,
-                'purchase_price' => $product->purchasePrice,
-                'min_price' => $product->minPrice,
-                'uom' => $product->uom,
-                'weight' => $product->weight,
-                'volume' => $product->volume,
-                'country' => $product->country,
-                'supplier' => $product->supplier,
-                'barcodes' => json_encode($product->barcodes, JSON_UNESCAPED_UNICODE),
-                'attributes' => json_encode($product->attributes, JSON_UNESCAPED_UNICODE),
-                // Insert default only — excluded from the update set below.
-                'is_active' => true,
-                'synced_at' => Carbon::now(),
-            ]],
-            ['source', 'external_id'],
-            [
-                'external_folder_id',
-                'name',
-                'code',
-                'article',
-                'description',
-                'retail_price',
-                'b2b_price',
-                'purchase_price',
-                'min_price',
-                'uom',
-                'weight',
-                'volume',
-                'country',
-                'supplier',
-                'barcodes',
-                'attributes',
-                'synced_at',
-            ],
-        );
+        $name = Translations::mergeRu($mapping?->product?->getRawOriginal('name'), $product->name);
+        $description = Translations::mergeRu($mapping?->product?->getRawOriginal('description'), $product->description);
+
+        $now = Carbon::now();
+
+        DB::transaction(function () use ($mapping, $product, $name, $description, $sourceKey, $now) {
+            if ($mapping === null) {
+                $localProduct = Product::query()->create([
+                    'name' => json_decode($name, true),
+                    'code' => $product->code,
+                    'article' => $product->article,
+                    'description' => json_decode($description, true),
+                    'retail_price' => $product->retailPrice,
+                    'b2b_price' => $product->b2bPrice,
+                    'purchase_price' => $product->purchasePrice,
+                    'min_price' => $product->minPrice,
+                    'uom' => $product->uom,
+                    'weight' => $product->weight,
+                    'volume' => $product->volume,
+                    'country' => $product->country,
+                    'supplier' => $product->supplier,
+                    'is_active' => true,
+                ]);
+
+                $localProduct->externalMapping()->create([
+                    'source' => $sourceKey,
+                    'external_id' => $product->externalId,
+                    'external_folder_id' => $product->externalFolderId,
+                    'synced_at' => $now,
+                    'barcodes' => $product->barcodes,
+                    'erp_attributes' => $product->attributes,
+                ]);
+            } else {
+                $mapping->product->update([
+                    'name' => json_decode($name, true),
+                    'code' => $product->code,
+                    'article' => $product->article,
+                    'description' => json_decode($description, true),
+                    'retail_price' => $product->retailPrice,
+                    'b2b_price' => $product->b2bPrice,
+                    'purchase_price' => $product->purchasePrice,
+                    'min_price' => $product->minPrice,
+                    'uom' => $product->uom,
+                    'weight' => $product->weight,
+                    'volume' => $product->volume,
+                    'country' => $product->country,
+                    'supplier' => $product->supplier,
+                ]);
+
+                $mapping->update([
+                    'external_folder_id' => $product->externalFolderId,
+                    'synced_at' => $now,
+                    'barcodes' => $product->barcodes,
+                    'erp_attributes' => $product->attributes,
+                ]);
+            }
+        });
 
         if ($product->images !== []) {
             SyncProductImagesJob::dispatch($sourceKey, $product->externalId, $product->images);

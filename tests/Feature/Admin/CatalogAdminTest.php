@@ -66,7 +66,7 @@ class CatalogAdminTest extends TestCase
     #[Test]
     public function the_prices_relation_manager_renders_and_can_add_a_price(): void
     {
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
         $priceType = PriceType::factory()->b2b()->create();
         ProductPrice::factory()->for($product)->for($priceType, 'priceType')->create(['price' => 123_456]);
 
@@ -101,7 +101,7 @@ class CatalogAdminTest extends TestCase
     #[Test]
     public function the_product_edit_page_and_attribute_values_relation_manager_render(): void
     {
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
         $attribute = Attribute::factory()->create(['name' => 'Материал']);
         AttributeValue::factory()->for($product)->for($attribute)->create(['value' => 'Дерево']);
 
@@ -118,7 +118,7 @@ class CatalogAdminTest extends TestCase
     {
         $category = Category::factory()->create();
         $brand = Brand::factory()->create();
-        $product = Product::factory()->create();
+        $product = Product::factory()->erpSynced()->create();
 
         Livewire::test(EditProduct::class, ['record' => $product->getRouteKey()])
             ->fillForm([

@@ -142,8 +142,8 @@ class ProductFiltersTest extends TestCase
     public function the_in_stock_filter_keeps_only_products_available_at_the_store(): void
     {
         $store = Store::factory()->create(['is_default' => true]);
-        $inStock = Product::factory()->create();
-        $outOfStock = Product::factory()->create();
+        $inStock = Product::factory()->outOfStock()->create();
+        $outOfStock = Product::factory()->outOfStock()->create();
         ProductStoreStock::factory()->for($inStock)->for($store)->create(['stock' => 5]);
         ProductStoreStock::factory()->for($outOfStock)->for($store)->create(['stock' => 0]);
 

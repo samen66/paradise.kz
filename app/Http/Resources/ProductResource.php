@@ -31,7 +31,7 @@ class ProductResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'external_id' => $this->external_id,
+            'external_id' => $this->externalMapping?->external_id,
             'name' => $this->name,
             'slug' => $this->slug,
             'code' => $this->code,
@@ -52,13 +52,13 @@ class ProductResource extends JsonResource
             'old_price' => $this->majorComparePrice(),
             'is_new' => (bool) $this->is_new_arrival,
             'b2b_min_order_qty' => $this->resource->effectiveB2bMinOrderQty(),
-            'external_folder_id' => $this->external_folder_id,
+            'external_folder_id' => $this->externalMapping?->external_folder_id,
             // Mirrored ERP data so the B2B site never has to call the ERP at
             // read time. `barcodes`/`attributes` are JSON-cast on the model.
             'country' => $this->country,
             'supplier' => $this->supplier,
-            'barcodes' => $this->barcodes ?? [],
-            'attributes' => $this->attributes ?? [],
+            'barcodes' => $this->externalMapping?->barcodes ?? [],
+            'attributes' => $this->externalMapping?->erp_attributes ?? [],
             // `description` and `variants` are only included on the detail
             // endpoint, flagged by the controller via the transient
             // `with_description` attribute.
