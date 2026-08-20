@@ -118,7 +118,16 @@
     "assemblyValue": "Жеткізу күні",
     "warranty": "Кепілдік",
     "colorLabel": "Қаптама түсі",
-    "freeDeliveryNote": "Жақын нүкте жоқ па? Алматы бойынша тегін жеткізу."
+    "freeDeliveryNote": "Жақын нүкте жоқ па? Алматы бойынша тегін жеткізу.",
+    "trustProduction": "Өз өндірісіміз",
+    "trustProductionSub": "Емен массиві, Алматы",
+    "trustWarranty": "18 ай кепілдік",
+    "trustWarrantySub": "Каркас пен жабынға",
+    "trustReturn": "14 күн қайтару",
+    "trustReturnSub": "Себебін түсіндірмей",
+    "trustAssembly": "Құрастыру тегін",
+    "trustAssemblySub": "Жеткізу күні",
+    "reviewsTitle": "Пікірлер"
   },
   "search": {
     "title": "Іздеу нәтижелері",

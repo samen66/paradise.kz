@@ -118,7 +118,16 @@
     "assemblyValue": "В день доставки",
     "warranty": "Гарантия",
     "colorLabel": "Цвет обивки",
-    "freeDeliveryNote": "Нет удобной точки рядом? Бесплатная доставка по Алматы."
+    "freeDeliveryNote": "Нет удобной точки рядом? Бесплатная доставка по Алматы.",
+    "trustProduction": "Своё производство",
+    "trustProductionSub": "Массив дуба, Алматы",
+    "trustWarranty": "18 месяцев гарантии",
+    "trustWarrantySub": "На каркас и покрытие",
+    "trustReturn": "Возврат 14 дней",
+    "trustReturnSub": "Без объяснения причин",
+    "trustAssembly": "Сборка бесплатно",
+    "trustAssemblySub": "В день доставки",
+    "reviewsTitle": "Отзывы"
   },
   "search": {
     "title": "Результаты поиска",

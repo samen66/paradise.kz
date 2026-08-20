@@ -13,9 +13,10 @@ import { getEcho } from "@/lib/echo";
 interface ProductInfoProps {
   product: Product;
   locale: string;
+  categoryName?: string | null;
 }
 
-export function ProductInfo({ product, locale }: ProductInfoProps) {
+export function ProductInfo({ product, locale, categoryName }: ProductInfoProps) {
   const t = useTranslations("product");
   const tCommon = useTranslations("common");
 
@@ -65,55 +66,119 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
   const displayStock = selectedVariant ? selectedVariant.stock : liveStock;
   const inStock = selectedVariant ? selectedVariant.in_stock : liveInStock;
 
+  const showroomCount = product.showrooms?.length ?? 0;
+  const reviewsCount = product.reviews_count ?? product.reviews?.length ?? 0;
+  const avgRating = product.rating ?? 0;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Purchase card */}
       <div className="rounded-[20px] border border-line bg-white dark:bg-card p-5 lg:p-7 shadow-[0_1px_2px_rgba(28,26,23,0.04),0_16px_40px_rgba(28,26,23,0.07)] dark:shadow-none">
         {/* Top part: Hidden on mobile (rendered in ProductMobileHeader) */}
         <div className="hidden lg:block">
-          {/* Badges */}
-          <div className="mb-3.5 flex gap-1.5">
-            {discountPercent ? <Badge variant="sale">-{discountPercent}%</Badge> : null}
-            {inStock && displayStock !== undefined ? (
-              <Badge variant="mint">
-                {tCommon("inStock")} — {displayStock} шт
-              </Badge>
-            ) : !inStock ? (
-              <Badge variant="sale">Нет в наличии</Badge>
-            ) : null}
+
+          {/* 1. Category + Article header line */}
+          <div className="flex items-center gap-2.5 text-[11px] tracking-[0.1em] uppercase text-accent">
+            {categoryName && <span>{categoryName}</span>}
+            <span className="flex-1 h-px bg-line" />
+            {product.article && (
+              <span className="tabular-nums opacity-55 text-muted normal-case tracking-normal text-xs">
+                {product.article}
+              </span>
+            )}
           </div>
 
-        {/* Title */}
-        <h1 className="font-display text-[26px] font-bold leading-[1.2] tracking-tight text-ink">
-          {product.name}
-        </h1>
+          {/* 2. Title */}
+          <h1 className="font-display text-[26px] font-bold leading-[1.2] tracking-tight text-ink mt-3">
+            {product.name}
+          </h1>
 
-        {/* Meta line */}
-        <div className="mt-1.5 text-[13px] text-muted">
-          {product.article ? `${t("article")} ${product.article}` : null}
-          {brandName ? ` · ${brandName}` : null}
-          {product.country ? ` · ${product.country}` : null}
+          {/* 3. Rating + quick links */}
+          <div className="mt-2 flex items-center gap-3 text-[13px] pb-4 border-b border-line">
+            {avgRating > 0 && (
+              <>
+                <StarRating rating={avgRating} size={14} />
+                <span className="font-semibold tabular-nums text-ink">{avgRating.toFixed(1).replace(".", ",")}</span>
+              </>
+            )}
+            {reviewsCount > 0 && (
+              <a href="#reviews" className="text-accent hover:underline">
+                {reviewsCount} {reviewsCount === 1 ? "отзыв" : reviewsCount < 5 ? "отзыва" : "отзывов"}
+              </a>
+            )}
+            {reviewsCount > 0 && (
+              <>
+                <span className="opacity-35">·</span>
+                <a href="#specs" className="text-accent hover:underline">
+                  {t("characteristics")}
+                </a>
+              </>
+            )}
+            {brandName ? (
+              <>
+                <span className="opacity-35">·</span>
+                <span className="text-muted">{brandName}</span>
+              </>
+            ) : null}
+          </div>
         </div>
 
-
-        </div>
-
-        {/* Price */}
-        <div className="mt-5 flex items-baseline gap-3">
-          <span className="font-display text-[32px] font-bold text-ink">
+        {/* 4. Price block */}
+        <div className="mt-5 flex items-end gap-3">
+          <span className="font-display text-[36px] lg:text-[40px] font-bold leading-none tabular-nums text-ink">
             {livePrice !== null ? formatPrice(livePrice, locale) : "—"}
           </span>
           {liveOldPrice ? (
-            <span className="text-[17px] text-muted line-through">
+            <span className="text-[15px] text-muted line-through pb-1.5 tabular-nums">
               {formatPrice(liveOldPrice, locale)}
             </span>
           ) : null}
+          {discountPercent ? (
+            <Badge variant="sale" className="mb-1.5">−{discountPercent}%</Badge>
+          ) : null}
         </div>
 
-        {/* Variants */}
+        {/* 5. Stock status */}
+        <div className="mt-4 flex items-center gap-2.5 text-[13px]">
+          {inStock ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse" />
+              <span>
+                {tCommon("inStock")}
+                {displayStock !== undefined && displayStock > 0 ? (
+                  <> — <span className="tabular-nums">{displayStock} шт</span></>
+                ) : null}
+              </span>
+              {showroomCount > 0 && (
+                <>
+                  <span className="opacity-35">·</span>
+                  <a href="#showrooms" className="text-accent hover:underline">
+                    в {showroomCount} {showroomCount === 1 ? "шоуруме" : showroomCount < 5 ? "шоурумах" : "шоурумах"}
+                  </a>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="w-full border border-line border-l-2 border-l-accent px-3.5 py-3">
+              <div className="font-semibold text-ink text-sm">Нет на складе — привезём под заказ</div>
+              <div className="text-xs text-muted mt-0.5">
+                Срок изготовления 18—24 дня. Можно оформить сейчас или получить письмо, когда товар вернётся.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 6. Variants (finish/color) */}
         {variants.length > 0 ? (
           <div className="mt-5">
-            <div className="mb-2 text-[13px] font-semibold text-ink">{t("colorLabel")}</div>
+            <div className="flex justify-between items-baseline text-[11px] tracking-[0.09em] uppercase text-muted mb-2.5">
+              <span>{t("colorLabel")}</span>
+              {selectedVariant && (
+                <span className="normal-case tracking-normal text-[13px] text-ink opacity-90">
+                  {selectedVariant.name}
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {variants.map((v: ProductVariant) => (
                 <button
@@ -132,7 +197,7 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
           </div>
         ) : null}
 
-        {/* Actions */}
+        {/* 7. Actions: Add to cart + Favorite */}
         <div className="mt-5 flex items-stretch gap-2.5">
           <div className="flex-1">
             {inStock ? (
@@ -141,42 +206,46 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
           </div>
           <FavoriteButton productId={product.id} className="!h-12 !w-12" />
         </div>
-      </div>
 
-      {/* Delivery info card */}
-      <div className="flex flex-col gap-3 rounded-[20px] border border-line bg-white dark:bg-card px-5 py-5 lg:px-7 lg:py-[22px] text-sm shadow-[0_1px_2px_rgba(28,26,23,0.04),0_12px_32px_rgba(28,26,23,0.05)] dark:shadow-none">
-        <div className="grid grid-cols-2 gap-2 text-xs lg:hidden mb-1">
-          <div className="flex items-center gap-1.5 text-mint-ink font-medium">
-            {inStock ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-mint-ink animate-pulse"></span>
-                В наличии {displayStock !== undefined ? `(${displayStock})` : ""}
-              </>
-            ) : (
-              <span className="text-red-500">Нет в наличии</span>
-            )}
+        {/* 8. Delivery info rows (integrated into sidebar, not separate card) */}
+        <div className="mt-5 border-t border-line">
+          <div className="flex justify-between items-center gap-3 py-3 border-b border-line text-[13px]">
+            <span className="text-muted">{t("deliveryAlmaty")}</span>
+            <span className="text-right text-ink">
+              <span className="font-semibold text-green-600">{t("deliveryFree")}</span>
+              {" · "}
+              <span className="font-semibold">Завтра</span>
+            </span>
           </div>
-          <div className="text-muted text-right">
-            Доставка: <span className="font-semibold text-ink">Завтра</span>
+          <div className="flex justify-between gap-3 py-3 border-b border-line text-[13px]">
+            <span className="text-muted">Самовывоз</span>
+            <span className="text-right text-ink">
+              Сегодня
+              {showroomCount > 0 ? (
+                <>
+                  {" из "}
+                  <a href="#showrooms" className="text-accent hover:underline">
+                    {showroomCount} {showroomCount === 1 ? "шоурума" : "шоурумов"}
+                  </a>
+                </>
+              ) : null}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3 py-3 border-b border-line text-[13px]">
+            <span className="text-muted">{t("assemblyLabel")}</span>
+            <span className="text-right font-medium text-ink">{t("assemblyValue")}</span>
+          </div>
+          <div className="flex justify-between gap-3 py-3 border-b border-line text-[13px]">
+            <span className="text-muted">Оплата</span>
+            <span className="text-right text-ink">Картой, Kaspi, при получении</span>
           </div>
         </div>
 
-        <div className="hidden lg:flex justify-between gap-3">
-          <span className="text-muted">{t("deliveryAlmaty")}</span>
-          <span className="font-semibold text-mint-ink">{t("deliveryFree")}</span>
-        </div>
-        <div className="hidden lg:flex justify-between gap-3">
-          <span className="text-muted">{t("deliveryDate")}</span>
-          <span className="font-medium text-ink">Завтра</span>
-        </div>
-        
-        <div className="flex justify-between gap-3">
-          <span className="text-muted">{t("assemblyLabel")}</span>
-          <span className="font-medium text-ink">{t("assemblyValue")}</span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span className="text-muted">{t("warranty")}</span>
-          <span className="font-medium text-ink">18 месяцев</span>
+        {/* 9. B2B promo strip */}
+        <div className="mt-4 rounded-xl bg-surface px-4 py-3 text-xs leading-relaxed">
+          <span className="font-semibold text-sm text-ink">Партнёрам</span>
+          {" — оптовая цена от 5 шт. "}
+          <a href="/b2b" className="text-accent hover:underline font-medium">Войти как партнёр</a>
         </div>
       </div>
 
@@ -204,4 +273,3 @@ export function ProductInfo({ product, locale }: ProductInfoProps) {
     </div>
   );
 }
-
