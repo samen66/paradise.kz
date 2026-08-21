@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import Sidebar from '@/components/Sidebar';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -24,5 +25,16 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return null; 
   }
 
-  return <>{children}</>;
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-zinc-50 text-zinc-900">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto p-8">
+        {children}
+      </main>
+    </div>
+  );
 }

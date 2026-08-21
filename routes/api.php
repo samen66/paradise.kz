@@ -130,4 +130,6 @@ Route::prefix('admin')
     ->middleware(['auth:sanctum', 'role:admin|manager'])
     ->group(function () {
         Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
+        Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
+        Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
     });
