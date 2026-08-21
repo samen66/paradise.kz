@@ -1,0 +1,74 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_DATABASE: paradise
+      MYSQL_USER: paradise
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: php artisan queue:listen --tries=3 --timeout=90
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_KEY: ${APP_KEY}
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: paradise
+      DB_USERNAME: paradise
+      DB_PASSWORD: secret
+      QUEUE_CONNECTION: database
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: php artisan reverb:start --host="0.0.0.0" --port=8080
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "8080:8080"
+    environment:
+      APP_KEY: ${APP_KEY}
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: paradise
+      DB_USERNAME: paradise
+      DB_PASSWORD: secret
+      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_SERVER_PORT: 8080
+      REVERB_APP_ID: ${REVERB_APP_ID:-111111}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-my-reverb-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-my-reverb-secret}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    external: true
+    name: paradisekz_mysql_data
