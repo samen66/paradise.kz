@@ -11,6 +11,7 @@ export default function Sidebar() {
   const links = [
     { href: '/', label: 'Главная' },
     { href: '/products', label: 'Товары' },
+    { href: '/orders', label: 'Заказы' },
     { href: '/categories', label: 'Категории' },
     { href: '/brands', label: 'Бренды' },
   ];

@@ -132,4 +132,5 @@ Route::prefix('admin')
         Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
         Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
         Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
+        Route::apiResource('orders', \App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
     });
