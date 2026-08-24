@@ -133,4 +133,6 @@ Route::prefix('admin')
         Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
         Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
         Route::apiResource('orders', \App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
+        Route::get('users', [\App\Http\Controllers\Api\Admin\UserController::class, 'index']);
+        Route::post('users/{user}/approve', [\App\Http\Controllers\Api\Admin\UserController::class, 'approve']);
     });
