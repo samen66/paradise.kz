@@ -29,6 +29,7 @@ class UserForm
                 TextInput::make('company_name'),
                 TextInput::make('company_bin'),
                 Toggle::make('is_approved')
+                    ->disabled()
                     ->required(),
                 TextInput::make('discount_percent')
                     ->required()
