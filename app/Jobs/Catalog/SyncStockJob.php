@@ -8,11 +8,11 @@ use App\Contracts\Catalog\CatalogSource;
 use App\Models\ProductExternalMapping;
 use App\Models\ProductStoreStock;
 use App\Models\Store;
+use App\Services\Inventory\FifoInventoryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Mirror the ERP's current free-stock, broken down per warehouse, into
@@ -107,18 +107,15 @@ class SyncStockJob implements ShouldQueue
     }
 
     /**
+     * Delegates to {@see FifoInventoryService::recomputeAggregateStock()} so the
+     * aggregate is rolled up by exactly one statement everywhere in the app.
+     *
      * @param  array<int, int>  $productIds
      */
     private function recomputeAggregateStock(array $productIds): void
     {
         foreach (array_chunk($productIds, self::CHUNK_SIZE) as $chunk) {
-            DB::table('products')
-                ->whereIn('id', $chunk)
-                ->update([
-                    'stock' => DB::raw(
-                        '(SELECT COALESCE(SUM(stock), 0) FROM product_store_stock WHERE product_store_stock.product_id = products.id)',
-                    ),
-                ]);
+            FifoInventoryService::recomputeAggregateStock($chunk);
         }
     }
 }

@@ -33,6 +33,9 @@ class FifoInventoryService
      * @param  float  $quantity  Units received (> 0).
      * @param  int  $unitCost  Purchase cost per unit, in kopecks (>= 0).
      * @param  Model|null  $document  The document that caused the receipt (e.g. a goods receipt).
+     * @param  string  $type  A {@see StockMovement} TYPE_* constant. Defaults to a purchase
+     *                        receipt; a cancelled order puts stock back as TYPE_RETURN so the
+     *                        ledger distinguishes goods bought from goods given back.
      */
     public function receive(
         Product $product,
@@ -41,6 +44,7 @@ class FifoInventoryService
         int $unitCost,
         ?Model $document = null,
         ?User $user = null,
+        string $type = StockMovement::TYPE_RECEIPT,
     ): Batch {
         if ($quantity <= 0) {
             throw new InvalidArgumentException('Количество прихода должно быть больше нуля.');
@@ -52,7 +56,7 @@ class FifoInventoryService
 
         $quantity = round($quantity, 3);
 
-        return DB::transaction(function () use ($product, $store, $quantity, $unitCost, $document, $user): Batch {
+        return DB::transaction(function () use ($product, $store, $quantity, $unitCost, $document, $user, $type): Batch {
             $batch = Batch::create([
                 'product_id' => $product->id,
                 'store_id' => $store->id,
@@ -69,7 +73,7 @@ class FifoInventoryService
                 product: $product,
                 batch: $batch,
                 quantityDelta: $quantity,
-                type: StockMovement::TYPE_RECEIPT,
+                type: $type,
                 unitCost: $unitCost,
                 balanceAfter: $balanceAfter,
                 document: $document,
@@ -171,9 +175,16 @@ class FifoInventoryService
 
     /**
      * Recompute the cached on-hand quantity and weighted-average cost for a
-     * product at a warehouse from its remaining FIFO layers.
+     * product at a warehouse from its remaining FIFO layers, then roll the
+     * per-warehouse figures up into the product's aggregate `products.stock`.
      *
-     * @return float The recomputed on-hand quantity.
+     * Both projections are derived, never authored: the FIFO layers are the
+     * truth. Keeping the aggregate in step here is what makes it safe for the
+     * catalog to read `products.stock` when no warehouse is selected — before
+     * this, the aggregate was only ever recomputed by the (now retired) ERP
+     * stock sync, so any local receipt or sale left it silently stale.
+     *
+     * @return float The recomputed on-hand quantity at this warehouse.
      */
     private function refreshProjection(Product $product, Store $store): float
     {
@@ -200,7 +211,35 @@ class FifoInventoryService
             ['stock' => $onHand, 'avg_cost' => $averageCost],
         );
 
+        self::recomputeAggregateStock($product->id);
+
         return $onHand;
+    }
+
+    /**
+     * Roll every warehouse balance for a product up into `products.stock`.
+     *
+     * Done in SQL rather than in PHP so the aggregate can never drift from the
+     * per-warehouse rows it summarises, and so the same statement can be
+     * reused for a bulk backfill (see `stock:recompute`).
+     *
+     * @param  int|array<int, int>  $productIds
+     */
+    public static function recomputeAggregateStock(int|array $productIds): void
+    {
+        $ids = is_array($productIds) ? array_values($productIds) : [$productIds];
+
+        if ($ids === []) {
+            return;
+        }
+
+        DB::table('products')
+            ->whereIn('id', $ids)
+            ->update([
+                'stock' => DB::raw(
+                    '(SELECT COALESCE(SUM(stock), 0) FROM product_store_stock WHERE product_store_stock.product_id = products.id)',
+                ),
+            ]);
     }
 
     private function recordMovement(

@@ -63,8 +63,13 @@ class CartController extends Controller
             $quantity = (float) $item['quantity'];
             $product = $products->get($productId);
             $price = $prices[$productId] ?? null;
-            $storeStock = (float) ($stocks[$productId] ?? 0);
-            $stock = $storeStock > 0 ? $storeStock : (float) $product?->stock;
+            // Same rule as the catalog and OrderPlacementService: a resolved
+            // warehouse answers for itself, zero included. Falling back to the
+            // all-warehouse aggregate here told the cart a sold-out line was
+            // fine, and checkout then rejected it.
+            $stock = $store !== null
+                ? (float) ($stocks[$productId] ?? 0)
+                : (float) ($product?->stock ?? 0);
 
             $problem = match (true) {
                 $product === null, ! $publiclyVisibleIds->has($productId) => 'unavailable',

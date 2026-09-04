@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(PriceTypesSeeder::class);
+        // Catalog stock and checkout both need at least one active warehouse.
+        $this->call(DefaultStoreSeeder::class);
 
         User::factory()->create([
             'name' => 'Admin',

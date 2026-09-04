@@ -34,8 +34,13 @@ class PublicProductPresenter
 
         $products->each(function (Product $product) use ($store, $prices, $stocks, $showStockQuantity): void {
             $product->resolved_price = $prices[$product->id] ?? null;
-            $storeStock = $stocks[$product->id] ?? 0;
-            $product->resolved_stock = $storeStock > 0 ? $storeStock : (float) $product->stock;
+            // A chosen warehouse answers for itself, zero included: falling back
+            // to the all-warehouse aggregate here would mean a sold-out product
+            // still advertised as in stock, and checkout rejecting it at 422.
+            // With no warehouse resolved, the aggregate IS the answer.
+            $product->resolved_stock = $store !== null
+                ? (float) ($stocks[$product->id] ?? 0)
+                : (float) $product->stock;
             $product->show_stock_quantity = $showStockQuantity;
         });
     }

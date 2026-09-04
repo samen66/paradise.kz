@@ -36,8 +36,8 @@ use Illuminate\Validation\ValidationException;
  * later catalog/price changes, and so the push job can forward them as-is.
  *
  * Stock is authoritatively decremented from the local FIFO ledger
- * (FifoInventoryService) at placement time — this app, not the ERP, owns
- * stock for its own storefront. The cheap pre-check below (against the
+ * (FifoInventoryService) at placement time — that ledger is the single source
+ * of truth for on-hand quantities. The cheap pre-check below (against the
  * product_store_stock projection) exists only to give a fast, friendly 422
  * before opening a transaction; FifoInventoryService::issue() is the
  * authoritative, lock-guarded check-and-deduct.
@@ -48,9 +48,7 @@ use Illuminate\Validation\ValidationException;
  *   - {@see placeGuest()} — an anonymous storefront checkout, public catalog +
  *     retail price. No persistent "guest" identity exists in the domain; a
  *     minimal throwaway User row is created so the order can reuse the exact
- *     same Order/Filament/push-job machinery as a B2B order (it simply never
- *     links to an ERP counterparty, so PushOrderJob fails it non-transiently
- *     — guest orders are intentionally local-only).
+ *     same Order/admin machinery as a B2B order.
  */
 class OrderPlacementService
 {
@@ -318,8 +316,11 @@ class OrderPlacementService
                 $this->reject($index, "Товар «{$product->name}» недоступен для заказа.");
             }
 
-            $storeStock = (float) ($stockByProductId[$product->id] ?? 0);
-            $availableStock = $storeStock > 0 ? $storeStock : (float) $product->stock;
+            // The order is fulfilled from exactly one warehouse, so only that
+            // warehouse's balance may be promised — including when it is zero.
+            // (The old fallback to the all-warehouse aggregate let a sold-out
+            // line pass this pre-check and fail later inside issue().)
+            $availableStock = (float) ($stockByProductId[$product->id] ?? 0);
 
             if ($quantity > $availableStock) {
                 $this->reject($index, "Товара «{$product->name}» недостаточно на складе «{$store->name}».");
@@ -368,8 +369,11 @@ class OrderPlacementService
                 $this->reject($index, "Товар «{$product->name}» недоступен для заказа.");
             }
 
-            $storeStock = (float) ($stockByProductId[$product->id] ?? 0);
-            $availableStock = $storeStock > 0 ? $storeStock : (float) $product->stock;
+            // The order is fulfilled from exactly one warehouse, so only that
+            // warehouse's balance may be promised — including when it is zero.
+            // (The old fallback to the all-warehouse aggregate let a sold-out
+            // line pass this pre-check and fail later inside issue().)
+            $availableStock = (float) ($stockByProductId[$product->id] ?? 0);
 
             if ($quantity > $availableStock) {
                 $this->reject($index, "Товара «{$product->name}» недостаточно на складе «{$store->name}».");
