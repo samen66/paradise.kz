@@ -40,6 +40,32 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  storefront:
+    build:
+      context: ./storefront
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      API_URL_INTERNAL: http://nginx/api
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
+  b2b-portal:
+    build:
+      context: ./b2b-portal
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      API_URL_INTERNAL: http://nginx/api
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
   reverb:
     build:
       context: .

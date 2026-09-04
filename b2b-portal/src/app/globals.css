@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-sans: var(--font-golos), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-src), var(--font-golos), ui-sans-serif, sans-serif;
+
+  /* Surfaces */
+  --color-surface: var(--bg-surface);
+  --color-panel: var(--bg-panel);
+  --color-card: var(--bg-card);
+
+  /* Ink & text */
+  --color-ink: var(--text-ink);
+  --color-ink-hover: var(--text-ink-hover);
+  --color-muted: var(--text-muted);
+  --color-inverse: var(--bg-inverse);
+  --color-ink-inverse: var(--text-ink-inverse);
+
+  /* Lines */
+  --color-line: var(--border-line);
+  --color-line-strong: var(--border-line-strong);
+
+  /* Accents */
+  --color-mint: var(--accent-mint);
+  --color-mint-ink: var(--accent-mint-ink);
+  --color-sale: var(--accent-sale);
+  --color-sale-ink: var(--accent-sale-ink);
+
+  /* Product page accents */
+  --color-star: var(--accent-star);
+  --color-star-empty: var(--accent-star-empty);
+  --color-success: #1f7a4d;
+  --color-danger: #c8372f;
+}
+
+@layer base {
+  :root {
+    --bg-surface: #f5f3f1;
+    --bg-panel: #efe7dd;
+    --bg-card: #efeae4;
+
+    --text-ink: #404040;
+    --text-ink-hover: #2a2a2a;
+    --text-muted: #8b857f;
+    --bg-inverse: #404040;
+    --text-ink-inverse: #ffffff;
+
+    --border-line: #e4ded6;
+    --border-line-strong: #c4c4c4;
+
+    --accent-mint: #d8f0e2;
+    --accent-mint-ink: #1f7a4d;
+    --accent-sale: #e5482d;
+    --accent-sale-ink: #ffffff;
+
+    --accent-star: #f5a623;
+    --accent-star-empty: #e5e1da;
+  }
+}
+
+body {
+  @apply bg-surface font-sans text-ink antialiased;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

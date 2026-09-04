@@ -62,6 +62,13 @@ services:
       API_URL_INTERNAL: http://nginx:8080/api
     logging: *default-logging
 
+  b2b-portal:
+    image: ghcr.io/samen66/paradise-b2b-portal:${TAG:-latest}
+    restart: always
+    environment:
+      API_URL_INTERNAL: http://nginx:8080/api
+    logging: *default-logging
+
   mysql:
     image: mysql:8.0
     restart: always

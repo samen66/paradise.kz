@@ -1,55 +1,49 @@
+"use client";
+
+// Client-side cart (localStorage). Checkout wires up in Phase 2 via
+// POST /public/cart/validate + /public/checkout — until then the cart is a
+// persisted picking list.
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Product } from "@/lib/types";
 
-export interface B2bCartItem {
+export interface CartItem {
   productId: number;
   slug: string | null;
   name: string;
   image: string | null;
+  /** Unit price in ₸ at the moment of adding (re-validated at checkout). */
   price: number | null;
   quantity: number;
 }
 
-interface B2bCartState {
-  items: B2bCartItem[];
-  addItem: (product: Product, quantity: number) => void;
-  removeItem: (productId: number) => void;
+interface CartState {
+  items: CartItem[];
+  add: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  remove: (productId: number) => void;
   setQuantity: (productId: number, quantity: number) => void;
   clear: () => void;
 }
 
-export const useB2bCart = create<B2bCartState>()(
+export const useCart = create<CartState>()(
   persist(
     (set) => ({
       items: [],
-      addItem: (product, quantity) =>
+      add: (item, quantity = 1) =>
         set((state) => {
-          const existing = state.items.find((i) => i.productId === product.id);
+          const existing = state.items.find((i) => i.productId === item.productId);
 
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.productId === product.id ? { ...i, quantity: i.quantity + quantity } : i,
+                i.productId === item.productId ? { ...i, quantity: i.quantity + quantity } : i,
               ),
             };
           }
 
-          return {
-            items: [
-              ...state.items,
-              {
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                image: product.image,
-                price: product.price,
-                quantity,
-              },
-            ],
-          };
+          return { items: [...state.items, { ...item, quantity }] };
         }),
-      removeItem: (productId) =>
+      remove: (productId) =>
         set((state) => ({ items: state.items.filter((i) => i.productId !== productId) })),
       setQuantity: (productId, quantity) =>
         set((state) => ({
@@ -60,6 +54,6 @@ export const useB2bCart = create<B2bCartState>()(
         })),
       clear: () => set({ items: [] }),
     }),
-    { name: "paradise-b2b-cart" },
+    { name: "paradise-cart" },
   ),
 );
