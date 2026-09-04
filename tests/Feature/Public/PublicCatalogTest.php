@@ -159,6 +159,20 @@ class PublicCatalogTest extends TestCase
     }
 
     #[Test]
+    public function product_detail_exposes_seo_meta_for_the_storefront_head(): void
+    {
+        $product = Product::factory()->create([
+            'seo_title' => ['ru' => 'Диван Атланта купить в Алматы'],
+            'seo_description' => ['ru' => 'Мягкий диван от производителя'],
+        ]);
+
+        $this->getJson('/api/public/products/'.$product->id)
+            ->assertOk()
+            ->assertJsonPath('data.seo_title', 'Диван Атланта купить в Алматы')
+            ->assertJsonPath('data.seo_description', 'Мягкий диван от производителя');
+    }
+
+    #[Test]
     public function categories_returns_only_active_local_categories(): void
     {
         $parent = Category::factory()->create(['name' => 'Мебель']);

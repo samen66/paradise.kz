@@ -34,6 +34,10 @@ class ProductResource extends JsonResource
             'external_id' => $this->externalMapping?->external_id,
             'name' => $this->name,
             'slug' => $this->slug,
+            // Storefront <title>/<meta description>, falling back to name and
+            // description on the client (product/[slug]/page.tsx).
+            'seo_title' => $this->seo_title,
+            'seo_description' => $this->seo_description,
             'code' => $this->code,
             'article' => $this->article,
             'category_id' => $this->category_id,
@@ -76,8 +80,8 @@ class ProductResource extends JsonResource
                 'attributeValues',
                 fn (): array => $this->characteristicsPayload(),
             ),
-            'rating' => $this->whenLoaded('reviews', fn() => (float) $this->reviews->where('is_approved', true)->avg('rating')),
-            'reviews_count' => $this->whenLoaded('reviews', fn() => $this->reviews->where('is_approved', true)->count()),
+            'rating' => $this->whenLoaded('reviews', fn () => (float) $this->reviews->where('is_approved', true)->avg('rating')),
+            'reviews_count' => $this->whenLoaded('reviews', fn () => $this->reviews->where('is_approved', true)->count()),
             'reviews' => $this->when(
                 (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('reviews'),
                 fn (): array => $this->reviews->where('is_approved', true)->map(fn ($r) => [

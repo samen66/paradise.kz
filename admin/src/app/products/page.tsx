@@ -38,6 +38,12 @@ const ISSUE_LABELS: Record<string, string> = {
 /** Sold out is a fact of the business; the rest mean the product is set up wrongly. */
 const WARNING_ISSUES = ['out_of_stock'];
 
+/** Prices come from the API in minor units (тиын); the column shows ₸. */
+const formatTenge = (kopecks: unknown): string =>
+  kopecks === null || kopecks === undefined || kopecks === ''
+    ? '—'
+    : `₸${(Number(kopecks) / 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })}`;
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
@@ -181,8 +187,8 @@ export default function ProductsPage() {
                         {p.category?.name?.ru || <span className="text-gray-400 italic">—</span>}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-gray-900 font-medium">{p.retail_price ? `₸${p.retail_price.toLocaleString('ru-RU')}` : '—'} <span className="text-xs text-gray-400 font-normal ml-1">Розница</span></div>
-                        <div className="text-gray-600 text-sm mt-0.5">{p.b2b_price ? `₸${p.b2b_price.toLocaleString('ru-RU')}` : '—'} <span className="text-xs text-gray-400 font-normal ml-1">B2B</span></div>
+                        <div className="text-gray-900 font-medium">{formatTenge(p.retail_price)} <span className="text-xs text-gray-400 font-normal ml-1">Розница</span></div>
+                        <div className="text-gray-600 text-sm mt-0.5">{formatTenge(p.b2b_price)} <span className="text-xs text-gray-400 font-normal ml-1">B2B</span></div>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${p.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
