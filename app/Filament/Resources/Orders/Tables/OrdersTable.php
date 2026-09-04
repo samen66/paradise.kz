@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
-use App\Jobs\Erp\PushOrderJob;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\Orders\OrderCancellationService;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
@@ -15,15 +15,33 @@ use Filament\Tables\Table;
 class OrdersTable
 {
     /** @var array<string, string> */
+    /**
+     * Labels for every status that can appear in the database — the two legacy
+     * ones included, so historical orders still render a human name.
+     */
     private const STATUS_LABELS = [
         'pending' => 'В обработке',
         'confirmed' => 'Подтверждён',
         'in_delivery' => 'В доставке',
         'completed' => 'Выполнен',
         'cancelled' => 'Отменён',
-        'synced' => 'Отправлен в систему',
-        'failed' => 'Ошибка',
+        'synced' => 'Отправлен в систему (архив)',
+        'failed' => 'Ошибка отправки (архив)',
     ];
+
+    /**
+     * The subset a manager may actually assign. Legacy statuses are readable
+     * but not selectable — see {@see Order::CLIENT_STATUSES}.
+     *
+     * @return array<string, string>
+     */
+    private static function assignableStatuses(): array
+    {
+        return array_intersect_key(
+            self::STATUS_LABELS,
+            array_flip(Order::CLIENT_STATUSES),
+        );
+    }
 
     public static function configure(Table $table): Table
     {
@@ -112,31 +130,23 @@ class OrdersTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                Action::make('retry')
-                    ->label('Повторить отправку')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('warning')
-                    ->visible(fn (Order $record): bool => $record->status !== 'synced')
-                    ->requiresConfirmation()
-                    ->action(function (Order $record): void {
-                        PushOrderJob::dispatch($record);
-
-                        Notification::make()
-                            ->title('Заказ поставлен в очередь на отправку в учётную систему')
-                            ->success()
-                            ->send();
-                    }),
                 Action::make('changeStatus')
                     ->label('Изменить статус')
                     ->icon('heroicon-o-arrow-path-rounded-square')
                     ->form([
                         \Filament\Forms\Components\Select::make('status')
                             ->label('Новый статус')
-                            ->options(self::STATUS_LABELS)
+                            ->options(self::assignableStatuses())
                             ->required(),
                     ])
                     ->action(function (Order $record, array $data): void {
-                        $record->update(['status' => $data['status']]);
+                        // Cancelling puts the goods back on the shelf, so it
+                        // goes through the service rather than a status write.
+                        if ($data['status'] === Order::STATUS_CANCELLED) {
+                            app(OrderCancellationService::class)->cancel($record, auth()->user());
+                        } else {
+                            $record->update(['status' => $data['status']]);
+                        }
 
                         Notification::make()
                             ->title("Статус изменён на «" . (self::STATUS_LABELS[$data['status']] ?? $data['status']) . "»")

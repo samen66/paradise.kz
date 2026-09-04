@@ -29,7 +29,29 @@ class Order extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
-    /** @var list<string> */
+    /**
+     * The statuses a manager or customer can actually put an order in.
+     *
+     * `synced` and `failed` are legacy: they described an order's relationship
+     * with an external accounting system that no longer exists. Historical rows
+     * still carry them (so they stay in {@see ALL_STATUSES} for reads and
+     * filters), but nothing may assign them any more.
+     *
+     * @var list<string>
+     */
+    public const CLIENT_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_CONFIRMED,
+        self::STATUS_IN_DELIVERY,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED,
+    ];
+
+    /**
+     * Every status that may appear in the database, legacy included.
+     *
+     * @var list<string>
+     */
     public const ALL_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_CONFIRMED,

@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\GuestCheckoutRequest;
 use App\Http\Resources\OrderResource;
-use App\Jobs\Erp\PushOrderJob;
 use App\Models\User;
 use App\Services\Orders\OrderPlacementService;
 use Illuminate\Http\JsonResponse;
@@ -54,12 +53,10 @@ class CheckoutController extends Controller
             );
         }
 
-        // Guest orders never link to an ERP counterparty (no B2B account), so
-        // this always ends in the job's existing non-transient "no
-        // counterparty" failure — kept for a uniform push/status pipeline
-        // across B2B and guest orders rather than special-casing the dispatch.
-        PushOrderJob::dispatch($order);
-        
+        // No push to an external system: orders are worked through their
+        // statuses in the admin panel. (This used to dispatch PushOrderJob,
+        // which — because a guest never has an ERP counterparty — flipped every
+        // storefront order to `failed` seconds after checkout.)
         $resource = new OrderResource($order);
         if ($order->payment_method === 'kaspi') {
             $resource->additional([

@@ -5,14 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 
-const ALL_STATUSES = [
+// Statuses a manager can actually assign. Mirrors Order::CLIENT_STATUSES on
+// the backend, which rejects anything else with a 422.
+const ASSIGNABLE_STATUSES = [
   { value: 'pending',     label: 'Новый' },
   { value: 'confirmed',   label: 'Подтверждён' },
   { value: 'in_delivery', label: 'В доставке' },
   { value: 'completed',   label: 'Завершён' },
   { value: 'cancelled',   label: 'Отменён' },
-  { value: 'synced',      label: 'Синхронизирован' },
-  { value: 'failed',      label: 'Ошибка' },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
@@ -21,8 +21,10 @@ const STATUS_STYLES: Record<string, string> = {
   in_delivery: 'bg-purple-50 text-purple-700 border-purple-200',
   completed:   'bg-green-50 text-green-700 border-green-200',
   cancelled:   'bg-red-50 text-red-700 border-red-200',
-  synced:      'bg-teal-50 text-teal-700 border-teal-200',
-  failed:      'bg-rose-50 text-rose-700 border-rose-200',
+  // Legacy: these described an order's state in an external accounting system
+  // that no longer exists. Old orders still carry them, so they stay readable.
+  synced:      'bg-gray-100 text-gray-600 border-gray-200',
+  failed:      'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -31,8 +33,8 @@ const STATUS_LABELS: Record<string, string> = {
   in_delivery: 'В доставке',
   completed:   'Завершён',
   cancelled:   'Отменён',
-  synced:      'Синхронизирован',
-  failed:      'Ошибка',
+  synced:      'Архив (отправлен)',
+  failed:      'Архив (ошибка отправки)',
 };
 
 export default function OrderDetailPage() {
@@ -275,7 +277,7 @@ export default function OrderDetailPage() {
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-3"
               >
-                {ALL_STATUSES.map(s => (
+                {ASSIGNABLE_STATUSES.map(s => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>

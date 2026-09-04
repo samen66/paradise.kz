@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Account;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
+use App\Services\Orders\OrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,20 +41,29 @@ class OrderController extends Controller
         return new OrderResource($order->load(['items', 'store', 'address']));
     }
 
-    public function cancel(Request $request, Order $order): \Illuminate\Http\JsonResponse
-    {
+    /**
+     * Cancel one's own order. Customers may only take back an order the shop
+     * has not started working yet; once it is confirmed they have to call.
+     *
+     * The goods go back on the shelf — see {@see OrderCancellationService}.
+     */
+    public function cancel(
+        Request $request,
+        Order $order,
+        OrderCancellationService $cancellation,
+    ): \Illuminate\Http\JsonResponse {
         if ($order->user_id !== $request->user()->id) {
             abort(Response::HTTP_NOT_FOUND);
         }
 
         if ($order->status !== Order::STATUS_PENDING) {
             return response()->json([
-                'message' => 'Only pending orders can be cancelled',
+                'message' => 'Отменить можно только новый заказ. Свяжитесь с менеджером.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $order->update(['status' => Order::STATUS_CANCELLED]);
+        $cancellation->cancel($order, $request->user());
 
-        return response()->json(['message' => 'Order cancelled']);
+        return response()->json(['message' => 'Заказ отменён.']);
     }
 }

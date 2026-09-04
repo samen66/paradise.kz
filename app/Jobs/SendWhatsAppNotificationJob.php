@@ -16,25 +16,37 @@ class SendWhatsAppNotificationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * @param  string|null  $toPhone  Explicit recipient. Null means the customer
+     *                                who placed the order — the usual case; the
+     *                                shop passes its own number for new-order alerts.
+     */
     public function __construct(
         public Order $order,
-        public string $message
-    ) {
-    }
+        public string $message,
+        public ?string $toPhone = null,
+    ) {}
 
     public function handle(WhatsAppService $service): void
     {
-        $phone = $this->order->contacts['phone'] ?? null;
+        $phone = $this->toPhone ?? $this->customerPhone();
 
-        // If the order has no direct phone contact, try to use the user's phone if B2C
-        if (! $phone && $this->order->user) {
-            $phone = $this->order->user->phone;
-        }
-
-        if (! $phone) {
+        if (blank($phone)) {
             return;
         }
 
         $service->sendMessage($phone, $this->message);
+    }
+
+    private function customerPhone(): ?string
+    {
+        $phone = $this->order->contacts['phone'] ?? null;
+
+        // Guests carry their phone on the throwaway user row created at checkout.
+        if (blank($phone) && $this->order->user !== null) {
+            $phone = $this->order->user->phone;
+        }
+
+        return $phone;
     }
 }

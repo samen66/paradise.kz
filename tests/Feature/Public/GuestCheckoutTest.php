@@ -66,7 +66,11 @@ class GuestCheckoutTest extends TestCase
         $this->assertSame(User::TYPE_RETAIL, $guest->type);
         $this->assertTrue($guest->is_approved);
 
-        Bus::assertDispatched(PushOrderJob::class);
+        // The order is worked in the admin panel; nothing is pushed anywhere.
+        // This used to dispatch PushOrderJob, which failed non-transiently on
+        // the missing ERP counterparty and flipped the order to `failed`.
+        Bus::assertNotDispatched(PushOrderJob::class);
+        $this->assertSame(Order::STATUS_PENDING, $order->fresh()->status);
     }
 
     #[Test]

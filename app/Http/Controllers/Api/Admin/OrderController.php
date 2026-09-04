@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\Orders\OrderCancellationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -16,7 +17,7 @@ class OrderController extends Controller
     public function index(): JsonResponse
     {
         $orders = QueryBuilder::for(Order::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::callback('search', function ($query, $value): void {
@@ -29,7 +30,7 @@ class OrderController extends Controller
                           });
                     });
                 }),
-            ])
+            )
             ->with(['user'])
             ->latest()
             ->paginate(20);
@@ -48,14 +49,30 @@ class OrderController extends Controller
         return response()->json(['data' => $order]);
     }
 
-    public function update(Request $request, int $id): JsonResponse
-    {
+    /**
+     * Move an order to another status.
+     *
+     * Cancelling is not just a status write: the goods have to go back on the
+     * shelf, so it goes through {@see OrderCancellationService}. Everything
+     * else is a plain update — the OrderObserver picks it up and notifies the
+     * customer.
+     */
+    public function update(
+        Request $request,
+        int $id,
+        OrderCancellationService $cancellation,
+    ): JsonResponse {
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:' . implode(',', Order::ALL_STATUSES)],
+            'status' => ['required', 'string', 'in:'.implode(',', Order::CLIENT_STATUSES)],
         ]);
 
         $order = Order::findOrFail($id);
-        $order->update(['status' => $validated['status']]);
+
+        if ($validated['status'] === Order::STATUS_CANCELLED) {
+            $cancellation->cancel($order, $request->user());
+        } else {
+            $order->update(['status' => $validated['status']]);
+        }
 
         return response()->json(['data' => $order->fresh(['user', 'address', 'items.product.media'])]);
     }

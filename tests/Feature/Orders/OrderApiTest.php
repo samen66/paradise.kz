@@ -53,7 +53,7 @@ class OrderApiTest extends TestCase
     }
 
     #[Test]
-    public function it_places_an_order_and_dispatches_the_push_job(): void
+    public function it_places_an_order_with_snapshotted_per_client_prices(): void
     {
         $user = $this->approvedClient(['discount_percent' => 0]);
         Sanctum::actingAs($user);
@@ -103,9 +103,8 @@ class OrderApiTest extends TestCase
         $prices = collect($response->json('data.items'))->pluck('price')->all();
         $this->assertEqualsWithDelta([2000.0, 500.0], $prices, 0.001);
 
-        Bus::assertDispatched(PushOrderJob::class, function (PushOrderJob $job) use ($user): bool {
-            return $job->order->user_id === $user->id;
-        });
+        // B2B orders are worked in the admin panel too — nothing is pushed out.
+        Bus::assertNotDispatched(PushOrderJob::class);
     }
 
     #[Test]

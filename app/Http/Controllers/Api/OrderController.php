@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
-use App\Jobs\Erp\PushOrderJob;
 use App\Models\Order;
 use App\Services\Orders\OrderPlacementService;
 use Illuminate\Http\JsonResponse;
@@ -40,8 +39,10 @@ class OrderController extends Controller
 
     /**
      * Place an order. Lines are validated against visibility + stock and have
-     * their per-client price snapshotted, then the order is queued for push to
-     * MoySklad. Checkout never blocks on MoySklad.
+     * their per-client price snapshotted; stock is drawn down from the local
+     * FIFO ledger inside the same transaction. The order then lives entirely
+     * in this application — a manager works it through its statuses in the
+     * admin panel. Nothing is pushed anywhere.
      */
     public function store(StoreOrderRequest $request): JsonResponse
     {
@@ -54,8 +55,6 @@ class OrderController extends Controller
             $validated['comment'] ?? null,
             $validated['delivery'] ?? null,
         );
-
-        PushOrderJob::dispatch($order);
 
         return (new OrderResource($order))
             ->response()

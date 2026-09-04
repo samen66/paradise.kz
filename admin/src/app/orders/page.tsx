@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 
+// Filter options. Legacy statuses stay filterable so historical orders can
+// still be found, but they are no longer assignable — see the detail page.
 const ALL_STATUSES = [
   { value: '', label: 'Все статусы' },
   { value: 'pending', label: 'Новый' },
@@ -11,8 +13,8 @@ const ALL_STATUSES = [
   { value: 'in_delivery', label: 'В доставке' },
   { value: 'completed', label: 'Завершён' },
   { value: 'cancelled', label: 'Отменён' },
-  { value: 'synced', label: 'Синхронизирован' },
-  { value: 'failed', label: 'Ошибка' },
+  { value: 'synced', label: 'Архив (отправлен)' },
+  { value: 'failed', label: 'Архив (ошибка отправки)' },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
@@ -21,8 +23,8 @@ const STATUS_STYLES: Record<string, string> = {
   in_delivery: 'bg-purple-50 text-purple-700 border-purple-200',
   completed:   'bg-green-50 text-green-700 border-green-200',
   cancelled:   'bg-red-50 text-red-700 border-red-200',
-  synced:      'bg-teal-50 text-teal-700 border-teal-200',
-  failed:      'bg-rose-50 text-rose-700 border-rose-200',
+  synced:      'bg-gray-100 text-gray-600 border-gray-200',
+  failed:      'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -31,8 +33,8 @@ const STATUS_LABELS: Record<string, string> = {
   in_delivery: 'В доставке',
   completed:   'Завершён',
   cancelled:   'Отменён',
-  synced:      'Синхронизирован',
-  failed:      'Ошибка',
+  synced:      'Архив (отправлен)',
+  failed:      'Архив (ошибка отправки)',
 };
 
 export default function OrdersPage() {
