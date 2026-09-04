@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use Spatie\Image\Enums\Fit;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -45,6 +45,7 @@ class Product extends Model implements HasMedia
         'b2b_price',
         'purchase_price',
         'min_price',
+        'compare_at_price',
         'stock',
         'uom',
         'weight',
@@ -65,6 +66,8 @@ class Product extends Model implements HasMedia
             'retail_price' => 'integer',
             'b2b_price' => 'integer',
             'min_price' => 'integer',
+            'purchase_price' => 'integer',
+            'compare_at_price' => 'integer',
             'stock' => 'decimal:3',
             'weight' => 'decimal:3',
             'volume' => 'decimal:3',
