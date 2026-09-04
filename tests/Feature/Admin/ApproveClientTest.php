@@ -21,6 +21,11 @@ class ApproveClientTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Most cases here cover the ERP-connected path, so they opt into the
+        // legacy provider explicitly (the app defaults to `local`). The
+        // no-ERP path has its own test at the bottom of this file.
+        config()->set('erp.provider', 'moysklad');
         config()->set('moysklad.token', 'test-token');
     }
 
@@ -71,6 +76,24 @@ class ApproveClientTest extends TestCase
         app(ApproveClient::class)->handle($client);
 
         $this->assertTrue($client->fresh()->is_approved);
+        Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function approval_works_with_no_erp_connected(): void
+    {
+        // The default provider. Approval is a local decision — it opens the
+        // wholesale catalog for this client — so it must not depend on an
+        // integration that isn't there.
+        config()->set('erp.provider', 'local');
+        Http::fake(); // any call would be unexpected
+
+        $client = User::factory()->b2b()->create(['is_approved' => false]);
+
+        app(ApproveClient::class)->handle($client);
+
+        $this->assertTrue($client->fresh()->is_approved);
+        $this->assertNull($client->fresh()->external_counterparty_id);
         Http::assertNothingSent();
     }
 }

@@ -22,6 +22,11 @@ class MoySkladOrderTarget implements OrderTarget
         private readonly MoySkladService $service,
     ) {}
 
+    public function supportsCounterparties(): bool
+    {
+        return true;
+    }
+
     public function createCounterparty(User $user): string
     {
         $counterparty = $this->service->createCounterparty([

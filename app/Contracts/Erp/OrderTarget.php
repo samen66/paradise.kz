@@ -20,9 +20,21 @@ use App\Services\Erp\Data\PushedOrder;
 interface OrderTarget
 {
     /**
+     * Whether this target maintains counterparties at all.
+     *
+     * False when there is no external system to hold one (the `local`
+     * provider). Callers must check this before {@see createCounterparty()}:
+     * approving a B2B client is a local decision and must not depend on an
+     * integration that isn't there.
+     */
+    public function supportsCounterparties(): bool;
+
+    /**
      * Ensure the B2B client exists as a counterparty in the external system and
      * return its external id. Implementations build the provider-specific
      * counterparty payload from the user's company details.
+     *
+     * Only valid when {@see supportsCounterparties()} is true.
      */
     public function createCounterparty(User $user): string;
 

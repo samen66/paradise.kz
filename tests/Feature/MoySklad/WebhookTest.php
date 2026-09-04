@@ -23,6 +23,11 @@ class WebhookTest extends TestCase
     {
         parent::setUp();
 
+        // The app now runs on the `local` provider by default (config/erp.php);
+        // this suite covers the legacy MoySklad integration, so it opts back in
+        // explicitly. Delete this file together with app/Services/MoySklad (D4).
+        config(['erp.provider' => 'moysklad']);
+
         config(['moysklad.webhook_secret' => self::SECRET]);
         Bus::fake();
     }

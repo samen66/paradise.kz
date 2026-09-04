@@ -2,19 +2,18 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Fallback full sync; webhooks keep the mirror fresh in between (see docs).
-Schedule::command('moysklad:sync')
-    ->everyFifteenMinutes()
-    ->withoutOverlapping();
-
-// Sync upserts bypass model events, so new ERP products get their storefront
-// slug here shortly after each sync window.
-Schedule::command('catalog:generate-product-slugs')
-    ->everyFifteenMinutes()
-    ->withoutOverlapping();
+/*
+ * No scheduled work.
+ *
+ * The catalog is authored in the admin panel and stock comes from the local
+ * FIFO ledger, so there is nothing to sync on a timer. The former
+ * `moysklad:sync` and `catalog:generate-product-slugs` entries existed only to
+ * mirror an external ERP and to backfill slugs after its bulk upserts (which
+ * bypassed model events); locally created products get their slug from
+ * Product::booted().
+ */

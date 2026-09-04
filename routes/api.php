@@ -28,8 +28,9 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// MoySklad calls this directly, so it is intentionally unauthenticated and
-// instead guarded by a shared secret inside the controller.
+// Legacy ERP webhook. Under the default `local` provider the handler rejects
+// every request (401) — nothing calls this. Kept only so the MoySklad suite
+// keeps passing; remove with app/Services/MoySklad (plan task D4).
 Route::post('/moysklad/webhook', MoySkladWebhookController::class);
 
 Route::post('/kaspi/webhook', \App\Http\Controllers\Api\Public\KaspiWebhookController::class);
@@ -133,6 +134,9 @@ Route::prefix('admin')
         Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
         Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
         Route::apiResource('orders', \App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
+        // Read-only: stock moves through goods receipts / adjustments so that
+        // every change is recorded in the ledger.
+        Route::get('stock', [\App\Http\Controllers\Api\Admin\StockController::class, 'index']);
         Route::get('users', [\App\Http\Controllers\Api\Admin\UserController::class, 'index']);
         Route::post('users/{user}/approve', [\App\Http\Controllers\Api\Admin\UserController::class, 'approve']);
     });

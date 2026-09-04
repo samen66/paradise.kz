@@ -8,15 +8,18 @@ use App\Contracts\Erp\OrderTarget;
 use App\Models\User;
 
 /**
- * Approve a B2B client and guarantee they are linked to an ERP counterparty
- * (the order `agent`).
+ * Approve a B2B client, linking them to an ERP counterparty (the order `agent`)
+ * when an ERP is actually connected.
  *
- * Per the B2B plan: approval is BLOCKED if a counterparty cannot be created.
- * If the client already carries an `external_counterparty_id` (e.g. an admin
- * pasted an existing one) we skip the API call and just flip the gate.
+ * Approval is a local decision — it opens the wholesale catalog and pricing for
+ * this client — so with no ERP behind us (the `local` provider) there is simply
+ * no counterparty to create and the gate flips on its own.
  *
- * Any error thrown by the provider bubbles up to the caller (the Filament
- * action) so it can show a danger notification and leave the client unapproved.
+ * When an ERP IS connected the old rule still holds: approval is BLOCKED if the
+ * counterparty cannot be created, because orders would then be unpushable. Any
+ * error from the provider bubbles up to the caller (the Filament action) so it
+ * can show a danger notification and leave the client unapproved. A client that
+ * already carries an `external_counterparty_id` skips the API call.
  */
 class ApproveClient
 {
@@ -26,7 +29,7 @@ class ApproveClient
 
     public function handle(User $user): User
     {
-        if (blank($user->external_counterparty_id)) {
+        if ($this->orders->supportsCounterparties() && blank($user->external_counterparty_id)) {
             $user->external_counterparty_id = $this->orders->createCounterparty($user) ?: null;
         }
 
