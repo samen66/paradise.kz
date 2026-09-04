@@ -12,6 +12,7 @@ export default function Sidebar() {
     { href: '/', label: 'Главная' },
     { href: '/products', label: 'Товары' },
     { href: '/orders', label: 'Заказы' },
+    { href: '/stock', label: 'Склад' },
     { href: '/users', label: 'Клиенты (B2B)' },
     { href: '/categories', label: 'Категории' },
     { href: '/brands', label: 'Бренды' },

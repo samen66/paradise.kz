@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -73,9 +72,13 @@ class ProductForm
                             ->schema([
                                 TextInput::make('stock')
                                     ->label(__('admin.fields.stock'))
+                                    // Derived from the FIFO ledger, never authored:
+                                    // disabled() also keeps it out of the saved
+                                    // payload, so a save can't overwrite the
+                                    // projection FifoInventoryService maintains.
                                     ->disabled()
-                                    ->helperText(__('admin.helpers.erp_readonly'))
-                                    ->required()
+                                    ->dehydrated(false)
+                                    ->helperText(__('admin.helpers.stock_readonly'))
                                     ->numeric()
                                     ->default(0),
                                 TextInput::make('retail_price')
@@ -166,9 +169,6 @@ class ProductForm
                                             ->disabled(),
                                         TextInput::make('supplier')
                                             ->label(__('admin.fields.supplier'))
-                                            ->disabled(),
-                                        DateTimePicker::make('synced_at')
-                                            ->label(__('admin.fields.synced_at'))
                                             ->disabled(),
                                     ]),
                                 TagsInput::make('barcodes')

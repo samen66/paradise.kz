@@ -81,9 +81,6 @@ class ProductsTable
                     ->limit(3),
                 IconColumn::make('is_active')
                     ->boolean(),
-                TextColumn::make('synced_at')
-                    ->dateTime()
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

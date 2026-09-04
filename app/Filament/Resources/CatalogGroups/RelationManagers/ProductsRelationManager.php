@@ -11,7 +11,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -45,14 +44,16 @@ class ProductsRelationManager extends RelationManager
                 TextInput::make('b2b_price')
                     ->numeric()
                     ->prefix('$'),
+                // Derived from the FIFO ledger — see FifoInventoryService.
                 TextInput::make('stock')
-                    ->required()
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->helperText(__('admin.helpers.stock_readonly'))
                     ->numeric()
                     ->default(0),
                 TextInput::make('uom'),
                 Toggle::make('is_active')
                     ->required(),
-                DateTimePicker::make('synced_at'),
             ]);
     }
 
@@ -91,9 +92,6 @@ class ProductsRelationManager extends RelationManager
                     ->limit(3),
                 IconColumn::make('is_active')
                     ->boolean(),
-                TextColumn::make('synced_at')
-                    ->dateTime()
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

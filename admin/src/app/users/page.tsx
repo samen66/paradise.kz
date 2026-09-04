@@ -38,7 +38,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   const handleApprove = async (id: number) => {
-    if (!confirm('Будет создан контрагент в МойСклад, и клиент получит доступ к каталогу. Одобрить?')) return;
+    if (!confirm('Клиент получит доступ к оптовому каталогу и ценам. Одобрить?')) return;
     setApprovingId(id);
     try {
       await api.post(`/admin/users/${id}/approve`);
