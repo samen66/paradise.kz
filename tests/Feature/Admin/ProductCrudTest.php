@@ -45,6 +45,8 @@ class ProductCrudTest extends TestCase
             'name' => ['ru' => 'Диван Атланта', 'kk' => 'Атланта диваны'],
             'description' => ['ru' => 'Мягкий диван', 'kk' => 'Жұмсақ диван'],
             'slug' => 'divan-atlanta',
+            'seo_title' => ['ru' => 'Диван Атланта купить', 'kk' => 'Атланта диванын сатып алу'],
+            'seo_description' => ['ru' => 'Мягкий диван от производителя'],
             'code' => 'SKU-001',
             'article' => 'ART-001',
             'category_id' => $category->id,
@@ -70,6 +72,9 @@ class ProductCrudTest extends TestCase
         $this->assertSame('Атланта диваны', $product->getTranslation('name', 'kk'));
         $this->assertSame('Мягкий диван', $product->getTranslation('description', 'ru'));
         $this->assertSame('divan-atlanta', $product->slug);
+        $this->assertSame('Диван Атланта купить', $product->getTranslation('seo_title', 'ru'));
+        $this->assertSame('Атланта диванын сатып алу', $product->getTranslation('seo_title', 'kk'));
+        $this->assertSame('Мягкий диван от производителя', $product->getTranslation('seo_description', 'ru'));
         $this->assertSame('SKU-001', $product->code);
         $this->assertSame('ART-001', $product->article);
         $this->assertSame($category->id, $product->category_id);
@@ -204,6 +209,26 @@ class ProductCrudTest extends TestCase
         ])->assertOk();
 
         $this->assertNull($product->fresh()->article);
+    }
+
+    #[Test]
+    public function seo_meta_is_translatable_and_survives_an_unrelated_update(): void
+    {
+        $product = Product::factory()->create([
+            'seo_title' => ['ru' => 'Заголовок', 'kk' => 'Тақырып'],
+            'seo_description' => ['ru' => 'Описание'],
+        ]);
+
+        $this->putJson("/api/admin/products/{$product->id}", [
+            'name' => ['ru' => 'Стул'],
+            'retail_price' => 1000,
+        ])->assertOk();
+
+        $product->refresh();
+
+        $this->assertSame('Заголовок', $product->getTranslation('seo_title', 'ru'));
+        $this->assertSame('Тақырып', $product->getTranslation('seo_title', 'kk'));
+        $this->assertSame('Описание', $product->getTranslation('seo_description', 'ru'));
     }
 
     #[Test]

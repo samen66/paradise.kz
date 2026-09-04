@@ -31,13 +31,15 @@ class Product extends Model implements HasMedia
     public const IMAGE_COLLECTION = 'images';
 
     /** @var list<string> */
-    public array $translatable = ['name', 'description'];
+    public array $translatable = ['name', 'description', 'seo_title', 'seo_description'];
 
     protected $fillable = [
         'category_id',
         'brand_id',
         'name',
         'slug',
+        'seo_title',
+        'seo_description',
         'code',
         'article',
         'description',

@@ -27,6 +27,10 @@ const emptyForm = {
   description_ru: '',
   description_kk: '',
   slug: '',
+  seo_title_ru: '',
+  seo_title_kk: '',
+  seo_description_ru: '',
+  seo_description_kk: '',
   code: '',
   article: '',
   category_id: '',
@@ -112,6 +116,10 @@ export default function EditProductPage() {
               description_ru: p.description?.ru || '',
               description_kk: p.description?.kk || '',
               slug: p.slug || '',
+              seo_title_ru: p.seo_title?.ru || '',
+              seo_title_kk: p.seo_title?.kk || '',
+              seo_description_ru: p.seo_description?.ru || '',
+              seo_description_kk: p.seo_description?.kk || '',
               code: p.code || '',
               article: p.article || '',
               category_id: p.category_id ? String(p.category_id) : '',
@@ -154,6 +162,11 @@ export default function EditProductPage() {
 
       if (formData.description_ru) data.append('description[ru]', formData.description_ru);
       if (formData.description_kk) data.append('description[kk]', formData.description_kk);
+
+      if (formData.seo_title_ru) data.append('seo_title[ru]', formData.seo_title_ru);
+      if (formData.seo_title_kk) data.append('seo_title[kk]', formData.seo_title_kk);
+      if (formData.seo_description_ru) data.append('seo_description[ru]', formData.seo_description_ru);
+      if (formData.seo_description_kk) data.append('seo_description[kk]', formData.seo_description_kk);
 
       // Sent even when blank so that clearing a field in the UI clears it on
       // the server; the request turns "" into null.
@@ -384,6 +397,24 @@ export default function EditProductPage() {
               <input name="slug" value={formData.slug} onChange={handleChange} className={inputClass} placeholder="divan-atlanta" />,
               'Lowercase latin letters, digits and dashes. Leave blank to generate it from the Russian name; changing it later breaks existing links.',
             )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {field('Meta title (RU)',
+                <input name="seo_title_ru" value={formData.seo_title_ru} onChange={handleChange} className={inputClass} placeholder="Falls back to the product name" />,
+              )}
+              {field('Meta title (KK)',
+                <input name="seo_title_kk" value={formData.seo_title_kk} onChange={handleChange} className={inputClass} placeholder="Falls back to the product name" />,
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {field('Meta description (RU)',
+                <textarea name="seo_description_ru" value={formData.seo_description_ru} onChange={handleChange} rows={3} className={`${inputClass} resize-y`} placeholder="Up to ~160 characters" />,
+              )}
+              {field('Meta description (KK)',
+                <textarea name="seo_description_kk" value={formData.seo_description_kk} onChange={handleChange} rows={3} className={`${inputClass} resize-y`} placeholder="Up to ~160 characters" />,
+              )}
+            </div>
           </div>
 
           {/* ----------------------------------------------------------- Media */}

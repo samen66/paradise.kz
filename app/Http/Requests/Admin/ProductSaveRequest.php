@@ -103,9 +103,9 @@ class ProductSaveRequest extends FormRequest
             'category_id' => 'nullable|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
 
-            // The slug is left blank on create and Product::booted() generates
-            // it from the ru name; on update an existing slug must not collide
-            // with another product's.
+            // SEO. The slug is left blank on create and Product::booted()
+            // generates it from the ru name; on update an existing slug must not
+            // collide with another product's.
             'slug' => [
                 'nullable',
                 'string',
@@ -113,6 +113,12 @@ class ProductSaveRequest extends FormRequest
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('products', 'slug')->ignore($this->route('product')),
             ],
+            'seo_title' => 'nullable|array',
+            'seo_title.ru' => 'nullable|string|max:255',
+            'seo_title.kk' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|array',
+            'seo_description.ru' => 'nullable|string|max:1000',
+            'seo_description.kk' => 'nullable|string|max:1000',
 
             // Prices — in ₸ here, converted to тиын by validated().
             'retail_price' => 'nullable|numeric|decimal:0,2|min:0|max:99999999.99',
