@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 export default function EditProductPage() {
   const { id } = useParams();
@@ -16,8 +17,10 @@ export default function EditProductPage() {
   const [formData, setFormData] = useState({
     name_ru: '',
     name_kk: '',
+    name_en: '',
     description_ru: '',
     description_kk: '',
+    description_en: '',
     retail_price: '',
     b2b_price: '',
     category_id: '',
@@ -32,11 +35,8 @@ export default function EditProductPage() {
     // Fetch categories for the select dropdown
     const fetchOptions = async () => {
       try {
-        const catRes = await fetch('http://localhost:8000/api/public/categories');
-        if (catRes.ok) {
-          const json = await catRes.json();
-          setCategories(json.data || json || []);
-        }
+        const catRes = await api.get('/public/categories');
+        setCategories(catRes.data?.data || catRes.data || []);
       } catch (err) {
         console.error('Could not fetch categories');
       }
@@ -47,15 +47,16 @@ export default function EditProductPage() {
     if (!isCreate) {
       const fetchProduct = async () => {
         try {
-          const res = await fetch(`http://localhost:8000/api/admin/products/${id}`);
-          if (res.ok) {
-            const json = await res.json();
-            const p = json.data;
+          const res = await api.get(`/admin/products/${id}`);
+          const p = res.data?.data || res.data;
+          if (p) {
             setFormData({
               name_ru: p.name?.ru || '',
               name_kk: p.name?.kk || '',
+              name_en: p.name?.en || '',
               description_ru: p.description?.ru || '',
               description_kk: p.description?.kk || '',
+              description_en: p.description?.en || '',
               retail_price: p.retail_price || '',
               b2b_price: p.b2b_price || '',
               category_id: p.category_id || '',
@@ -82,9 +83,11 @@ export default function EditProductPage() {
       const data = new FormData();
       data.append('name[ru]', formData.name_ru);
       if (formData.name_kk) data.append('name[kk]', formData.name_kk);
+      if (formData.name_en) data.append('name[en]', formData.name_en);
       
       if (formData.description_ru) data.append('description[ru]', formData.description_ru);
       if (formData.description_kk) data.append('description[kk]', formData.description_kk);
+      if (formData.description_en) data.append('description[en]', formData.description_en);
       
       if (formData.retail_price) data.append('retail_price', formData.retail_price);
       if (formData.b2b_price) data.append('b2b_price', formData.b2b_price);
@@ -97,29 +100,29 @@ export default function EditProductPage() {
         data.append('images[]', img);
       });
       
-      let url = `http://localhost:8000/api/admin/products`;
+      let url = `/admin/products`;
       if (!isCreate) {
         url += `/${id}`;
         data.append('_method', 'PUT'); // Laravel requirement for multipart PUT
       }
       
-      const res = await fetch(url, {
-        method: 'POST', // Always POST, _method handles the PUT for Laravel
+      const res = await api.post(url, data, {
         headers: {
-          'Accept': 'application/json',
-        },
-        body: data
+          'Content-Type': 'multipart/form-data',
+        }
       });
       
-      if (res.ok) {
+      if (res.status === 200 || res.status === 201) {
         router.push('/products');
-      } else {
-        const err = await res.json();
-        alert('Validation failed: ' + JSON.stringify(err.errors || err.message));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save', error);
-      alert('An error occurred while saving.');
+      if (error.response?.data) {
+        const err = error.response.data;
+        alert('Validation failed: ' + JSON.stringify(err.errors || err.message));
+      } else {
+        alert('An error occurred while saving.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -159,7 +162,7 @@ export default function EditProductPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
             <h2 className="text-lg font-semibold border-b pb-2">Basic Information</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Name (RU) <span className="text-red-500">*</span></label>
                 <input 
@@ -179,6 +182,16 @@ export default function EditProductPage() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   placeholder="Enter product name in Kazakh"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Name (EN)</label>
+                <input 
+                  name="name_en"
+                  value={formData.name_en}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Enter product name in English"
                 />
               </div>
             </div>
@@ -239,16 +252,40 @@ export default function EditProductPage() {
               </div>
             </div>
             
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Description (RU)</label>
-              <textarea 
-                name="description_ru"
-                value={formData.description_ru}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
-                placeholder="Product description in Russian"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Description (RU)</label>
+                <textarea 
+                  name="description_ru"
+                  value={formData.description_ru}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
+                  placeholder="Product description in Russian"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Description (KK)</label>
+                <textarea 
+                  name="description_kk"
+                  value={formData.description_kk}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
+                  placeholder="Product description in Kazakh"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Description (EN)</label>
+                <textarea 
+                  name="description_en"
+                  value={formData.description_en}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
+                  placeholder="Product description in English"
+                />
+              </div>
             </div>
           </div>
 

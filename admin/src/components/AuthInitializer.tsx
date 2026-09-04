@@ -2,32 +2,29 @@
 
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import api from '@/lib/api';
 
 export default function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const { setUser } = useAuthStore();
+  const { setUser, logout } = useAuthStore();
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/auth/me', {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          credentials: 'include',
-        });
-        
-        if (res.ok) {
-          const userData = await res.json();
-          setUser(userData.data || userData);
-        } else {
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
           setUser(null);
+          return;
         }
+
+        const res = await api.get('/auth/me');
+        setUser(res.data.user || res.data.data || res.data);
       } catch (e) {
-        setUser(null);
+        logout();
       }
     };
     
     fetchUser();
-  }, [setUser]);
+  }, [setUser, logout]);
 
   return <>{children}</>;
 }

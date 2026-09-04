@@ -29,7 +29,7 @@ class AuthController extends Controller
 
         $user = User::create([
             'name' => $data['name'] ?? $data['company_name'],
-            'email' => $data['email'],
+            'email' => $data['email'] ?? null,
             'phone' => $data['phone'],
             'password' => $data['password'],
             'company_name' => $data['company_name'],
@@ -59,11 +59,16 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
-        $user = User::where('phone', $credentials['phone'])->first();
+        // B2B clients sign in with a phone, admin-panel staff with an email —
+        // whichever was sent is the field the error belongs on, so the form
+        // highlights the input the person actually filled.
+        $field = isset($credentials['email']) ? 'email' : 'phone';
+
+        $user = User::where($field, $credentials[$field])->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'phone' => ['Неверный номер телефона или пароль.'],
+                $field => ['Неверный логин или пароль.'],
             ]);
         }
 

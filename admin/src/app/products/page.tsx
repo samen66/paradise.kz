@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -19,17 +20,10 @@ export default function ProductsPage() {
         ...(search && { 'filter[search]': search }),
         ...(isActive && { 'filter[is_active]': isActive }),
       });
-      const res = await fetch(`http://localhost:8000/api/admin/products?${query}`, {
-        headers: {
-          'Accept': 'application/json',
-          // 'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setProducts(json.data || []);
-        setTotalPages(json.meta?.last_page || 1);
-      }
+      const res = await api.get(`/admin/products?${query}`);
+      
+      setProducts(res.data?.data || []);
+      setTotalPages(res.data?.meta?.last_page || 1);
     } catch (error) {
       console.error('Failed to fetch products', error);
     } finally {
@@ -47,13 +41,8 @@ export default function ProductsPage() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/admin/products/${id}`, {
-        method: 'DELETE',
-        headers: { 'Accept': 'application/json' }
-      });
-      if (res.ok) {
-        fetchProducts();
-      }
+      await api.delete(`/admin/products/${id}`);
+      fetchProducts();
     } catch (error) {
       console.error('Failed to delete product', error);
     }

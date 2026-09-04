@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import api from '@/lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,42 +17,26 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // 1. Get CSRF Cookie
-      await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'include',
-      });
-
-      // 2. Login
-      const loginRes = await fetch('http://localhost:8000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!loginRes.ok) {
-        throw new Error('Неверные учетные данные');
+      const loginRes = await api.post('/auth/login', { email, password });
+      
+      const token = loginRes.data.token;
+      if (token) {
+        localStorage.setItem('admin_token', token);
       }
 
-      // 3. Fetch user data
-      const userRes = await fetch('http://localhost:8000/api/auth/me', {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'include',
-      });
-
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        setUser(userData.data || userData);
-        router.push('/products');
-      }
+      // Fetch user data after token is set
+      const userRes = await api.get('/auth/me');
+      
+      setUser(userRes.data.user || userRes.data.data || userRes.data);
+      router.push('/products');
     } catch (err: any) {
-      setError(err.message || 'Ошибка входа');
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response?.data?.errors?.email) {
+        setError(err.response.data.errors.email[0]);
+      } else {
+        setError(err.message || 'Ошибка входа');
+      }
     }
   };
 
