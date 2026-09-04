@@ -15,7 +15,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = QueryBuilder::for(Product::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::exact('is_active'),
                 AllowedFilter::callback('search', function ($query, $value) {
@@ -25,7 +25,7 @@ class ProductController extends Controller
                           ->orWhere('code', 'LIKE', "%{$value}%");
                     });
                 }),
-            ])
+            )
             ->with(['category', 'brand', 'media', 'externalMapping'])
             ->paginate(15);
 
