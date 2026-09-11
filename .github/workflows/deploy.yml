@@ -12,6 +12,7 @@ env:
   API_IMAGE: ghcr.io/samen66/paradise-api
   NGINX_IMAGE: ghcr.io/samen66/paradise-nginx
   STOREFRONT_IMAGE: ghcr.io/samen66/paradise-storefront
+  ADMIN_IMAGE: ghcr.io/samen66/paradise-admin
 
 jobs:
   test-api:
@@ -102,6 +103,19 @@ jobs:
             ${{ env.STOREFRONT_IMAGE }}:latest
           cache-from: type=gha,scope=storefront
           cache-to: type=gha,scope=storefront,mode=max
+
+      - name: Build & push admin image
+        uses: docker/build-push-action@v6
+        with:
+          context: admin
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.paradise.kz/api
+          tags: |
+            ${{ env.ADMIN_IMAGE }}:${{ github.sha }}
+            ${{ env.ADMIN_IMAGE }}:latest
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,scope=admin,mode=max
 
   deploy:
     runs-on: ubuntu-latest

@@ -36,6 +36,7 @@ services:
     depends_on:
       - app
       - storefront
+      - admin
     logging: *default-logging
     # Reload every 6h so renewed certificates get picked up.
     command: ["/bin/sh", "-c", "while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"]
@@ -67,6 +68,14 @@ services:
     restart: always
     environment:
       API_URL_INTERNAL: http://nginx:8080/api
+    logging: *default-logging
+
+  # Back-office SPA. Renders client-side only and talks to
+  # https://api.paradise.kz/api from the browser (URL baked in at build time),
+  # so it needs no internal API URL.
+  admin:
+    image: ghcr.io/samen66/paradise-admin:${TAG:-latest}
+    restart: always
     logging: *default-logging
 
   mysql:
