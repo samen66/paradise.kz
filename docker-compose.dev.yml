@@ -66,6 +66,18 @@ services:
       - nginx
     restart: unless-stopped
 
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3002:3000"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
   reverb:
     build:
       context: .

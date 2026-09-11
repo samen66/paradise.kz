@@ -5,15 +5,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# NEXT_PUBLIC_* are inlined at build time.
+# NEXT_PUBLIC_* are inlined at build time. The admin is a client-only SPA
+# (bearer token in localStorage), so the browser-facing API URL is all it needs.
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
-# The portal ships no static files yet; the runtime stage still copies public/.
-RUN mkdir -p public
 
 FROM node:22-alpine
 WORKDIR /app

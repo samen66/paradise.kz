@@ -2,138 +2,164 @@
 
 ## Project Overview
 
-Paradise.kz is a Laravel 13.8 web application with a Filament admin panel. The project uses modern tooling for asset bundling (Vite + Tailwind CSS) and queue management, with support for AWS S3 media storage.
+Paradise.kz is a furniture shop (showroom + warehouse in Almaty) selling to two
+segments: **B2C** retail customers and **B2B** partner stores. The repository is
+a monorepo of one Laravel API and three Next.js front-ends:
+
+| App | Dir | What it is | Dev port | Production host |
+|---|---|---|---|---|
+| API + back-office | `/` (Laravel) | JSON API under `/api/*`, Filament panel at `/admin` | 8000 | `api.paradise.kz` |
+| Storefront | `storefront/` | B2C shop, ru/kk (next-intl), SSR | 3000 | `shop.paradise.kz` |
+| B2B portal | `b2b-portal/` | Partner-store catalog, quick order, own prices | 3001 | `b2b.paradise.kz` |
+| Admin SPA | `admin/` | Manager's day-to-day: orders, products, stock view, B2B client approval | 3002 | `admin.paradise.kz` |
+
+The app runs **standalone, with no external ERP**. It owns its catalog, prices
+and stock. The MoySklad integration it used to mirror from has been removed;
+`ERP_PROVIDER=local` is the only provider.
+
+## Architecture
+
+### Two admin panels, split by job
+
+- **`admin/` (Next.js)** — operational screens for managers: orders and status
+  changes, product list/edit, read-only stock, B2B client approval, categories,
+  brands. Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`).
+- **Filament (`/admin` on the API host)** — back-office: goods receipts,
+  warehouses (Stores), suppliers, price types, CMS pages, banners, reviews,
+  catalog groups. `admin/` links out to it (`ERP_ADMIN_URL` in `admin/src/lib/api.ts`).
+
+### Stock: the local FIFO ledger is the source of truth
+
+```
+Goods receipt (GoodsReceiptService::post) ──> FifoInventoryService::receive()
+Order placed  (OrderPlacementService)     ──> FifoInventoryService::issue()
+Order cancelled (OrderCancellationService) ─> return movements, original cost
+
+FifoInventoryService writes:
+  batches              — FIFO cost layers
+  stock_movements      — append-only ledger (the truth)
+  product_store_stock  — per-warehouse projection (on-hand + avg cost)
+  products.stock       — aggregate over all warehouses (recomputeAggregateStock)
+```
+
+- Nothing writes `products.stock` or `product_store_stock` directly — only
+  `FifoInventoryService`. Stock is read-only in both admin panels; it changes
+  through receipts, orders and cancellations. `php artisan stock:recompute`
+  rebuilds the `products.stock` aggregate from the per-warehouse projection.
+- The storefront reads stock via `PublicProductPresenter` (per selected store,
+  aggregate otherwise).
+
+### Other domain services
+
+- `app/Services/Orders/` — `OrderPlacementService` (`place()` B2B,
+  `placeGuest()`, `placeRetail()`): visibility → stock → price checks, price
+  snapshot in the order, FIFO issue in one transaction.
+  `OrderCancellationService` puts goods back. `OrderObserver` →
+  `SendWhatsAppNotificationJob` on status changes.
+- `app/Services/Pricing/PricingService.php` — B2B / retail price types, legacy
+  `products.b2b_price` / `retail_price`, per-client `client_product_prices`,
+  `discount_percent`.
+- `app/Services/Catalog/` — `VisibilityService` (catalog groups; public catalog
+  = products in no group), `PublicProductPresenter`, `StoreResolver`, `CategoryTree`.
+- `app/Services/Auth/OtpService.php` — phone OTP login for the storefront.
+
+### ERP abstraction (dormant)
+
+`app/Contracts/Erp/` (`ErpProvider`, `OrderTarget`, `WebhookHandler`) and
+`app/Contracts/Catalog/CatalogSource` stay as the seam for a future import
+source. `config/erp.php` maps provider keys to implementations; the only one is
+`App\Services\Local\LocalErpProvider`, whose reads return nothing and whose
+writes throw. The catalog sync jobs in `app/Jobs/Catalog/` are written against
+the contract and are not scheduled. Historical links to external systems
+(`product_external_mappings`, `stores.source` / `external_id`,
+`order_items.external_product_id`) are kept as data, not used for logic.
+
+### API layout (`routes/api.php`)
+
+| Prefix | Auth | Used by |
+|---|---|---|
+| `/api/public/*` | none (guest checkout, OTP login, catalog, facets, order tracking) | storefront |
+| `/api/account/*` | `auth:sanctum` | storefront customer account |
+| `/api/auth/*` | login/register public, the rest `auth:sanctum` | b2b-portal, admin SPA |
+| `/api/{categories,products,orders,addresses}` | `auth:sanctum` + `approved` + `b2b` | b2b-portal |
+| `/api/admin/*` | `auth:sanctum` + `role:admin\|manager` | admin SPA |
+
+All front-ends authenticate with Sanctum **bearer tokens** (no cookie/stateful
+auth). Cross-origin access is governed by `CORS_ALLOWED_ORIGINS`
+(`config/cors.php`).
 
 ## Tech Stack
 
-### Backend
-- **Framework**: Laravel 13.8
-- **PHP**: ^8.3
-- **Admin Panel**: Filament 5.6 (for admin UI)
-- **Authentication**: Laravel Sanctum 4.3
-- **Permissions**: Spatie Laravel Permission 8.0
-- **Media Management**: Spatie Laravel Media Library 11.23
-- **Query Builder**: Spatie Laravel Query Builder 7.3
-- **Storage**: AWS S3 support (league/flysystem-aws-s3-v3 3.34)
-
-### Frontend
-- **Build Tool**: Vite 8.0 with Laravel Vite Plugin 3.1
-- **CSS Framework**: Tailwind CSS 4.0
-- **Tailwind Integration**: @tailwindcss/vite 4.0
-
-### Development & Testing
-- **Testing**: PHPUnit 12.5.12
-- **Mocking**: Mockery 1.6
-- **Code Quality**: Laravel Pint 1.27
-- **Monitoring**: Laravel Pail 1.2.5
-- **Faker**: FakerPHP 1.23
+- **API**: Laravel 13, PHP 8.4 in production images, MySQL 8, Redis (queue,
+  cache, sessions), Filament 5, Sanctum 4, Spatie Permission / Media Library /
+  Query Builder / Translatable (ru + kk columns).
+- **Front-ends**: Next.js 16.x (App Router, TypeScript, `output: "standalone"`),
+  Tailwind CSS 4, zustand. Storefront and B2B portal use next-intl.
+- **Laravel's own Vite build** (`resources/`) only serves Filament/Blade assets.
+- **Tests**: PHPUnit 12 (API only). Front-ends are checked by `tsc --noEmit` +
+  `npm run build` in CI.
 
 ## Project Structure
 
 ```
 app/
-  Models/User.php           - User model
-  Http/Controllers/
-    Controller.php          - Base controller
-  Providers/
-    AppServiceProvider.php  - App service provider
-    Filament/
-      AdminPanelProvider.php - Filament admin configuration
-
-bootstrap/
-  providers.php             - Service provider bootstrap
-
-config/
-  permission.php            - Spatie permission configuration
-
-database/
-  migrations/
-    2026_06_24_074125_create_permission_tables.php - Permission tables
-
-docker/
-  entrypoint.sh            - Docker entry point script
-Dockerfile                  - Docker configuration
-docker-compose.yml          - Compose configuration
-
-public/
-  css/                      - Generated CSS files
-  js/                       - Generated JS files
-  fonts/                    - Font assets
-
-resources/                  - Frontend resources (views, etc.)
-
-vite.config.js             - Vite configuration
+  Actions/               - ApproveClient (B2B approval)
+  Contracts/{Erp,Catalog,Sms}/ - integration seams
+  Filament/              - back-office resources (receipts, stores, CMS, …)
+  Http/Controllers/Api/  - Public/, Account/, Admin/, Auth/ + B2B controllers
+  Jobs/                  - Catalog/ (dormant sync), WhatsApp, storefront revalidation
+  Services/              - Inventory/, Orders/, Pricing/, Catalog/, Local/, Auth/, Sms/, WhatsApp/
+storefront/  b2b-portal/  admin/   - Next.js apps, each with its own package.json + Dockerfile
+deploy/
+  nginx/                 - api/shop/b2b/admin vhosts, baked into the nginx image
+  README.md              - production runbook
+docker/php/Dockerfile.prod - API + nginx production images
+docker-compose.yml       - local dev stack (+ docker-compose.dev.yml)
+docker-compose.prod.yml  - production stack (/opt/paradise on the VPS)
+docs/mvp-plan-2026-09.md - current MVP plan and task status
 ```
 
 ## Setup & Development
 
-### Initial Setup
 ```bash
-composer run setup
+composer run setup     # composer install, .env, key, migrate, npm build
+composer run dev       # artisan serve + queue:listen + pail + vite
+cd storefront && npm run dev   # :3000
+cd b2b-portal && npm run dev   # :3001
+cd admin && npm run dev -- -p 3002
 ```
 
-This runs:
-1. `composer install`
-2. Creates `.env` from `.env.example`
-3. Generates app key
-4. Runs migrations
-5. `npm install`
-6. Builds frontend assets
+Each Next.js app reads `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api`)
+from its `.env.local`.
 
-### Development Server
-```bash
-composer run dev
-```
+## Deployment
 
-Starts concurrently:
-- Laravel development server (php artisan serve)
-- Queue listener (php artisan queue:listen)
-- Pail logs (php artisan pail)
-- Vite dev server (npm run dev)
-
-### Build & Test
-```bash
-npm run build      # Build frontend assets
-composer test      # Run PHPUnit tests
-```
-
-## Key Features
-
-- **Filament Admin Panel** — Admin UI for content management
-- **Permission System** — Role-based access control via Spatie
-- **Media Management** — File uploads with AWS S3 integration
-- **Sanctum Authentication** — Token-based API authentication
-- **Vite + Tailwind** — Modern frontend development setup
-
-## Environment Configuration
-
-Key `.env` settings:
-- `APP_KEY` — Generated during setup
-- `DB_*` — Database configuration
-- `AWS_*` — S3 storage credentials (if using media library with S3)
-- `QUEUE_CONNECTION` — Job queue driver
+Push to `main` → `.github/workflows/deploy.yml` runs the tests, builds and
+pushes `paradise-{api,nginx,storefront,b2b-portal,admin}` images to GHCR, then SSH-deploys
+`docker-compose.prod.yml`. See `deploy/README.md`. `NEXT_PUBLIC_*` values are
+baked into the front-end images at build time (build args in `deploy.yml`).
 
 ## Common Commands
 
 | Command | Purpose |
 |---------|---------|
-| `php artisan serve` | Start dev server |
+| `php artisan test --compact` | Run the API test suite |
+| `vendor/bin/pint --dirty --format agent` | Format changed PHP |
+| `php artisan migrate` | Run database migrations |
 | `php artisan queue:listen` | Process queued jobs |
 | `php artisan pail` | Stream logs |
-| `php artisan migrate` | Run database migrations |
-| `php artisan tinker` | Interactive shell |
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Build frontend assets |
-| `composer test` | Run tests |
+| `npx tsc --noEmit && npm run build` | Check a Next.js app (run inside its dir) |
 
 ## Notes for Claude
 
-- Use Filament documentation when working with admin panel features
-- Spatie Permission is pre-configured; check `config/permission.php` for setup
-- Vite handles asset bundling; no manual webpack configuration needed
-- Queue jobs are available in development mode with `queue:listen`
-- Media library supports S3; configure AWS credentials in `.env`
-- Laravel Pint is configured for code formatting
+- Stock changes go through `FifoInventoryService` only — see "Stock" above and
+  `AGENTS.md` rule 1.
+- There is no ERP. Do not reintroduce MoySklad calls; new import sources go
+  behind `App\Contracts\Erp\ErpProvider` / `CatalogSource`.
+- Use Filament documentation when working with the back-office panel.
+- Spatie Permission roles (`RolesAndPermissionsSeeder`): `admin`, `manager`, `b2b_customer`.
+  B2C customers have no role.
+- Media library supports S3; configure AWS credentials in `.env`.
 
 ===
 

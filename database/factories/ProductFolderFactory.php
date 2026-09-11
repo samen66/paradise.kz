@@ -23,7 +23,7 @@ class ProductFolderFactory extends Factory
         $name = fake()->randomElement(['Диваны', 'Столы', 'Стулья', 'Шкафы', 'Кровати']);
 
         return [
-            'source' => 'moysklad',
+            'source' => 'erp',
             'external_id' => (string) Str::uuid(),
             'parent_external_id' => null,
             'name' => $name,

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Public;
 
-use App\Jobs\Erp\PushOrderJob;
 use App\Models\Batch;
 use App\Models\CatalogGroup;
 use App\Models\CatalogSetting;
@@ -66,10 +65,9 @@ class GuestCheckoutTest extends TestCase
         $this->assertSame(User::TYPE_RETAIL, $guest->type);
         $this->assertTrue($guest->is_approved);
 
-        // The order is worked in the admin panel; nothing is pushed anywhere.
-        // This used to dispatch PushOrderJob, which failed non-transiently on
-        // the missing ERP counterparty and flipped the order to `failed`.
-        Bus::assertNotDispatched(PushOrderJob::class);
+        // The order is worked in the admin panel and stays pending. It used to
+        // be pushed to the ERP, which failed on the missing counterparty and
+        // flipped every storefront order to `failed`.
         $this->assertSame(Order::STATUS_PENDING, $order->fresh()->status);
     }
 

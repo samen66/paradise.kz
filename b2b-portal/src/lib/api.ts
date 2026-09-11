@@ -36,6 +36,8 @@ export class ApiValidationError extends ApiError {
 }
 
 interface ApiOptions extends RequestInit {
+  /** Sent as Accept-Language; the API returns translatable fields in this locale. */
+  locale?: string;
   /** ISR revalidation window in seconds; false disables caching. */
   revalidate?: number | false;
   searchParams?: Record<string, string | number | boolean | undefined>;
@@ -58,6 +60,7 @@ async function request<T>(method: string, path: string, body: unknown, options: 
     headers: {
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(options.locale ? { "Accept-Language": options.locale } : {}),
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),

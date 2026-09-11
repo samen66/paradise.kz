@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Orders;
 
-use App\Jobs\Erp\PushOrderJob;
 use App\Models\Address;
 use App\Models\Batch;
 use App\Models\CatalogGroup;
@@ -102,9 +101,6 @@ class OrderApiTest extends TestCase
         // Item price exposed in major units (₸).
         $prices = collect($response->json('data.items'))->pluck('price')->all();
         $this->assertEqualsWithDelta([2000.0, 500.0], $prices, 0.001);
-
-        // B2B orders are worked in the admin panel too — nothing is pushed out.
-        Bus::assertNotDispatched(PushOrderJob::class);
     }
 
     #[Test]
@@ -149,7 +145,6 @@ class OrderApiTest extends TestCase
             ->assertJsonValidationErrors('items.0');
 
         $this->assertDatabaseCount('orders', 0);
-        Bus::assertNotDispatched(PushOrderJob::class);
     }
 
     #[Test]

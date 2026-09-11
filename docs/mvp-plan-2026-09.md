@@ -633,24 +633,48 @@ E2E (Playwright, `storefront/e2e/`) — из аудита от 2026-07-23 ост
 [x] A4  GET /api/admin/stock + экран «Склад» в admin/ + ссылка на приёмки
 [x] C6  order_items.external_product_id → nullable (checkout падал с 500)  🔴
 
-СПРИНТ 3 — каталог из админки
-[ ] B2  admin/products/new + вынести ProductForm
-[ ] B3  расширить ProductSaveRequest
-[ ] B4  бейджи «Нет цены / Нет остатка» + фильтр
-[ ] B1  удалить catalog:generate-product-slugs (P2)
+СПРИНТ 3 — каталог из админки            ✅ ЗАКРЫТ
+[x] B2  создание товара — уже работало через /products/create
+[x] B3  ProductSaveRequest + форма: все поля товара, селект брендов, SEO
+[x] B4  бейджи «почему товар не на витрине» + фильтр «только проблемные»
+[ ] B1  удалить catalog:generate-product-slugs (P2, не блокер)
 
-СПРИНТ 4 — деплой
-[ ] E1  закоммитить b2b-portal/ и config/cors.php  🔴
-[ ] E2  admin/Dockerfile + сервис в prod-compose + nginx admin.paradise.kz
-[ ] E3  CI-матрица typecheck для трёх фронтов
-[ ] E4  обновить CLAUDE.md / AGENTS.md / .env.production.example
-[ ] D4  удалить код МойСклада и его тесты
+СПРИНТ 4 — деплой                        ✅ ЗАКРЫТ
+[x] E1  b2b-portal и config/cors.php закоммичены
+[x] E2  admin/Dockerfile + сервис в prod-compose + nginx admin.paradise.kz
+[x] E3  CI-матрица: tsc --noEmit + npm run build для трёх фронтов
+[x] E4  CLAUDE.md / AGENTS.md / .env.production.example приведены к реальности
+[x] D4  код МойСклада и его тесты удалены
 
-ПЕРЕД ЗАПУСКОМ
+ОСТАЛОСЬ
+[ ] Закоммитить A3b (предупреждение «нет активного склада») — лежит незакоммиченным
+[ ] Слить mvp/local-inventory в main (конфликт на 1 строку в app/Models/Product.php)
+[ ] C4b завести аккаунт у WhatsApp-провайдера и заполнить настройки в CatalogSettings
 [ ] Прогнать приёмочные сценарии 1–5 на чистой БД
-[ ] php artisan test — зелёный
 [ ] Backup БД настроен (deploy/scripts/backup.sh в кроне)
+[ ] Выпустить первый деплой и проверить три домена
 ```
+
+### Состояние на 2026-09-11
+
+Тесты: **248 / 242 зелёных / 6 skipped / 0 красных** (было 309 — минус ~60 тестов МойСклада,
+удалённых вместе с интеграцией). `npx tsc --noEmit` в `admin/` чистый.
+
+`grep -ri moysklad app/ config/ routes/ tests/ database/` — пусто. Интеграции больше нет.
+
+Все три фронта в `docker-compose.prod.yml`, все четыре домена в `deploy/nginx/`.
+
+**Мелочи, которые всплыли при проверке — не блокеры, но стоит убрать:**
+
+- `app/Console/Commands/paradise.kz.code-workspace` — файл настроек IDE, случайно закоммичен
+  в каталог artisan-команд ещё в июле (коммит `73b7ca4`). Мусор в git.
+- `app/Console/Commands/SyncAndPopulateCatalogCommand.php` — тянет каталог из `CatalogSource`,
+  который теперь no-op. Команда стала пустышкой: синк ничего не приносит, работает только
+  вторая половина (populate). Либо переписать под локальные данные, либо удалить.
+- `app/Services/MoySklad/Data/` — пустой каталог, оставшийся после удаления файлов.
+  Git его не видит, но в рабочей копии он мозолит глаза.
+- Сервис `scheduler` в `docker-compose.prod.yml` поднимает `schedule:work`, а расписание пустое.
+  Не вредит, но и не нужен — оставить осознанно или убрать.
 
 ### Результаты прогонов
 

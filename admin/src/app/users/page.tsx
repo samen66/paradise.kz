@@ -23,8 +23,8 @@ export default function UsersPage() {
       const res = await api.get('/admin/users', { params });
       const json = res.data;
       setUsers(json.data || []);
-      setTotalPages(json.meta?.last_page || 1);
-      setTotal(json.meta?.total || 0);
+      setTotalPages(json.last_page || 1);
+      setTotal(json.total || 0);
     } catch (err) {
       console.error('Failed to fetch users', err);
     } finally {

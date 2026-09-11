@@ -27,7 +27,7 @@ class Product extends Model implements HasMedia
     use HasTranslations;
     use InteractsWithMedia;
 
-    /** Media collection that mirrors MoySklad product images. */
+    /** Media collection holding the product's images. */
     public const IMAGE_COLLECTION = 'images';
 
     /** @var list<string> */

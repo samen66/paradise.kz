@@ -54,9 +54,9 @@ class CheckoutController extends Controller
         }
 
         // No push to an external system: orders are worked through their
-        // statuses in the admin panel. (This used to dispatch PushOrderJob,
-        // which — because a guest never has an ERP counterparty — flipped every
-        // storefront order to `failed` seconds after checkout.)
+        // statuses in the admin panel. (This used to push the order to the
+        // ERP, which — because a guest never has an ERP counterparty — flipped
+        // every storefront order to `failed` seconds after checkout.)
         $resource = new OrderResource($order);
         if ($order->payment_method === 'kaspi') {
             $resource->additional([

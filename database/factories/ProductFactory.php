@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -42,7 +43,7 @@ class ProductFactory extends Factory
     public function erpSynced(?string $externalId = null): static
     {
         return $this->afterCreating(function (Product $product) use ($externalId): void {
-            \App\Models\ProductExternalMapping::factory()->create(array_filter([
+            ProductExternalMapping::factory()->create(array_filter([
                 'product_id' => $product->id,
                 'external_id' => $externalId,
             ]));
@@ -69,7 +70,7 @@ class ProductFactory extends Factory
             for ($i = 0; $i < $count; $i++) {
                 $product->addMediaFromString(UploadedFile::fake()->image("image-{$i}.jpg")->getContent())
                     ->usingFileName("image-{$i}.jpg")
-                    ->withCustomProperties(['moysklad_image_id' => (string) Str::uuid()])
+                    ->withCustomProperties(['external_image_id' => (string) Str::uuid()])
                     ->toMediaCollection(Product::IMAGE_COLLECTION);
             }
         });

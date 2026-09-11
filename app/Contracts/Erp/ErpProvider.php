@@ -14,7 +14,7 @@ use App\Contracts\Catalog\CatalogSource;
  *   - {@see OrderTarget}    — push placed orders and mirror their state back,
  *   - {@see WebhookHandler} — receive change notifications.
  *
- * MoySklad is the current implementation. The active provider is resolved from
+ * The only implementation is `local` (no ERP). The active provider is resolved from
  * config('erp.provider'); every mirrored row records the provider {@see key()}
  * in its `source` column so rows from multiple providers can coexist.
  */
@@ -22,7 +22,7 @@ interface ErpProvider
 {
     /**
      * Stable provider identifier persisted on every mirrored row's `source`
-     * column (e.g. "moysklad").
+     * column (e.g. "local").
      */
     public function key(): string;
 

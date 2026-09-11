@@ -11,8 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Local/demo data so the catalog + SPA are browsable without a live MoySklad
- * sync. Run with: `php artisan db:seed --class=DemoSeeder`.
+ * Local/demo data so the catalog + SPA are browsable on a fresh database. Run with: `php artisan db:seed --class=DemoSeeder`.
  *
  * NOT part of DatabaseSeeder — keep production free of fake catalog data.
  */

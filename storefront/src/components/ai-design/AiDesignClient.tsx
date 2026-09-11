@@ -140,10 +140,13 @@ export function AiDesignClient() {
     { label: "До 300 000 ₸", txt: "спальня, бюджетный вариант до 300 000 ₸" },
   ];
 
-  const products: Product[] = list.map((p) => ({
+  // Demo picks shaped like an API product, so ProductCard renders them as-is.
+  const products: Product[] = list.map((p): Product => ({
     id: p.id,
-    name: { ru: p.name, kk: p.name },
+    external_id: p.article,
+    name: p.name,
     slug: p.article.toLowerCase(),
+    code: null,
     price: p.price,
     in_stock: true,
     stock: 8,
@@ -152,7 +155,11 @@ export function AiDesignClient() {
     category_id: p.cat,
     images: [img(p.seed)],
     image: img(p.seed).medium,
-  } as Product));
+    country: null,
+    supplier: null,
+    barcodes: [],
+    attributes: {},
+  }));
 
   const collH = [230, 180, 200, 170, 210, 190];
   const collage = list.map((p, i) => ({

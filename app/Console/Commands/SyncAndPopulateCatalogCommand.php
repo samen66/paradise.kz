@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Run a full MoySklad sync SYNCHRONOUSLY (no queue required), then populate
+ * Run a full catalog sync from the configured ERP provider (config('erp.provider'))
+ * SYNCHRONOUSLY (no queue required), then populate
  * categories, brands and structured attributes with realistic furniture-shop
  * data based on the imported product names and ERP attributes.
  *
@@ -33,11 +34,11 @@ use Illuminate\Support\Str;
 class SyncAndPopulateCatalogCommand extends Command
 {
     protected $signature = 'catalog:sync-and-populate
-        {--no-sync : Skip MoySklad sync, only populate attributes}
+        {--no-sync : Skip the ERP sync, only populate attributes}
         {--no-populate : Only run sync, skip attribute population}
         {--since= : Y-m-d H:i:s for incremental sync}';
 
-    protected $description = 'Sync products from MoySklad (synchronously) and populate categories, brands, and attributes with realistic data';
+    protected $description = 'Sync products from the configured ERP provider (synchronously) and populate categories, brands, and attributes with realistic data';
 
     // ─── Furniture-specific reference data ──────────────────────────────
 
@@ -104,7 +105,7 @@ class SyncAndPopulateCatalogCommand extends Command
         $skipSync = (bool) $this->option('no-sync');
         $skipPopulate = (bool) $this->option('no-populate');
 
-        // ─── Step 1: MoySklad Sync ──────────────────────────────────────
+        // ─── Step 1: ERP Sync ───────────────────────────────────────────
         if (! $skipSync) {
             $this->runSync($source);
         }
@@ -138,8 +139,8 @@ class SyncAndPopulateCatalogCommand extends Command
         $since = $this->option('since');
 
         $this->info($since === null
-            ? '🔄 Starting FULL MoySklad sync (synchronous)...'
-            : "🔄 Starting incremental MoySklad sync since {$since}...");
+            ? '🔄 Starting FULL ERP sync (synchronous)...'
+            : "🔄 Starting incremental ERP sync since {$since}...");
 
         $steps = [
             'Syncing product folders...' => fn () => (new SyncProductFoldersJob)->handle($source),
@@ -152,7 +153,7 @@ class SyncAndPopulateCatalogCommand extends Command
         foreach ($steps as $label => $job) {
             $this->line("  → {$label}");
             $job();
-            $this->line("    ✓ done");
+            $this->line('    ✓ done');
         }
 
         // Process image sync jobs that were dispatched to the queue
@@ -161,7 +162,7 @@ class SyncAndPopulateCatalogCommand extends Command
         $this->processImageJobsSync($source);
         $this->line('    ✓ done');
 
-        $this->info('🔄 MoySklad sync complete!');
+        $this->info('🔄 ERP sync complete!');
         $this->newLine();
     }
 
@@ -230,6 +231,7 @@ class SyncAndPopulateCatalogCommand extends Command
 
         if ($products->isEmpty()) {
             $this->warn('  No products found. Skipping populate.');
+
             return;
         }
 
@@ -295,7 +297,8 @@ class SyncAndPopulateCatalogCommand extends Command
             }
         }
 
-        $this->line('    ✓ ' . count($result) . ' categories created');
+        $this->line('    ✓ '.count($result).' categories created');
+
         return $result;
     }
 
@@ -319,7 +322,8 @@ class SyncAndPopulateCatalogCommand extends Command
             $result[$brandName] = $brand;
         }
 
-        $this->line('    ✓ ' . count($result) . ' brands created');
+        $this->line('    ✓ '.count($result).' brands created');
+
         return $result;
     }
 
@@ -346,14 +350,15 @@ class SyncAndPopulateCatalogCommand extends Command
             $result[$name] = $attr;
         }
 
-        $this->line('    ✓ ' . count($result) . ' attributes created');
+        $this->line('    ✓ '.count($result).' attributes created');
+
         return $result;
     }
 
     /**
      * @param  array<string, Category>  $categories
-     * @param  array<string, Brand>     $brands
-     * @param  array<string, Attribute> $attributes
+     * @param  array<string, Brand>  $brands
+     * @param  array<string, Attribute>  $attributes
      */
     private function populateProduct(
         Product $product,
@@ -467,6 +472,7 @@ class SyncAndPopulateCatalogCommand extends Command
                         }
                     }
                 }
+
                 return $categories[$categoryName] ?? null;
             }
         }
@@ -474,6 +480,7 @@ class SyncAndPopulateCatalogCommand extends Command
         // Fallback: assign to first available category
         $keys = array_keys(self::CATEGORY_MAP);
         $randomParent = $keys[array_rand($keys)];
+
         return $categories[$randomParent] ?? null;
     }
 
@@ -492,6 +499,7 @@ class SyncAndPopulateCatalogCommand extends Command
         // Use a deterministic but varied brand assignment based on product name hash
         $brandList = array_values($brands);
         $index = crc32($name) % count($brandList);
+
         return $brandList[abs($index)];
     }
 
@@ -552,7 +560,7 @@ class SyncAndPopulateCatalogCommand extends Command
         }
 
         // Use product name + attribute name as seed for deterministic randomness
-        $seed = crc32($productName . $attrName);
+        $seed = crc32($productName.$attrName);
         $index = abs($seed) % count($pool);
 
         return $pool[$index];
@@ -560,7 +568,7 @@ class SyncAndPopulateCatalogCommand extends Command
 
     /**
      * Generate a realistic price in kopecks based on the product type.
-     * (Only used as fallback when MoySklad doesn't provide a price.)
+     * (Only used as fallback when the ERP doesn't provide a price.)
      */
     private function generateRealisticPrice(string $name): int
     {
@@ -580,12 +588,14 @@ class SyncAndPopulateCatalogCommand extends Command
         foreach ($ranges as $keyword => [$min, $max]) {
             if (mb_strpos($name, $keyword) !== false) {
                 $seed = crc32($name);
+
                 return $min + abs($seed) % ($max - $min);
             }
         }
 
         // Default range for unrecognized items
         $seed = crc32($name);
+
         return 5_000_000 + abs($seed) % 40_000_000; // 50,000 – 450,000 тг
     }
 }

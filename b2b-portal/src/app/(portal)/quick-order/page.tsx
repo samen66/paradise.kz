@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useB2bCart } from "@/stores/useB2bCart";
+import { useB2bAuth } from "@/stores/useB2bAuth";
 import { apiGet } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ export default function QuickOrderPage() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<{ article: string; product?: Product; requestedQty: number; status: 'added' | 'not_found' | 'out_of_stock' }[]>([]);
   const { addItem } = useB2bCart();
+  const token = useB2bAuth((state) => state.token);
   const router = useRouter();
 
   const handleProcess = async () => {
@@ -34,9 +36,12 @@ export default function QuickOrderPage() {
 
     try {
       for (const item of parsedItems) {
-        // Search product by article (assuming backend supports search by article)
-        const response = await apiGet<{ data: Product[] }>(`/products?search=${item.article}`, {
-          requireB2bAuth: true
+        // B2B catalog search matches name, code and article; pick the exact article below.
+        const response = await apiGet<{ data: Product[] }>("/products", {
+          token,
+          locale: "ru",
+          revalidate: false,
+          searchParams: { "filter[search]": item.article },
         });
 
         const product = response.data.find(p => p.article === item.article || p.name.includes(item.article));

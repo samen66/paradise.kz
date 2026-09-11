@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Services\Local\LocalErpProvider;
-use App\Services\MoySklad\MoySkladErpProvider;
 
 return [
 
@@ -39,12 +38,6 @@ return [
      */
     'providers' => [
         'local' => LocalErpProvider::class,
-
-        // Legacy. No longer selected by anything at runtime — kept registered
-        // only so the existing MoySklad test suite can opt back in explicitly
-        // while the integration is being retired. Remove together with
-        // app/Services/MoySklad and tests/{Feature,Unit}/MoySklad (task D4).
-        'moysklad' => MoySkladErpProvider::class,
     ],
 
 ];
