@@ -23,7 +23,7 @@ export default function ProductsPage() {
       const res = await api.get(`/admin/products?${query}`);
       
       setProducts(res.data?.data || []);
-      setTotalPages(res.data?.meta?.last_page || 1);
+      setTotalPages(res.data?.last_page || 1);
     } catch (error) {
       console.error('Failed to fetch products', error);
     } finally {

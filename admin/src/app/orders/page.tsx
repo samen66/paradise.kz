@@ -56,8 +56,8 @@ export default function OrdersPage() {
       const res = await api.get('/admin/orders', { params });
       const json = res.data;
       setOrders(json.data || []);
-      setTotalPages(json.meta?.last_page || 1);
-      setTotal(json.meta?.total || 0);
+      setTotalPages(json.last_page || 1);
+      setTotal(json.total || 0);
     } catch (err) {
       console.error('Failed to fetch orders', err);
     } finally {

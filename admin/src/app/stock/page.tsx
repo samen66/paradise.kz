@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import api from '@/lib/api';
+import api, { ERP_ADMIN_URL } from '@/lib/api';
+import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
 
 /**
  * On-hand stock per product and warehouse.
@@ -10,9 +11,6 @@ import api from '@/lib/api';
  * only way to change them is to post a goods receipt or an adjustment — that
  * way every movement leaves a trace. The link below goes to those screens.
  */
-
-const ERP_ADMIN_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api')
-  .replace(/\/api\/?$/, '');
 
 type StockRow = {
   id: number;
@@ -30,6 +28,7 @@ export default function StockPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [hasActiveStore, setHasActiveStore] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchStock = useCallback(async () => {
@@ -42,8 +41,9 @@ export default function StockPage() {
       const res = await api.get('/admin/stock', { params });
       const json = res.data;
       setRows(json.data || []);
-      setTotalPages(json.meta?.last_page || 1);
-      setTotal(json.meta?.total || 0);
+      setTotalPages(json.last_page || 1);
+      setTotal(json.total || 0);
+      setHasActiveStore(json.meta?.has_active_store ?? null);
     } catch (err) {
       console.error('Failed to fetch stock', err);
     } finally {
@@ -79,6 +79,8 @@ export default function StockPage() {
             Приёмки и корректировки →
           </a>
         </div>
+
+        <NoActiveStoreWarning hasActiveStore={hasActiveStore} />
 
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
           Остаток нельзя отредактировать вручную — он считается по складскому журналу.

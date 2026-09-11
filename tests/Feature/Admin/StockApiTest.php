@@ -75,6 +75,20 @@ class StockApiTest extends TestCase
     }
 
     #[Test]
+    public function it_reports_whether_any_warehouse_is_active(): void
+    {
+        $this->actAsAdmin();
+
+        $this->getJson('/api/admin/stock')->assertOk()
+            ->assertJsonPath('meta.has_active_store', true);
+
+        $this->store->update(['is_active' => false]);
+
+        $this->getJson('/api/admin/stock')->assertOk()
+            ->assertJsonPath('meta.has_active_store', false);
+    }
+
+    #[Test]
     public function it_is_closed_to_everyone_but_staff(): void
     {
         $this->getJson('/api/admin/stock')->assertUnauthorized();
