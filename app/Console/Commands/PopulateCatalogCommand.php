@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Contracts\Catalog\CatalogSource;
-use App\Jobs\Catalog\SyncProductFoldersJob;
-use App\Jobs\Catalog\SyncProductImagesJob;
-use App\Jobs\Catalog\SyncProductsJob;
-use App\Jobs\Catalog\SyncProductVariantsJob;
-use App\Jobs\Catalog\SyncStockJob;
-use App\Jobs\Catalog\SyncStoresJob;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Brand;
@@ -21,24 +14,25 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Run a full catalog sync from the configured ERP provider (config('erp.provider'))
- * SYNCHRONOUSLY (no queue required), then populate
- * categories, brands and structured attributes with realistic furniture-shop
- * data based on the imported product names and ERP attributes.
+ * Fill a catalog that already has products with the structure the storefront
+ * needs: categories, brands, and the characteristics shown on a product page.
+ *
+ * Products used to arrive from an ERP carrying none of this, and this command
+ * inferred it from their names. They are authored in the admin panel now, but
+ * the reference data below — the furniture category tree, the brand list, the
+ * attribute pools — is worth keeping: it is what turns a bare import or a
+ * hand-entered batch into a browsable catalog, and it is tuned to this shop.
+ *
+ * Only fills what is missing; it never overwrites a value an admin set.
  *
  * Usage:
- *   php artisan catalog:sync-and-populate          # full sync + populate
- *   php artisan catalog:sync-and-populate --no-sync # skip sync, only populate
- *   php artisan catalog:sync-and-populate --no-populate # only sync, no populate
+ *   php artisan catalog:populate
  */
-class SyncAndPopulateCatalogCommand extends Command
+class PopulateCatalogCommand extends Command
 {
-    protected $signature = 'catalog:sync-and-populate
-        {--no-sync : Skip the ERP sync, only populate attributes}
-        {--no-populate : Only run sync, skip attribute population}
-        {--since= : Y-m-d H:i:s for incremental sync}';
+    protected $signature = 'catalog:populate';
 
-    protected $description = 'Sync products from the configured ERP provider (synchronously) and populate categories, brands, and attributes with realistic data';
+    protected $description = 'Fill categories, brands and structured attributes for existing products using furniture-shop reference data';
 
     // ─── Furniture-specific reference data ──────────────────────────────
 
@@ -100,20 +94,9 @@ class SyncAndPopulateCatalogCommand extends Command
     /** Default attributes for any product that doesn't match keywords */
     private const DEFAULT_ATTRIBUTES = ['Материал каркаса', 'Цвет', 'Стиль', 'Страна производства', 'Гарантия'];
 
-    public function handle(CatalogSource $source): int
+    public function handle(): int
     {
-        $skipSync = (bool) $this->option('no-sync');
-        $skipPopulate = (bool) $this->option('no-populate');
-
-        // ─── Step 1: ERP Sync ───────────────────────────────────────────
-        if (! $skipSync) {
-            $this->runSync($source);
-        }
-
-        // ─── Step 2: Populate structured data ───────────────────────────
-        if (! $skipPopulate) {
-            $this->populateCatalog();
-        }
+        $this->populateCatalog();
 
         $this->newLine();
         $this->info('✅ Done! Final counts:');
@@ -129,96 +112,6 @@ class SyncAndPopulateCatalogCommand extends Command
         );
 
         return self::SUCCESS;
-    }
-
-    // ─── Sync ───────────────────────────────────────────────────────────
-
-    private function runSync(CatalogSource $source): void
-    {
-        /** @var string|null $since */
-        $since = $this->option('since');
-
-        $this->info($since === null
-            ? '🔄 Starting FULL ERP sync (synchronous)...'
-            : "🔄 Starting incremental ERP sync since {$since}...");
-
-        $steps = [
-            'Syncing product folders...' => fn () => (new SyncProductFoldersJob)->handle($source),
-            'Syncing products...' => fn () => (new SyncProductsJob($since))->handle($source),
-            'Syncing product variants...' => fn () => (new SyncProductVariantsJob($since))->handle($source),
-            'Syncing stores...' => fn () => (new SyncStoresJob)->handle($source),
-            'Syncing stock...' => fn () => (new SyncStockJob($since))->handle($source),
-        ];
-
-        foreach ($steps as $label => $job) {
-            $this->line("  → {$label}");
-            $job();
-            $this->line('    ✓ done');
-        }
-
-        // Process image sync jobs that were dispatched to the queue
-        // by SyncProductsJob — run them synchronously too.
-        $this->line('  → Syncing product images (this may take a while)...');
-        $this->processImageJobsSync($source);
-        $this->line('    ✓ done');
-
-        $this->info('🔄 ERP sync complete!');
-        $this->newLine();
-    }
-
-    /**
-     * SyncProductsJob dispatches SyncProductImagesJob to the queue. Since
-     * we want fully synchronous execution, drain those jobs manually.
-     */
-    private function processImageJobsSync(CatalogSource $source): void
-    {
-        // Image jobs were dispatched to the database queue. Process them here.
-        $processed = 0;
-        $bar = null;
-
-        // Count pending image jobs
-        $pendingCount = DB::table('jobs')
-            ->where('payload', 'like', '%SyncProductImagesJob%')
-            ->count();
-
-        if ($pendingCount > 0) {
-            $bar = $this->output->createProgressBar($pendingCount);
-            $bar->start();
-
-            while (true) {
-                $job = DB::table('jobs')
-                    ->where('payload', 'like', '%SyncProductImagesJob%')
-                    ->orderBy('id')
-                    ->first();
-
-                if ($job === null) {
-                    break;
-                }
-
-                try {
-                    $payload = json_decode($job->payload, true);
-                    $command = unserialize($payload['data']['command']);
-
-                    if ($command instanceof SyncProductImagesJob) {
-                        $command->handle($source);
-                    }
-
-                    DB::table('jobs')->where('id', $job->id)->delete();
-                    $processed++;
-                    $bar?->advance();
-                } catch (\Throwable $e) {
-                    $this->warn("    ⚠ Image sync error: {$e->getMessage()}");
-                    // Move to failed and continue
-                    DB::table('jobs')->where('id', $job->id)->delete();
-                    $bar?->advance();
-                }
-            }
-
-            $bar?->finish();
-            $this->newLine();
-        }
-
-        $this->line("    Processed {$processed} image sync jobs");
     }
 
     // ─── Populate ───────────────────────────────────────────────────────

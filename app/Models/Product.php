@@ -82,8 +82,8 @@ class Product extends Model implements HasMedia
     protected static function booted(): void
     {
         // Storefront URL slug, generated from the ru name once the id is
-        // known and then kept stable (SEO). ERP sync upserts bypass model
-        // events, so `catalog:generate-product-slugs` backfills those rows.
+        // known and then kept stable (SEO). Bulk inserts bypass model events,
+        // so `catalog:generate-product-slugs` backfills any row that misses it.
         static::created(function (Product $product): void {
             if ($product->slug === null) {
                 $product->slug = $product->generateSlug();

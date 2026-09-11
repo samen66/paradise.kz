@@ -8,9 +8,17 @@ use App\Models\Product;
 use Illuminate\Console\Command;
 
 /**
- * Backfills storefront slugs for products created without one — pre-existing
- * rows and rows inserted by the ERP sync's bulk upserts (which bypass the
- * model event that normally assigns a slug). Scheduled after each sync window.
+ * Backfills storefront slugs for products that somehow have none.
+ *
+ * Products normally get their slug from Product::booted() the moment they are
+ * created, and the storefront addresses a product by it — so a product without
+ * one has no page. This exists for the rows that bypass model events: bulk
+ * `insert()` from a seeder or a future CSV/marketplace import, and anything
+ * already in the database from before slugs existed.
+ *
+ * It used to run on a schedule after every ERP sync window, because those bulk
+ * upserts produced slugless rows constantly. There is no sync any more, so it
+ * is a repair tool now — run it by hand after an import.
  */
 class GenerateProductSlugsCommand extends Command
 {

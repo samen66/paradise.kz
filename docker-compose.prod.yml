@@ -51,10 +51,6 @@ services:
     deploy:
       replicas: 2
 
-  scheduler:
-    <<: *app-image
-    command: ["php", "artisan", "schedule:work"]
-
   storefront:
     image: ghcr.io/samen66/paradise-storefront:${TAG:-latest}
     restart: always
