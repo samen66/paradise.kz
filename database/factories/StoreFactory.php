@@ -21,7 +21,7 @@ class StoreFactory extends Factory
     public function definition(): array
     {
         return [
-            'source' => 'moysklad',
+            'source' => 'erp',
             'external_id' => (string) Str::uuid(),
             'name' => fake()->city(),
             'is_active' => true,

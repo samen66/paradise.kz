@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use Spatie\Image\Enums\Fit;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -27,7 +27,7 @@ class Product extends Model implements HasMedia
     use HasTranslations;
     use InteractsWithMedia;
 
-    /** Media collection that mirrors MoySklad product images. */
+    /** Media collection holding the product's images. */
     public const IMAGE_COLLECTION = 'images';
 
     /** @var list<string> */

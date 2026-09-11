@@ -4,9 +4,11 @@ use App\Http\Controllers\Api\Account\FavoriteController;
 use App\Http\Controllers\Api\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\Api\Account\ProfileController;
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\Admin\BrandController;
+use App\Http\Controllers\Api\Admin\StockController;
+use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\MoySkladWebhookController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\Public\CartController;
@@ -14,13 +16,14 @@ use App\Http\Controllers\Api\Public\CategoryController as PublicCategoryControll
 use App\Http\Controllers\Api\Public\CheckoutController;
 use App\Http\Controllers\Api\Public\FacetController;
 use App\Http\Controllers\Api\Public\HomeController;
+use App\Http\Controllers\Api\Public\KaspiWebhookController;
 use App\Http\Controllers\Api\Public\OrderTrackingController;
 use App\Http\Controllers\Api\Public\OtpAuthController;
 use App\Http\Controllers\Api\Public\PageController;
 use App\Http\Controllers\Api\Public\ProductController as PublicProductController;
+use App\Http\Controllers\Api\Public\ProductReviewController;
 use App\Http\Controllers\Api\Public\SettingsController;
 use App\Http\Controllers\Api\Public\SitemapController;
-use App\Http\Controllers\Api\StoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -28,14 +31,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// Legacy ERP webhook. Under the default `local` provider the handler rejects
-// every request (401) — nothing calls this. Kept only so the MoySklad suite
-// keeps passing; remove with app/Services/MoySklad (plan task D4).
-Route::post('/moysklad/webhook', MoySkladWebhookController::class);
-
-Route::post('/kaspi/webhook', \App\Http\Controllers\Api\Public\KaspiWebhookController::class);
-
-
+Route::post('/kaspi/webhook', KaspiWebhookController::class);
 
 Route::prefix('auth')->group(function () {
     // Self-registration is temporarily disabled for the 2026-07-02 release;
@@ -77,14 +73,14 @@ Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
 // pricing, only the public (ungrouped) catalog. See VisibilityService and
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
-    Route::get('/stores', [\App\Http\Controllers\Api\Public\StoreController::class, 'index']);
+    Route::get('/stores', [App\Http\Controllers\Api\Public\StoreController::class, 'index']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);
     // {product} is a slug or a numeric id — resolved in the controller.
     Route::get('/products/{product}', [PublicProductController::class, 'show']);
     Route::get('/facets', FacetController::class);
-    Route::post('/products/{product}/reviews', [\App\Http\Controllers\Api\Public\ProductReviewController::class, 'store']);
+    Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store']);
 
     Route::get('/home', HomeController::class);
     Route::get('/pages', [PageController::class, 'index']);
@@ -130,13 +126,13 @@ Route::prefix('account')->middleware('auth:sanctum')->group(function () {
 Route::prefix('admin')
     ->middleware(['auth:sanctum', 'role:admin|manager'])
     ->group(function () {
-        Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
-        Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
-        Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
-        Route::apiResource('orders', \App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
+        Route::apiResource('products', App\Http\Controllers\Api\Admin\ProductController::class);
+        Route::apiResource('categories', App\Http\Controllers\Api\Admin\CategoryController::class);
+        Route::apiResource('brands', BrandController::class);
+        Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
-        Route::get('stock', [\App\Http\Controllers\Api\Admin\StockController::class, 'index']);
-        Route::get('users', [\App\Http\Controllers\Api\Admin\UserController::class, 'index']);
-        Route::post('users/{user}/approve', [\App\Http\Controllers\Api\Admin\UserController::class, 'approve']);
+        Route::get('stock', [StockController::class, 'index']);
+        Route::get('users', [UserController::class, 'index']);
+        Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });

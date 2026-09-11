@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Product images are now mirrored into our own storage via Spatie Media
-     * Library (the `media` table); the old column held ephemeral MoySklad URLs
+     * Library (the `media` table); the old column held ephemeral ERP URLs
      * that expired and 401'd, so it is no longer needed.
      */
     public function up(): void

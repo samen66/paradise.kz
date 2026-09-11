@@ -8,6 +8,7 @@ use App\Models\CatalogGroup;
 use App\Models\CatalogSetting;
 use App\Models\ClientProductPrice;
 use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Models\ProductFolder;
 use App\Models\ProductStoreStock;
 use App\Models\ProductVariant;
@@ -219,9 +220,8 @@ class CatalogApiTest extends TestCase
         $this->assertArrayHasKey('medium', $image);
         $this->assertArrayHasKey('full', $image);
 
-        // Served from our own disk, never the old expiring proxy URL.
+        // Served from our own disk.
         $this->assertStringContainsString('/storage/', (string) $response->json('data.0.image'));
-        $this->assertStringNotContainsString('/api/moysklad/image', (string) $response->json('data.0.image'));
     }
 
     #[Test]
@@ -264,9 +264,9 @@ class CatalogApiTest extends TestCase
 
         $folder = ProductFolder::factory()->create();
         $inFolder = Product::factory()->create();
-        $inFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => $folder->external_id]));
+        $inFolder->externalMapping()->save(ProductExternalMapping::factory()->make(['external_folder_id' => $folder->external_id]));
         $notInFolder = Product::factory()->create();
-        $notInFolder->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make(['external_folder_id' => null]));
+        $notInFolder->externalMapping()->save(ProductExternalMapping::factory()->make(['external_folder_id' => null]));
 
         $response = $this->getJson('/api/products?filter[category]='.$folder->external_id)->assertOk();
 
@@ -319,7 +319,7 @@ class CatalogApiTest extends TestCase
             'country' => 'Казахстан',
             'supplier' => 'ТОО Поставщик',
         ]);
-        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
+        $product->externalMapping()->save(ProductExternalMapping::factory()->make([
             'barcodes' => ['4600000000017'],
             'erp_attributes' => ['Материал' => 'дерево'],
         ]));

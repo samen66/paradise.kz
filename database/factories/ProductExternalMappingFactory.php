@@ -1,4 +1,5 @@
 <?php
+
 // database/factories/ProductExternalMappingFactory.php
 
 declare(strict_types=1);
@@ -24,7 +25,7 @@ class ProductExternalMappingFactory extends Factory
     {
         return [
             'product_id' => Product::factory(),
-            'source' => 'moysklad',
+            'source' => 'erp',
             'external_id' => (string) Str::uuid(),
             'external_folder_id' => null,
             'synced_at' => now(),

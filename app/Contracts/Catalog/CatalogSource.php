@@ -15,9 +15,9 @@ use Generator;
 
 /**
  * An external catalog system mirrored into our local tables (products, folders,
- * warehouses, stock, images). MoySklad is the current implementation, but the
- * sync jobs depend only on this contract so the source can be swapped — or new
- * sources added — via the active {@see ErpProvider}
+ * warehouses, stock, images). No external source is connected today (the
+ * `local` provider's source yields nothing); the sync jobs depend only on this
+ * contract so a source can be plugged in via the active {@see ErpProvider}
  * (config('erp.provider')). Every method returns source-neutral DTOs from
  * {@see Data}.
  */
@@ -25,7 +25,7 @@ interface CatalogSource
 {
     /**
      * Stable identifier persisted on every mirrored row's `source` column
-     * (e.g. "moysklad"). Lets rows from multiple sources coexist.
+     * (e.g. "local"). Lets rows from multiple sources coexist.
      */
     public function key(): string;
 

@@ -25,7 +25,7 @@ class ProductVariantFactory extends Factory
 
         return [
             'product_id' => Product::factory(),
-            'source' => 'moysklad',
+            'source' => 'erp',
             'external_id' => (string) Str::uuid(),
             'name' => fake()->words(3, true),
             'code' => (string) fake()->unique()->numerify('#####'),
