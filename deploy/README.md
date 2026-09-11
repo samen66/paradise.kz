@@ -5,15 +5,20 @@
 Продакшн-стек описан в `docker-compose.prod.yml` (Compose-проект называется
 `paradise`) и живёт на одном VPS в `/opt/paradise`. Внешний трафик на портах
 80/443 принимает контейнер `nginx`, который терминирует TLS и разводит запросы
-по двум вертикалям:
+по трём вертикалям:
 
-- `shop.paradise.kz` — Next.js-витрина (B2C и B2B) в контейнере `storefront`,
+- `shop.paradise.kz` — Next.js-витрина (B2C) в контейнере `storefront`,
   слушающем порт 3000 (SSR-запросы storefront делает обратно через nginx на
   внутренний, не публикуемый наружу порт 8080);
 - `api.paradise.kz` — Laravel-приложение (API + админка Filament) в
-  контейнере `app`, PHP-FPM на порту 9000.
+  контейнере `app`, PHP-FPM на порту 9000;
+- `admin.paradise.kz` — Next.js-админка менеджера (заказы, товары, остатки,
+  одобрение B2B-клиентов) в контейнере `admin`, порт 3000. Она целиком
+  клиентская: браузер ходит в `https://api.paradise.kz/api` с bearer-токеном,
+  поэтому origin `https://admin.paradise.kz` обязан быть в
+  `CORS_ALLOWED_ORIGINS` (см. шаг 7).
 
-Помимо `nginx`, `app` и `storefront` в стеке есть:
+Помимо `nginx`, `app`, `storefront` и `admin` в стеке есть:
 
 - `mysql` (MySQL 8.0) — основная база данных;
 - `redis` (Redis 7) — очереди, кэш, сессии;
@@ -45,7 +50,13 @@
 - `ghcr.io/samen66/paradise-api:${TAG:-latest}` — используется контейнерами
   `app`, `queue`, `scheduler`;
 - `ghcr.io/samen66/paradise-nginx:${TAG:-latest}`;
-- `ghcr.io/samen66/paradise-storefront:${TAG:-latest}`.
+- `ghcr.io/samen66/paradise-storefront:${TAG:-latest}`;
+- `ghcr.io/samen66/paradise-admin:${TAG:-latest}`.
+
+> **Незакрытый пробел:** в `docker-compose.prod.yml` есть сервис `b2b-portal`
+> (`ghcr.io/samen66/paradise-b2b-portal`), но `deploy.yml` этот образ не
+> собирает, и nginx-конфига для `b2b.paradise.kz` нет. Пока образа нет в
+> GHCR, `docker compose pull` на этом сервисе упадёт.
 
 Тег `TAG` — это git sha коммита в `main`, который собрала и задеплоила CI;
 по умолчанию (если переменная не задана) используется `latest`. Значение
@@ -58,9 +69,10 @@
    Казахстане (для низкой задержки к покупателям и соответствия ожиданиям по
    локации данных).
 
-2. **DNS.** Создать A-записи `shop.paradise.kz` и `api.paradise.kz`,
-   указывающие на IP сервера. Это нужно сделать заранее — оба домена
-   участвуют в выпуске сертификатов Let's Encrypt на шаге 8.
+2. **DNS.** Создать A-записи `shop.paradise.kz`, `api.paradise.kz` и
+   `admin.paradise.kz`, указывающие на IP сервера. Это нужно сделать
+   заранее — все домены участвуют в выпуске сертификатов Let's Encrypt на
+   шаге 8.
 
 3. **Пользователь для деплоя.**
 
@@ -103,8 +115,10 @@
 
    Заполнить в `/opt/paradise/.env`: пароли БД (`DB_PASSWORD`,
    `DB_ROOT_PASSWORD`), `APP_KEY` (сгенерировать командой ниже, стек ещё не
-   обязан быть поднят целиком — контейнер `app` можно запустить одноразово),
-   и переменные `MOYSKLAD_*` (интеграция с ERP).
+   обязан быть поднят целиком — контейнер `app` можно запустить одноразово)
+   и `CORS_ALLOWED_ORIGINS` — список origin'ов фронтендов через запятую
+   (шаблон уже содержит shop/b2b/admin). Внешней ERP нет, `ERP_PROVIDER=local`
+   менять не нужно.
 
    ```bash
    docker compose -f docker-compose.prod.yml run --rm app php artisan key:generate --show
@@ -120,7 +134,7 @@
 
    ```bash
    # 8.1 Self-signed заглушки в volume letsencrypt, чтобы nginx поднялся:
-   for d in api.paradise.kz shop.paradise.kz; do
+   for d in api.paradise.kz shop.paradise.kz admin.paradise.kz; do
      docker run --rm -v paradise_letsencrypt:/etc/letsencrypt alpine/openssl req \
        -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$d" \
        -keyout /etc/letsencrypt/live/$d/privkey.pem \
@@ -137,7 +151,7 @@
    docker compose -f docker-compose.prod.yml up -d
 
    # 8.3 Выпустить настоящие сертификаты (DNS уже должен указывать на сервер):
-   for d in api.paradise.kz shop.paradise.kz; do
+   for d in api.paradise.kz shop.paradise.kz admin.paradise.kz; do
      docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot certonly \
        --webroot -w /var/www/certbot --force-renewal \
        -d $d --email admin@paradise.kz --agree-tos --no-eff-email
@@ -167,10 +181,27 @@
    docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
    ```
 
-   Создать первого администратора Filament:
+   Засеять справочники, без которых приложение не работает: роли (`admin`,
+   `manager`, `b2b_customer`), типы цен и склад по умолчанию. Все три сидера
+   идемпотентны. Общий `DatabaseSeeder` на проде **не запускать** — он
+   создаёт фабричного админа с тестовым паролем.
+
+   ```bash
+   for s in RolesAndPermissionsSeeder PriceTypesSeeder DefaultStoreSeeder; do
+     docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --class=$s --force
+   done
+   ```
+
+   Создать первого администратора и выдать ему роль — без роли `admin` или
+   `manager` не пустит ни Filament (`User::canAccessPanel`), ни админка
+   `admin.paradise.kz` (`/api/admin/*` под `role:admin|manager`). Один и тот
+   же email/пароль работает в обеих (в `tinker` подставить email, введённый
+   в `make:filament-user`):
 
    ```bash
    docker compose -f docker-compose.prod.yml exec app php artisan make:filament-user
+   docker compose -f docker-compose.prod.yml exec app php artisan tinker --execute \
+     'App\Models\User::where("email", "admin@paradise.kz")->firstOrFail()->assignRole("admin");'
    ```
 
 10. **Cron бэкапов.** Добавить в crontab пользователя root:
@@ -191,13 +222,14 @@
     для подключения по SSH.
 
 12. **Внешний мониторинг.** Настроить в UptimeRobot (или аналоге) проверки
-    доступности `https://shop.paradise.kz` и `https://api.paradise.kz/up`.
+    доступности `https://shop.paradise.kz`, `https://admin.paradise.kz` и
+    `https://api.paradise.kz/up`.
 
 ## 3. Обычный деплой
 
 Штатный путь — просто запушить в `main`: workflow `.github/workflows/deploy.yml`
-сам прогоняет тесты (`test-api`, `test-storefront`), собирает и пушит три
-образа в GHCR с тегами `${{ github.sha }}` и `latest`, затем по SSH
+сам прогоняет тесты (`test-api`, `test-storefront`), собирает и пушит четыре
+образа в GHCR (api, nginx, storefront, admin) с тегами `${{ github.sha }}` и `latest`, затем по SSH
 подключается к серверу и выполняет деплой (обновляет `TAG` в `.env`,
 подтягивает образы, пересоздаёт контейнеры, накатывает миграции и
 перезапускает очереди).
@@ -247,7 +279,7 @@ Workflow переключает `TAG` в `/opt/paradise/.env` на указан�
 Логи контейнеров стека:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f app|queue|scheduler|nginx|mysql
+docker compose -f docker-compose.prod.yml logs -f app|queue|scheduler|nginx|mysql|storefront|admin
 ```
 
 (указать конкретный сервис вместо `app|queue|...` — это перечисление
@@ -260,8 +292,8 @@ Nginx также пишет по-vhost'но access/error логи внутри �
 docker compose -f docker-compose.prod.yml exec nginx tail -f /var/log/nginx/api.error.log
 ```
 
-Аналогично доступны `api.access.log`, `shop.error.log`, `shop.access.log`
-(см. `deploy/nginx/api.paradise.kz.conf` и `deploy/nginx/shop.paradise.kz.conf`).
+Аналогично доступны `api.access.log`, `shop.error.log`, `shop.access.log`,
+`admin.error.log`, `admin.access.log` (см. конфиги в `deploy/nginx/`).
 
 ## 6. Бэкапы и восстановление
 
@@ -346,7 +378,8 @@ docker run --rm \
 - [ ] Логин покупателя (OTP) работает
 - [ ] Создание заказа проходит
 - [ ] https://api.paradise.kz/admin — вход в Filament
-- [ ] Ручной MoySklad-синк из админки / artisan
+- [ ] https://admin.paradise.kz — вход менеджера, список заказов грузится
+      (ошибка CORS в консоли браузера = нет origin'а в `CORS_ALLOWED_ORIGINS`)
 - [ ] `docker compose -f docker-compose.prod.yml logs queue` — джобы разгребаются, без ошибок
 - [ ] https://api.paradise.kz/up → 200 (встроенный health-check Laravel,
       настроен в `bootstrap/app.php` через `health: '/up'`)
