@@ -16,7 +16,6 @@ import {
   formatPrice,
   DAY_LABELS
 } from "@/lib/showroom-data";
-import { AddToCartButton } from "@/components/ProductCard"; // Using from ProductCard if available, otherwise will create local stub
 
 function plural(n: number, forms: string[]) {
   const n10 = n % 10, n100 = n % 100;
