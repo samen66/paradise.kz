@@ -28,20 +28,33 @@ jobs:
         run: php artisan test --parallel
 
   frontend-typecheck:
-    name: Frontend Typecheck (Next.js)
+    name: Frontend Typecheck & Build (${{ matrix.app }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [storefront, b2b-portal, admin]
     defaults:
       run:
-        working-directory: ./storefront
+        working-directory: ./${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Same major as the node:22-alpine production images.
+          node-version: '22'
           cache: 'npm'
-          cache-dependency-path: './storefront/package-lock.json'
+          cache-dependency-path: './${{ matrix.app }}/package-lock.json'
       - name: Install dependencies
         run: npm ci
       - name: Run Typecheck
         run: npx tsc --noEmit
+      # The build must succeed with no reachable API (pages that fetch at
+      # request time render on demand, not at build time).
+      - name: Build
+        run: npm run build
+        env:
+          API_URL_INTERNAL: http://127.0.0.1:1/api
+          NEXT_PUBLIC_API_URL: https://api.paradise.kz/api
+          NEXT_PUBLIC_SITE_URL: https://shop.paradise.kz
