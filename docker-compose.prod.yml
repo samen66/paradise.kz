@@ -36,6 +36,7 @@ services:
     depends_on:
       - app
       - storefront
+      - b2b-portal
       - admin
     logging: *default-logging
     # Reload every 6h so renewed certificates get picked up.

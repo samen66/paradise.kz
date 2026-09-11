@@ -12,6 +12,8 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+# The portal ships no static files yet; the runtime stage still copies public/.
+RUN mkdir -p public
 
 FROM node:22-alpine
 WORKDIR /app

@@ -5,11 +5,13 @@
 Продакшн-стек описан в `docker-compose.prod.yml` (Compose-проект называется
 `paradise`) и живёт на одном VPS в `/opt/paradise`. Внешний трафик на портах
 80/443 принимает контейнер `nginx`, который терминирует TLS и разводит запросы
-по трём вертикалям:
+по четырём вертикалям:
 
 - `shop.paradise.kz` — Next.js-витрина (B2C) в контейнере `storefront`,
   слушающем порт 3000 (SSR-запросы storefront делает обратно через nginx на
   внутренний, не публикуемый наружу порт 8080);
+- `b2b.paradise.kz` — Next.js-портал для магазинов-партнёров (B2B) в
+  контейнере `b2b-portal`, порт 3000; SSR-запросы — так же через nginx:8080;
 - `api.paradise.kz` — Laravel-приложение (API + админка Filament) в
   контейнере `app`, PHP-FPM на порту 9000;
 - `admin.paradise.kz` — Next.js-админка менеджера (заказы, товары, остатки,
@@ -18,7 +20,7 @@
   поэтому origin `https://admin.paradise.kz` обязан быть в
   `CORS_ALLOWED_ORIGINS` (см. шаг 7).
 
-Помимо `nginx`, `app`, `storefront` и `admin` в стеке есть:
+Помимо `nginx`, `app`, `storefront`, `b2b-portal` и `admin` в стеке есть:
 
 - `mysql` (MySQL 8.0) — основная база данных;
 - `redis` (Redis 7) — очереди, кэш, сессии;
@@ -51,12 +53,8 @@
   `app`, `queue`, `scheduler`;
 - `ghcr.io/samen66/paradise-nginx:${TAG:-latest}`;
 - `ghcr.io/samen66/paradise-storefront:${TAG:-latest}`;
+- `ghcr.io/samen66/paradise-b2b-portal:${TAG:-latest}`;
 - `ghcr.io/samen66/paradise-admin:${TAG:-latest}`.
-
-> **Незакрытый пробел:** в `docker-compose.prod.yml` есть сервис `b2b-portal`
-> (`ghcr.io/samen66/paradise-b2b-portal`), но `deploy.yml` этот образ не
-> собирает, и nginx-конфига для `b2b.paradise.kz` нет. Пока образа нет в
-> GHCR, `docker compose pull` на этом сервисе упадёт.
 
 Тег `TAG` — это git sha коммита в `main`, который собрала и задеплоила CI;
 по умолчанию (если переменная не задана) используется `latest`. Значение
@@ -69,10 +67,10 @@
    Казахстане (для низкой задержки к покупателям и соответствия ожиданиям по
    локации данных).
 
-2. **DNS.** Создать A-записи `shop.paradise.kz`, `api.paradise.kz` и
-   `admin.paradise.kz`, указывающие на IP сервера. Это нужно сделать
-   заранее — все домены участвуют в выпуске сертификатов Let's Encrypt на
-   шаге 8.
+2. **DNS.** Создать A-записи `shop.paradise.kz`, `b2b.paradise.kz`,
+   `api.paradise.kz` и `admin.paradise.kz`, указывающие на IP сервера. Это
+   нужно сделать заранее — все домены участвуют в выпуске сертификатов
+   Let's Encrypt на шаге 8.
 
 3. **Пользователь для деплоя.**
 
@@ -134,7 +132,7 @@
 
    ```bash
    # 8.1 Self-signed заглушки в volume letsencrypt, чтобы nginx поднялся:
-   for d in api.paradise.kz shop.paradise.kz admin.paradise.kz; do
+   for d in api.paradise.kz shop.paradise.kz b2b.paradise.kz admin.paradise.kz; do
      docker run --rm -v paradise_letsencrypt:/etc/letsencrypt alpine/openssl req \
        -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$d" \
        -keyout /etc/letsencrypt/live/$d/privkey.pem \
@@ -151,7 +149,7 @@
    docker compose -f docker-compose.prod.yml up -d
 
    # 8.3 Выпустить настоящие сертификаты (DNS уже должен указывать на сервер):
-   for d in api.paradise.kz shop.paradise.kz admin.paradise.kz; do
+   for d in api.paradise.kz shop.paradise.kz b2b.paradise.kz admin.paradise.kz; do
      docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot certonly \
        --webroot -w /var/www/certbot --force-renewal \
        -d $d --email admin@paradise.kz --agree-tos --no-eff-email
@@ -222,14 +220,14 @@
     для подключения по SSH.
 
 12. **Внешний мониторинг.** Настроить в UptimeRobot (или аналоге) проверки
-    доступности `https://shop.paradise.kz`, `https://admin.paradise.kz` и
-    `https://api.paradise.kz/up`.
+    доступности `https://shop.paradise.kz`, `https://b2b.paradise.kz`,
+    `https://admin.paradise.kz` и `https://api.paradise.kz/up`.
 
 ## 3. Обычный деплой
 
 Штатный путь — просто запушить в `main`: workflow `.github/workflows/deploy.yml`
-сам прогоняет тесты (`test-api`, `test-storefront`), собирает и пушит четыре
-образа в GHCR (api, nginx, storefront, admin) с тегами `${{ github.sha }}` и `latest`, затем по SSH
+сам прогоняет тесты (`test-api`, `test-storefront`), собирает и пушит пять
+образов в GHCR (api, nginx, storefront, b2b-portal, admin) с тегами `${{ github.sha }}` и `latest`, затем по SSH
 подключается к серверу и выполняет деплой (обновляет `TAG` в `.env`,
 подтягивает образы, пересоздаёт контейнеры, накатывает миграции и
 перезапускает очереди).
@@ -279,7 +277,7 @@ Workflow переключает `TAG` в `/opt/paradise/.env` на указан�
 Логи контейнеров стека:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f app|queue|scheduler|nginx|mysql|storefront|admin
+docker compose -f docker-compose.prod.yml logs -f app|queue|scheduler|nginx|mysql|storefront|b2b-portal|admin
 ```
 
 (указать конкретный сервис вместо `app|queue|...` — это перечисление
@@ -293,7 +291,8 @@ docker compose -f docker-compose.prod.yml exec nginx tail -f /var/log/nginx/api.
 ```
 
 Аналогично доступны `api.access.log`, `shop.error.log`, `shop.access.log`,
-`admin.error.log`, `admin.access.log` (см. конфиги в `deploy/nginx/`).
+`b2b.error.log`, `b2b.access.log`, `admin.error.log`, `admin.access.log`
+(см. конфиги в `deploy/nginx/`).
 
 ## 6. Бэкапы и восстановление
 
@@ -377,6 +376,7 @@ docker run --rm \
 - [ ] https://shop.paradise.kz/ru открывается, каталог грузится
 - [ ] Логин покупателя (OTP) работает
 - [ ] Создание заказа проходит
+- [ ] https://b2b.paradise.kz — вход одобренного B2B-клиента, каталог с оптовыми ценами
 - [ ] https://api.paradise.kz/admin — вход в Filament
 - [ ] https://admin.paradise.kz — вход менеджера, список заказов грузится
       (ошибка CORS в консоли браузера = нет origin'а в `CORS_ALLOWED_ORIGINS`)

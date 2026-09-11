@@ -111,7 +111,7 @@ app/
   Services/              - Inventory/, Orders/, Pricing/, Catalog/, Local/, Auth/, Sms/, WhatsApp/
 storefront/  b2b-portal/  admin/   - Next.js apps, each with its own package.json + Dockerfile
 deploy/
-  nginx/                 - api/shop/admin vhosts, baked into the nginx image
+  nginx/                 - api/shop/b2b/admin vhosts, baked into the nginx image
   README.md              - production runbook
 docker/php/Dockerfile.prod - API + nginx production images
 docker-compose.yml       - local dev stack (+ docker-compose.dev.yml)
@@ -135,12 +135,9 @@ from its `.env.local`.
 ## Deployment
 
 Push to `main` → `.github/workflows/deploy.yml` runs the tests, builds and
-pushes `paradise-{api,nginx,storefront,admin}` images to GHCR, then SSH-deploys
+pushes `paradise-{api,nginx,storefront,b2b-portal,admin}` images to GHCR, then SSH-deploys
 `docker-compose.prod.yml`. See `deploy/README.md`. `NEXT_PUBLIC_*` values are
 baked into the front-end images at build time (build args in `deploy.yml`).
-
-Gap: `b2b-portal` is a service in `docker-compose.prod.yml`, but `deploy.yml`
-does not build its image yet and there is no `b2b.paradise.kz` nginx vhost.
 
 ## Common Commands
 
