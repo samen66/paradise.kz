@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { adminApi } from "./adminApi";
 import { requireB2bClient } from "./fixtures";
 import { ADMIN_SESSION } from "./session";
 
@@ -11,11 +12,37 @@ import { ADMIN_SESSION } from "./session";
  */
 test.use({ storageState: ADMIN_SESSION });
 
+// Имя группы, заведённой текущим тестом — читается в afterEach.
+let createdNames: string[] = [];
+
+test.beforeEach(() => {
+  createdNames = [];
+});
+
+/**
+ * Страховка на случай, если тест упал до своего шага «Удалить группу»:
+ * удаление группы по API убирает и членство клиента заодно. Тихая — не
+ * должна ронять прогон.
+ */
+test.afterEach(async ({ request }) => {
+  const api = adminApi(request);
+  const body = await api.get<{ data: { id: number; name: string }[] }>("/admin/catalog-groups");
+
+  for (const name of createdNames) {
+    const group = body?.data?.find((g) => g.name === name);
+
+    if (group) {
+      await api.delete(`/admin/catalog-groups/${group.id}`);
+    }
+  }
+});
+
 test("клиент добавляется в группу и убирается из неё", async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
 
   const client = requireB2bClient();
   const name = `E2E группа ${Date.now()}`;
+  createdNames.push(name);
   const query = client.company_name ?? client.phone;
 
   await page.goto("/catalog-groups");
