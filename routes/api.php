@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Admin\ClientProductPriceController;
 use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\ProductCollectionController;
 use App\Http\Controllers\Api\Admin\ProductCollectionProductController;
+use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
@@ -138,6 +139,10 @@ Route::prefix('admin')
     ->middleware(['auth:sanctum', 'role:admin|manager'])
     ->group(function () {
         Route::apiResource('products', App\Http\Controllers\Api\Admin\ProductController::class);
+        Route::get('products/{product}/media', [ProductMediaController::class, 'index']);
+        Route::post('products/{product}/media', [ProductMediaController::class, 'store']);
+        Route::put('products/{product}/media/order', [ProductMediaController::class, 'order']);
+        Route::delete('products/{product}/media/{media}', [ProductMediaController::class, 'destroy'])->scopeBindings();
         Route::apiResource('categories', App\Http\Controllers\Api\Admin\CategoryController::class);
         Route::apiResource('brands', BrandController::class);
         Route::apiResource('attributes', AttributeController::class);

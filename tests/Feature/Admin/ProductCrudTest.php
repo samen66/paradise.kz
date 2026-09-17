@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\PriceType;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\StockMovement;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -266,13 +267,11 @@ class ProductCrudTest extends TestCase
 
     /**
      * The exact shape the admin SPA submits: multipart, `_method=PUT`, every
-     * scalar as a string, blanks as "", booleans as "1"/"0", images as files.
+     * scalar as a string, blanks as "", booleans as "1"/"0".
      */
     #[Test]
     public function the_multipart_payload_the_admin_form_sends_round_trips(): void
     {
-        Storage::fake(config('media-library.disk_name'));
-
         $brand = Brand::factory()->create();
         $product = Product::factory()->create([
             'slug' => 'divan-atlanta',
@@ -301,7 +300,6 @@ class ProductCrudTest extends TestCase
             'supplier' => '',
             'is_active' => '1',
             'is_new_arrival' => '1',
-            'images' => [UploadedFile::fake()->image('sofa.jpg')],
         ], ['Accept' => 'application/json'])->assertOk();
 
         $product->refresh();
@@ -319,7 +317,42 @@ class ProductCrudTest extends TestCase
         $this->assertSame('Казахстан', $product->country);
         $this->assertTrue($product->is_active);
         $this->assertTrue($product->is_new_arrival);
-        $this->assertCount(1, $product->getMedia(Product::IMAGE_COLLECTION));
+    }
+
+    #[Test]
+    public function images_are_no_longer_accepted_by_the_product_form(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        $product = Product::factory()->create();
+
+        $this->post("/api/admin/products/{$product->id}", [
+            '_method' => 'PUT',
+            'name' => ['ru' => 'Диван'],
+            'images' => [UploadedFile::fake()->image('sofa.jpg')],
+        ], ['Accept' => 'application/json'])->assertOk();
+
+        $this->assertCount(0, $product->fresh()->getMedia(Product::IMAGE_COLLECTION));
+    }
+
+    #[Test]
+    public function a_product_with_stock_movements_cannot_be_deleted(): void
+    {
+        $movement = StockMovement::factory()->create();
+
+        $this->deleteJson("/api/admin/products/{$movement->product_id}")
+            ->assertUnprocessable()
+            ->assertJsonStructure(['message']);
+
+        $this->assertDatabaseHas('products', ['id' => $movement->product_id]);
+    }
+
+    #[Test]
+    public function a_product_without_movements_is_deleted(): void
+    {
+        $product = Product::factory()->create();
+
+        $this->deleteJson("/api/admin/products/{$product->id}")->assertNoContent();
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
     #[Test]

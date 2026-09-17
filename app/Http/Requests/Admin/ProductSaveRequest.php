@@ -135,11 +135,9 @@ class ProductSaveRequest extends FormRequest
             'weight' => 'nullable|numeric|decimal:0,3|min:0|max:999999999.999',
             'volume' => 'nullable|numeric|decimal:0,3|min:0|max:999999999.999',
 
-            // Storefront flags & media
+            // Storefront flags
             'is_active' => 'boolean',
             'is_new_arrival' => 'boolean',
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:5120',
         ];
     }
 

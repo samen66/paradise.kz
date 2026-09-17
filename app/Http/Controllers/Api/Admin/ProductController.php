@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductSaveRequest;
 use App\Models\Product;
 use App\Services\Pricing\PricingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -120,55 +120,40 @@ class ProductController extends Controller
         $product->issues = $codes;
     }
 
-    public function show($id)
+    public function show(Product $product): JsonResponse
     {
-        $product = Product::with(['category', 'brand', 'media', 'externalMapping'])->findOrFail($id);
+        $product->load(['category', 'brand', 'externalMapping']);
 
-        return response()->json(['data' => $product]);
+        return response()->json(['data' => [
+            ...$product->toArray(),
+            'images' => ProductMediaController::presentAll($product),
+        ]]);
     }
 
-    public function store(ProductSaveRequest $request)
+    public function store(ProductSaveRequest $request): JsonResponse
     {
-        $validated = $request->validated();
+        $product = Product::create($request->validated());
 
-        $product = DB::transaction(function () use ($validated, $request) {
-            $product = Product::create($validated);
-
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $product->addMedia($image)->toMediaCollection(Product::IMAGE_COLLECTION ?? 'images');
-                }
-            }
-
-            return $product;
-        });
-
-        return response()->json(['data' => $product->load(['media', 'category', 'brand'])], 201);
+        return response()->json(['data' => $product->load(['category', 'brand'])], 201);
     }
 
-    public function update(ProductSaveRequest $request, $id)
+    public function update(ProductSaveRequest $request, Product $product): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product->update($request->validated());
 
-        $validated = $request->validated();
-
-        DB::transaction(function () use ($product, $validated, $request) {
-            $product->update($validated);
-
-            if ($request->hasFile('images')) {
-                $product->clearMediaCollection(Product::IMAGE_COLLECTION ?? 'images');
-                foreach ($request->file('images') as $image) {
-                    $product->addMedia($image)->toMediaCollection(Product::IMAGE_COLLECTION ?? 'images');
-                }
-            }
-        });
-
-        return response()->json(['data' => $product->load(['media', 'category', 'brand'])]);
+        return response()->json(['data' => $product->load(['category', 'brand'])]);
     }
 
-    public function destroy($id)
+    /**
+     * The stock ledger is append-only history; a product it mentions stays.
+     * A manager switches it off (is_active) instead.
+     */
+    public function destroy(Product $product): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        if ($product->stockMovements()->exists()) {
+            return response()->json(['message' => 'По товару есть движения по складу — удалить нельзя, выключите его.'], 422);
+        }
+
         $product->delete();
 
         return response()->json(null, 204);
