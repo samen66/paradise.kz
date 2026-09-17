@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\CatalogGroupController;
 use App\Http\Controllers\Api\Admin\CatalogGroupMemberController;
 use App\Http\Controllers\Api\Admin\ClientProductPriceController;
+use App\Http\Controllers\Api\Admin\GoodsReceiptController;
 use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\ProductCollectionController;
 use App\Http\Controllers\Api\Admin\ProductCollectionProductController;
@@ -173,6 +174,8 @@ Route::prefix('admin')
         Route::get('stock', [StockController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('stores', AdminStoreController::class);
+        Route::apiResource('goods-receipts', GoodsReceiptController::class);
+        Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post']);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });
