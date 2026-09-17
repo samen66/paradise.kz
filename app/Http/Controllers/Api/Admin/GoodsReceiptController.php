@@ -64,24 +64,20 @@ class GoodsReceiptController extends Controller
 
     public function update(GoodsReceiptRequest $request, GoodsReceipt $goodsReceipt): JsonResponse
     {
-        if ($refusal = $this->refuseIfPosted($goodsReceipt)) {
-            return $refusal;
-        }
+        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked) use ($request): JsonResponse {
+            $locked->update($request->validated());
 
-        $goodsReceipt->update($request->validated());
-
-        return response()->json(['data' => $this->present($goodsReceipt)]);
+            return response()->json(['data' => $this->present($locked)]);
+        });
     }
 
     public function destroy(GoodsReceipt $goodsReceipt): JsonResponse
     {
-        if ($refusal = $this->refuseIfPosted($goodsReceipt)) {
-            return $refusal;
-        }
+        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked): JsonResponse {
+            $locked->delete();
 
-        $goodsReceipt->delete();
-
-        return response()->json(null, 204);
+            return response()->json(null, 204);
+        });
     }
 
     public function post(Request $request, GoodsReceipt $goodsReceipt, GoodsReceiptService $service): JsonResponse

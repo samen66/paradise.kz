@@ -24,34 +24,28 @@ class GoodsReceiptItemController extends Controller
 
     public function store(GoodsReceiptItemRequest $request, GoodsReceipt $goodsReceipt): JsonResponse
     {
-        if ($refusal = $this->refuseIfPosted($goodsReceipt)) {
-            return $refusal;
-        }
+        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked) use ($request): JsonResponse {
+            $item = $locked->items()->create($request->validated());
 
-        $item = $goodsReceipt->items()->create($request->validated());
-
-        return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], 201);
+            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], 201);
+        });
     }
 
     public function update(GoodsReceiptItemRequest $request, GoodsReceipt $goodsReceipt, GoodsReceiptItem $item): JsonResponse
     {
-        if ($refusal = $this->refuseIfPosted($goodsReceipt)) {
-            return $refusal;
-        }
+        return $this->whileDraft($goodsReceipt, function () use ($request, $item): JsonResponse {
+            $item->update($request->validated());
 
-        $item->update($request->validated());
-
-        return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)]);
+            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)]);
+        });
     }
 
     public function destroy(GoodsReceipt $goodsReceipt, GoodsReceiptItem $item): JsonResponse
     {
-        if ($refusal = $this->refuseIfPosted($goodsReceipt)) {
-            return $refusal;
-        }
+        return $this->whileDraft($goodsReceipt, function () use ($item): JsonResponse {
+            $item->delete();
 
-        $item->delete();
-
-        return response()->json(null, 204);
+            return response()->json(null, 204);
+        });
     }
 }
