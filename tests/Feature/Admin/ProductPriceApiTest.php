@@ -41,7 +41,11 @@ class ProductPriceApiTest extends TestCase
         $id = $this->postJson("/api/admin/products/{$product->id}/prices", [
             'price_type_id' => $type->id,
             'price' => '1500.50',
-        ])->assertCreated()->assertJsonPath('data.price_type.id', $type->id)->json('data.id');
+        ])->assertCreated()
+            ->assertJsonPath('data.price_type.id', $type->id)
+            ->assertJsonPath('data.price_type.code', $type->code)
+            ->assertJsonMissingPath('data.price_type.sort_order')
+            ->json('data.id');
 
         $this->assertSame(150_050, ProductPrice::findOrFail($id)->price);
 
