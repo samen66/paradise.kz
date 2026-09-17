@@ -105,14 +105,21 @@ class WriteOffController extends Controller
         ];
     }
 
-    /** What the write-off cost, as the FIFO layers priced it when it was posted. */
+    /**
+     * What the write-off cost, as the FIFO layers priced it when it was
+     * posted. Rounded per movement — the same `(int) round($taken *
+     * $unitCost)` FifoInventoryService::issue() uses for each layer draw —
+     * rather than summing the raw movements and rounding once, which can
+     * disagree with the ledger (e.g. two 0.4-unit draws at 1 тиын each:
+     * issue() records 0 + 0, but sum-then-round gives round(0.8) = 1).
+     */
     private function postedCost(WriteOff $writeOff): int
     {
-        return (int) round((float) StockMovement::query()
+        return (int) StockMovement::query()
             ->where('documentable_type', WriteOff::class)
             ->where('documentable_id', $writeOff->id)
-            ->selectRaw('coalesce(sum(-qty_delta * unit_cost), 0) as cost')
-            ->value('cost'));
+            ->get(['qty_delta', 'unit_cost'])
+            ->sum(fn (StockMovement $movement): int => (int) round(abs((float) $movement->qty_delta) * (int) $movement->unit_cost));
     }
 
     /** 2.000 → "2", 1.500 → "1.5". */

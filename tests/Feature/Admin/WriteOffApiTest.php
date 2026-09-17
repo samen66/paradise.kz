@@ -103,6 +103,27 @@ class WriteOffApiTest extends TestCase
     }
 
     #[Test]
+    public function total_cost_rounds_per_movement_like_the_ledger(): void
+    {
+        $this->actingAsManager();
+        $store = Store::factory()->create();
+        $product = Product::factory()->create();
+        $inventory = app(FifoInventoryService::class);
+        // Two layers of 0.4 units at 1 тиын each: issue() rounds each draw
+        // separately (round(0.4) + round(0.4) = 0), while summing the raw
+        // movements first and rounding once gives round(0.8) = 1.
+        $inventory->receive($product, $store, 0.4, 1);
+        $inventory->receive($product, $store, 0.4, 1);
+
+        $writeOff = WriteOff::factory()->for($store, 'store')->create();
+        WriteOffItem::factory()->for($writeOff, 'writeOff')->create(['product_id' => $product->id, 'quantity' => 0.8]);
+
+        $this->postJson("/api/admin/write-offs/{$writeOff->id}/post")
+            ->assertOk()
+            ->assertJsonPath('data.total_cost', 0);
+    }
+
+    #[Test]
     public function a_shortage_is_explained_and_nothing_is_written(): void
     {
         $this->actingAsManager();
