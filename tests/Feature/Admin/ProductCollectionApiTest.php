@@ -51,6 +51,7 @@ class ProductCollectionApiTest extends TestCase
 
         $this->assertFalse($collection->fresh()->is_active);
         $this->assertSame('Хиты продаж', $collection->fresh()->getTranslation('title', 'ru'));
+        $this->assertSame(1, $collection->fresh()->sort_order);
 
         $this->deleteJson("/api/admin/product-collections/{$id}")->assertNoContent();
         $this->assertDatabaseMissing('product_collections', ['id' => $id]);

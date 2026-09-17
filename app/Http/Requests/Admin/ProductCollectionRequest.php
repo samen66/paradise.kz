@@ -39,7 +39,10 @@ class ProductCollectionRequest extends FormRequest
     {
         $validated = parent::validated();
         $validated['title'] = array_filter($validated['title'], fn (?string $value): bool => $value !== null && $value !== '');
-        $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+
+        if (array_key_exists('sort_order', $validated)) {
+            $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+        }
 
         return $key === null ? $validated : data_get($validated, $key, $default);
     }

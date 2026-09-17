@@ -57,6 +57,20 @@ class PriceTypeApiTest extends TestCase
     }
 
     #[Test]
+    public function updating_without_sort_order_keeps_it(): void
+    {
+        $this->actingAsManager();
+        $priceType = PriceType::factory()->create(['sort_order' => 5]);
+
+        $this->putJson("/api/admin/price-types/{$priceType->id}", [
+            'code' => $priceType->code,
+            'name' => 'Дилерская',
+        ])->assertOk();
+
+        $this->assertSame(5, $priceType->fresh()->sort_order);
+    }
+
+    #[Test]
     public function the_code_is_unique(): void
     {
         $this->actingAsManager();

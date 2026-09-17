@@ -35,7 +35,10 @@ class PriceTypeRequest extends FormRequest
     public function validated($key = null, $default = null): mixed
     {
         $validated = parent::validated();
-        $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+
+        if (array_key_exists('sort_order', $validated)) {
+            $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+        }
 
         return $key === null ? $validated : data_get($validated, $key, $default);
     }
