@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\Api\Account\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Admin\AttributeController;
+use App\Http\Controllers\Api\Admin\AttributeValueController;
 use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\CatalogGroupController;
 use App\Http\Controllers\Api\Admin\CatalogGroupMemberController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\ProductCollectionController;
 use App\Http\Controllers\Api\Admin\ProductCollectionProductController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
+use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
@@ -151,6 +153,8 @@ Route::prefix('admin')
         // Relations of a product; a child of another product answers 404.
         Route::apiResource('products.prices', ProductPriceController::class)->except('show')->scoped();
         Route::apiResource('products.client-prices', ClientProductPriceController::class)->except('show')->scoped();
+        Route::apiResource('products.attribute-values', AttributeValueController::class)->except('show')->scoped();
+        Route::apiResource('products.variants', ProductVariantController::class)->except('show')->scoped();
         Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
