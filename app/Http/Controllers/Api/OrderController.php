@@ -71,6 +71,6 @@ class OrderController extends Controller
             abort(Response::HTTP_NOT_FOUND);
         }
 
-        return new OrderResource($order->load(['items', 'store']));
+        return new OrderResource($order->load(['items.product.media', 'store']));
     }
 }

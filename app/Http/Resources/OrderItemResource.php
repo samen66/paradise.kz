@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -28,6 +29,14 @@ class OrderItemResource extends JsonResource
             'name' => $this->name,
             'quantity' => (float) $this->quantity,
             'price' => $this->price / 100,
+            // Presentation only, from the live product: the line's name, quantity
+            // and price stay the order's own snapshot. Present only when the
+            // caller eager-loaded `product` (with `media`), so the order list
+            // does not pay for photos it does not show.
+            'image' => $this->whenLoaded('product', fn (): ?string => $this->product
+                ?->getFirstMedia(Product::IMAGE_COLLECTION)
+                ?->getUrl('thumb')),
+            'article' => $this->whenLoaded('product', fn (): ?string => $this->product?->article),
         ];
     }
 }

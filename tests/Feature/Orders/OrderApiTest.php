@@ -17,7 +17,10 @@ use App\Models\User;
 use App\Services\Inventory\FifoInventoryService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -378,6 +381,122 @@ class OrderApiTest extends TestCase
 
         // 404 (not 403) so the order's existence does not leak.
         $this->getJson('/api/orders/'.$order->id)->assertStatus(404);
+    }
+
+    /**
+     * An order with `$lines` lines, each pointing at a product that has a photo.
+     */
+    private function orderWithPhotographedProducts(User $user, int $lines): Order
+    {
+        Storage::fake(config('media-library.disk_name'));
+
+        $order = Order::factory()->for($user)->create();
+
+        for ($i = 1; $i <= $lines; $i++) {
+            $product = Product::factory()->create(['article' => "ART-{$order->id}-{$i}"]);
+            $product->addMedia(UploadedFile::fake()->image("p{$i}.jpg"))
+                ->toMediaCollection(Product::IMAGE_COLLECTION);
+
+            $order->items()->create([
+                'product_id' => $product->id,
+                'external_product_id' => null,
+                'name' => "Товар {$i}",
+                'quantity' => 1,
+                'price' => 100_000,
+            ]);
+        }
+
+        return $order;
+    }
+
+    #[Test]
+    public function show_returns_the_photo_and_article_of_each_line(): void
+    {
+        $user = $this->approvedClient();
+        $order = $this->orderWithPhotographedProducts($user, 1);
+        $product = $order->items()->first()->product;
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/orders/'.$order->id)
+            ->assertOk()
+            ->assertJsonPath('data.items.0.article', "ART-{$order->id}-1")
+            ->assertJsonPath('data.items.0.image', $product->getFirstMedia(Product::IMAGE_COLLECTION)->getUrl('thumb'))
+            // The line keeps its own snapshot name, not the live product name.
+            ->assertJsonPath('data.items.0.name', 'Товар 1');
+    }
+
+    #[Test]
+    public function a_line_whose_product_is_gone_has_null_photo_and_article(): void
+    {
+        $user = $this->approvedClient();
+        $order = Order::factory()->for($user)->create();
+        $order->items()->create([
+            'product_id' => null,
+            'external_product_id' => null,
+            'name' => 'Удалённый товар',
+            'quantity' => 1,
+            'price' => 100_000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $line = $this->getJson('/api/orders/'.$order->id)->assertOk()->json('data.items.0');
+
+        $this->assertArrayHasKey('image', $line);
+        $this->assertNull($line['image']);
+        $this->assertArrayHasKey('article', $line);
+        $this->assertNull($line['article']);
+    }
+
+    #[Test]
+    public function show_returns_the_payment_status(): void
+    {
+        $user = $this->approvedClient();
+        $order = Order::factory()->for($user)->create(['payment_status' => 'paid']);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/orders/'.$order->id)
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', 'paid');
+    }
+
+    #[Test]
+    public function show_query_count_does_not_grow_with_the_number_of_lines(): void
+    {
+        $user = $this->approvedClient();
+        $small = $this->orderWithPhotographedProducts($user, 1);
+        $large = $this->orderWithPhotographedProducts($user, 3);
+
+        Sanctum::actingAs($user);
+
+        $countQueries = function (Order $order): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->getJson('/api/orders/'.$order->id)->assertOk();
+            DB::disableQueryLog();
+
+            return count(DB::getQueryLog());
+        };
+
+        $countQueries($small); // warm up per-request caches (roles, settings)
+
+        $this->assertSame($countQueries($small), $countQueries($large));
+    }
+
+    #[Test]
+    public function index_does_not_expose_line_photos(): void
+    {
+        $user = $this->approvedClient();
+        $this->orderWithPhotographedProducts($user, 1);
+
+        Sanctum::actingAs($user);
+
+        $line = $this->getJson('/api/orders')->assertOk()->json('data.0.items.0');
+
+        $this->assertArrayNotHasKey('image', $line);
+        $this->assertArrayNotHasKey('article', $line);
     }
 
     #[Test]
