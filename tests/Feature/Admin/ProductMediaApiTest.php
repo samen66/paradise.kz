@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Jobs\RevalidateStorefrontCacheJob;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
 use Tests\TestCase;
 
@@ -125,5 +128,57 @@ class ProductMediaApiTest extends TestCase
         $foreign = $this->upload(Product::factory()->create());
 
         $this->deleteJson("/api/admin/products/{$product->id}/media/{$foreign}")->assertNotFound();
+    }
+
+    #[Test]
+    public function media_outside_the_image_collection_is_not_deleted(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $media = $product->addMedia(UploadedFile::fake()->image('doc.jpg'))->toMediaCollection('other');
+
+        $this->deleteJson("/api/admin/products/{$product->id}/media/{$media->id}")->assertNotFound();
+        $this->assertNotNull(Media::find($media->id));
+    }
+
+    #[Test]
+    public function uploading_an_image_refreshes_the_storefront_cache(): void
+    {
+        Queue::fake();
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+
+        $this->upload($product);
+
+        Queue::assertPushed(RevalidateStorefrontCacheJob::class);
+    }
+
+    #[Test]
+    public function reordering_images_refreshes_the_storefront_cache(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $first = $this->upload($product, 'a.jpg');
+        $second = $this->upload($product, 'b.jpg');
+
+        Queue::fake();
+
+        $this->putJson("/api/admin/products/{$product->id}/media/order", ['ids' => [$second, $first]])->assertOk();
+
+        Queue::assertPushed(RevalidateStorefrontCacheJob::class);
+    }
+
+    #[Test]
+    public function deleting_an_image_refreshes_the_storefront_cache(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $id = $this->upload($product);
+
+        Queue::fake();
+
+        $this->deleteJson("/api/admin/products/{$product->id}/media/{$id}")->assertNoContent();
+
+        Queue::assertPushed(RevalidateStorefrontCacheJob::class);
     }
 }

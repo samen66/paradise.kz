@@ -7,6 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Brand;
 use App\Models\CatalogGroup;
 use App\Models\Category;
+use App\Models\GoodsReceiptItem;
 use App\Models\PriceType;
 use App\Models\Product;
 use App\Models\ProductPrice;
@@ -353,6 +354,18 @@ class ProductCrudTest extends TestCase
 
         $this->deleteJson("/api/admin/products/{$product->id}")->assertNoContent();
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
+    }
+
+    #[Test]
+    public function a_product_referenced_by_a_goods_receipt_cannot_be_deleted(): void
+    {
+        $item = GoodsReceiptItem::factory()->create();
+
+        $this->deleteJson("/api/admin/products/{$item->product_id}")
+            ->assertUnprocessable()
+            ->assertJsonStructure(['message']);
+
+        $this->assertDatabaseHas('products', ['id' => $item->product_id]);
     }
 
     #[Test]

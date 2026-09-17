@@ -235,6 +235,14 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * @return HasMany<GoodsReceiptItem, $this>
+     */
+    public function goodsReceiptItems(): HasMany
+    {
+        return $this->hasMany(GoodsReceiptItem::class);
+    }
+
+    /**
      * @return HasMany<ProductReview, $this>
      */
     public function reviews(): HasMany

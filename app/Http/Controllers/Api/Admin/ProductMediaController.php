@@ -54,6 +54,11 @@ class ProductMediaController extends Controller
 
         $media = $product->addMediaFromRequest('file')->toMediaCollection(Product::IMAGE_COLLECTION);
 
+        // A Filament product save touches the model and lets ProductObserver
+        // queue the storefront revalidation; media changes bypass that save,
+        // so trigger the same thing here.
+        $product->touch();
+
         return response()->json(['data' => self::present($media)], 201);
     }
 
@@ -76,13 +81,19 @@ class ProductMediaController extends Controller
         }
 
         Media::setNewOrder($ids);
+        $product->touch();
 
         return response()->json(['data' => self::presentAll($product->fresh())]);
     }
 
     public function destroy(Product $product, Media $media): JsonResponse
     {
+        if ($media->collection_name !== Product::IMAGE_COLLECTION) {
+            abort(404);
+        }
+
         $media->delete();
+        $product->touch();
 
         return response()->json(null, 204);
     }
