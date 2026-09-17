@@ -80,6 +80,12 @@ export default function ProductCollectionPage() {
           defaultValue={p.pivot.sort_order}
           className={inputClass}
           onBlur={(e) => {
+            if (e.target.value.trim() === '') {
+              e.target.value = String(p.pivot.sort_order);
+
+              return;
+            }
+
             const value = Number(e.target.value);
             if (Number.isInteger(value) && value !== p.pivot.sort_order) {
               void place(p.id, value, 'Порядок сохранён');
