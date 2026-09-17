@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\CartController as B2bCartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Api\Public\ProductController as PublicProductController
 use App\Http\Controllers\Api\Public\ProductReviewController;
 use App\Http\Controllers\Api\Public\SettingsController;
 use App\Http\Controllers\Api\Public\SitemapController;
+use App\Http\Controllers\Api\Public\StoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -57,7 +59,11 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/products/{product}', [ProductController::class, 'show']);
+    // Numeric id only: slugs are the public storefront's addressing. Without
+    // the constraint MySQL would cast '3-kreslo' to 3 and resolve product 3.
+    Route::get('/products/{product}', [ProductController::class, 'show'])->whereNumber('product');
+
+    Route::post('/cart/validate', [B2bCartController::class, 'validateCart']);
 
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
@@ -73,7 +79,7 @@ Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
 // pricing, only the public (ungrouped) catalog. See VisibilityService and
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
-    Route::get('/stores', [App\Http\Controllers\Api\Public\StoreController::class, 'index']);
+    Route::get('/stores', [StoreController::class, 'index']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);

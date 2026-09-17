@@ -12,18 +12,24 @@ import { AddToCartB2BButton } from "@/components/AddToCartB2BButton";
 
 export default function B2BProductDetail() {
   const params = useParams();
-  const slug = params.slug as string;
+  // B2B products are addressed by numeric id only (GET /api/products/{id}).
+  const rawId = params.id as string;
+  const productId = /^\d+$/.test(rawId) ? Number(rawId) : null;
   const { token } = useB2bAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token || !slug) return;
+    if (productId === null) {
+      setIsLoading(false);
+      return;
+    }
+    if (!token) return;
 
     const fetchProduct = async () => {
       try {
-        const response = await apiGet<{ data: Product }>(`/products/${slug}`, {
+        const response = await apiGet<{ data: Product }>(`/products/${productId}`, {
           token,
         });
         setProduct(response.data);
@@ -38,7 +44,7 @@ export default function B2BProductDetail() {
     };
 
     fetchProduct();
-  }, [token, slug]);
+  }, [token, productId]);
 
   if (isLoading) {
     return (

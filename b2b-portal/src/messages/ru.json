@@ -33,6 +33,12 @@
     "priceOnRequest": "Цена по запросу",
     "addToCart": "В корзину",
     "added": "Добавлено",
+    "maxInCart": "Максимум {count} шт.",
+    "allInCart": "Весь остаток уже в корзине",
+    "inCartCount": "В корзине: {count} шт.",
+    "addOneMore": "Добавить ещё одну",
+    "removeOne": "Убрать одну",
+    "removeFromCart": "Убрать из корзины",
     "home": "Главная",
     "notFound": "Страница не найдена",
     "notFoundText": "Возможно, товар был убран из каталога или адрес введён с ошибкой.",
@@ -146,8 +152,13 @@
     "problems": {
       "unavailable": "Товар больше недоступен",
       "no_price": "Цена не определена",
-      "insufficient_stock": "Недостаточно на складе"
+      "insufficient_stock": "Недостаточно на складе",
+      "below_min_qty": "Меньше минимального заказа"
     },
+    "inStockOnly": "На складе {count} шт.",
+    "reduceTo": "Оставить {count} шт.",
+    "raiseTo": "Увеличить до {count} шт.",
+    "fixBeforeCheckout": "Исправьте отмеченные товары, чтобы оформить заказ",
     "clearCart": "Очистить корзину",
     "itemsCount": "{count, plural, one {# товар} few {# товара} other {# товаров}}",
     "itemsSubtotal": "{count, plural, one {# товар} few {# товара} other {# товаров}} на сумму",

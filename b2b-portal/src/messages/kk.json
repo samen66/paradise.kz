@@ -33,6 +33,12 @@
     "priceOnRequest": "Бағасы сұрау бойынша",
     "addToCart": "Себетке",
     "added": "Қосылды",
+    "maxInCart": "Ең көбі {count} дана",
+    "allInCart": "Барлық қалдық себетте",
+    "inCartCount": "Себетте: {count} дана",
+    "addOneMore": "Тағы біреуін қосу",
+    "removeOne": "Біреуін алып тастау",
+    "removeFromCart": "Себеттен алып тастау",
     "home": "Басты бет",
     "notFound": "Бет табылмады",
     "notFoundText": "Тауар каталогтан алынып тасталған болуы мүмкін немесе мекенжай қате енгізілген.",
@@ -146,8 +152,13 @@
     "problems": {
       "unavailable": "Тауар енді қолжетімді емес",
       "no_price": "Бағасы анықталмаған",
-      "insufficient_stock": "Қоймада жеткіліксіз"
+      "insufficient_stock": "Қоймада жеткіліксіз",
+      "below_min_qty": "Ең аз тапсырыстан кем"
     },
+    "inStockOnly": "Қоймада {count} дана",
+    "reduceTo": "{count} дана қалдыру",
+    "raiseTo": "{count} данаға дейін көбейту",
+    "fixBeforeCheckout": "Тапсырыс беру үшін белгіленген тауарларды түзетіңіз",
     "clearCart": "Себетті тазарту",
     "itemsCount": "{count} тауар",
     "itemsSubtotal": "{count} тауар сомасы",

@@ -11,7 +11,7 @@ export default function QuickOrderPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<{ article: string; product?: Product; requestedQty: number; status: 'added' | 'not_found' | 'out_of_stock' }[]>([]);
+  const [results, setResults] = useState<{ article: string; product?: Product; requestedQty: number; status: 'added' | 'capped' | 'not_found' | 'out_of_stock' }[]>([]);
   const { addItem } = useB2bCart();
   const token = useB2bAuth((state) => state.token);
   const router = useRouter();
@@ -51,17 +51,29 @@ export default function QuickOrderPage() {
           continue;
         }
 
-        if (!product.in_stock || (product.stock !== undefined && product.stock < item.qty)) {
-          newResults.push({ article: item.article, product, requestedQty: item.qty, status: 'out_of_stock' as const });
+        // Rounded up to the minimum order; the whole line must fit the stock
+        // (added on top of what the cart already holds, never beyond it).
+        const minQty = product.b2b_min_order_qty || 1;
+        const finalQty = Math.max(item.qty, minQty);
+
+        if (!product.in_stock || (product.stock !== undefined && product.stock < finalQty)) {
+          newResults.push({ article: item.article, product, requestedQty: finalQty, status: 'out_of_stock' as const });
           continue;
         }
 
-        // Add to cart
-        const minQty = product.b2b_min_order_qty || 1;
-        const finalQty = Math.max(item.qty, minQty);
-        addItem(product, finalQty);
-        
-        newResults.push({ article: item.article, product, requestedQty: finalQty, status: 'added' as const });
+        const added = addItem(product, finalQty);
+
+        if (added.status === 'limit') {
+          newResults.push({ article: item.article, product, requestedQty: finalQty, status: 'out_of_stock' as const });
+          continue;
+        }
+
+        newResults.push({
+          article: item.article,
+          product,
+          requestedQty: added.quantity,
+          status: added.status === 'capped' ? ('capped' as const) : ('added' as const),
+        });
       }
 
       setResults(newResults);
@@ -111,7 +123,7 @@ export default function QuickOrderPage() {
           {results.length > 0 ? (
             <div className="space-y-3">
               {results.map((result, idx) => (
-                <div key={idx} className={`p-4 rounded-xl border ${result.status === 'added' ? 'border-success/20 bg-success/5' : 'border-danger/20 bg-danger/5'}`}>
+                <div key={idx} className={`p-4 rounded-xl border ${result.status === 'added' || result.status === 'capped' ? 'border-success/20 bg-success/5' : 'border-danger/20 bg-danger/5'}`}>
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-medium">{result.article}</p>
@@ -119,15 +131,16 @@ export default function QuickOrderPage() {
                     </div>
                     <span className="text-sm font-medium">{result.requestedQty} шт</span>
                   </div>
-                  <p className={`text-xs mt-2 font-medium ${result.status === 'added' ? 'text-success' : 'text-danger'}`}>
-                    {result.status === 'added' ? 'Добавлен в корзину' : 
+                  <p className={`text-xs mt-2 font-medium ${result.status === 'added' || result.status === 'capped' ? 'text-success' : 'text-danger'}`}>
+                    {result.status === 'added' ? 'Добавлен в корзину' :
+                     result.status === 'capped' ? `В корзине весь остаток: ${result.requestedQty} шт` : 
                      result.status === 'not_found' ? 'Товар не найден' : 
                      'Нет в наличии или недостаточно остатков'}
                   </p>
                 </div>
               ))}
 
-              {results.some(r => r.status === 'added') && (
+              {results.some(r => r.status === 'added' || r.status === 'capped') && (
                 <button
                   onClick={() => router.push('/cart')}
                   className="w-full mt-4 py-3 rounded-xl border border-line bg-surface text-ink font-medium hover:border-ink transition"

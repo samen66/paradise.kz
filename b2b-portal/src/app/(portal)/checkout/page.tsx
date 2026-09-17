@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ const submitCtaClasses =
 
 export default function B2BCheckoutPage() {
   const t = useTranslations("checkout");
+  const tCart = useTranslations("cart");
   const router = useRouter();
   const { items, clearCart } = useB2bCart();
   const { token, user } = useB2bAuth();
@@ -42,6 +43,11 @@ export default function B2BCheckoutPage() {
   const [comment, setComment] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Bumped after a rejected order so the cart is re-checked against fresh stock.
+  const [checkRound, setCheckRound] = useState(0);
+  // Set once the order exists: clearCart() empties the cart, and the
+  // "empty cart → back to /cart" redirect must not win over the success page.
+  const placed = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -89,21 +95,24 @@ export default function B2BCheckoutPage() {
     )
       .then((response) => setValidation(response.data))
       .catch(() => setValidation(null));
-  }, [mounted, items, storeId, token]);
+  }, [mounted, items, storeId, token, checkRound]);
 
-  const availableItems = useMemo(
-    () => (validation ? validation.items.filter((line) => line.available) : []),
+  const problemLines = useMemo(
+    () => (validation ? validation.items.filter((line) => !line.available) : []),
     [validation],
   );
 
-  if (!mounted) {
+  useEffect(() => {
+    if (mounted && items.length === 0 && !placed.current) {
+      router.replace("/cart");
+    }
+  }, [mounted, items.length, router]);
+
+  if (!mounted || items.length === 0) {
     return null;
   }
 
-  if (items.length === 0) {
-    router.replace("/cart");
-    return null;
-  }
+  const canSubmit = validation !== null && problemLines.length === 0 && storeId !== null;
 
   const deliveryCost = method === "delivery" ? (validation?.delivery_cost ?? 0) : 0;
   const subtotal = validation?.subtotal ?? 0;
@@ -112,13 +121,12 @@ export default function B2BCheckoutPage() {
     setBusy(true);
     setErrors([]);
     try {
+      // The whole cart as checked above — POST /orders rejects it as a whole
+      // (422, nothing reserved) if stock ran out in the meantime.
       const payload = {
-        name,
-        phone,
-        email: email || undefined,
         store_id: storeId,
         comment: comment || undefined,
-        items: availableItems.map((line) => ({ product_id: line.product_id, quantity: line.quantity })),
+        items: validation!.items.map((line) => ({ product_id: line.product_id, quantity: line.quantity })),
         delivery:
           method === "delivery"
             ? addressId !== "new"
@@ -127,13 +135,17 @@ export default function B2BCheckoutPage() {
             : undefined,
       };
 
-      const response = await apiPost<{ data: Order }>("/checkout", payload, { token, locale: "ru" });
+      const response = await apiPost<{ data: Order }>("/orders", payload, { token, locale: "ru" });
 
+      placed.current = true;
       clearCart();
       sessionStorage.setItem("last-order", JSON.stringify(response.data));
       router.push(`/checkout/success?number=${encodeURIComponent(response.data.number)}`);
     } catch (e) {
       setErrors(e instanceof ApiValidationError ? e.messages : ["Не удалось оформить заказ. Попробуйте ещё раз."]);
+      if (e instanceof ApiValidationError) {
+        setCheckRound((round) => round + 1);
+      }
       setBusy(false);
     }
   }
@@ -314,6 +326,23 @@ export default function B2BCheckoutPage() {
             <span className="text-xl font-semibold text-ink">{formatPrice(subtotal + deliveryCost, "ru")}</span>
           </div>
 
+          {problemLines.length > 0 ? (
+            <div role="alert" className="mt-4 rounded-xl border border-sale/30 bg-sale/5 p-3 text-sm text-sale">
+              <p className="font-medium">{tCart("fixBeforeCheckout")}</p>
+              <ul className="mt-1 space-y-0.5">
+                {problemLines.map((line) => (
+                  <li key={line.product_id}>
+                    {line.name ?? `#${line.product_id}`}: {tCart(`problems.${line.problem ?? "unavailable"}`)}
+                    {line.problem === "insufficient_stock" ? ` — ${tCart("inStockOnly", { count: Math.floor(line.stock) })}` : ""}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/cart" className="mt-2 inline-block font-medium text-ink underline underline-offset-2">
+                {tCart("title")}
+              </Link>
+            </div>
+          ) : null}
+
           {errors.length > 0 ? (
             <div className="mt-4 rounded-xl border border-sale/30 bg-sale/5 p-3">
               <ul className="space-y-1 text-sm font-medium text-sale">
@@ -326,7 +355,7 @@ export default function B2BCheckoutPage() {
 
           <button
             type="submit"
-            disabled={busy || availableItems.length === 0 || storeId === null}
+            disabled={busy || !canSubmit}
             className={submitCtaClasses}
           >
             {busy ? t("submitting") : t("submit")}
