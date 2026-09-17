@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Account\FavoriteController;
 use App\Http\Controllers\Api\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\Api\Account\ProfileController;
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\Admin\AttributeController;
 use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Api\Public\ProductController as PublicProductController
 use App\Http\Controllers\Api\Public\ProductReviewController;
 use App\Http\Controllers\Api\Public\SettingsController;
 use App\Http\Controllers\Api\Public\SitemapController;
+use App\Http\Controllers\Api\Public\StoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -73,7 +75,7 @@ Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
 // pricing, only the public (ungrouped) catalog. See VisibilityService and
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
-    Route::get('/stores', [App\Http\Controllers\Api\Public\StoreController::class, 'index']);
+    Route::get('/stores', [StoreController::class, 'index']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);
@@ -129,6 +131,7 @@ Route::prefix('admin')
         Route::apiResource('products', App\Http\Controllers\Api\Admin\ProductController::class);
         Route::apiResource('categories', App\Http\Controllers\Api\Admin\CategoryController::class);
         Route::apiResource('brands', BrandController::class);
+        Route::apiResource('attributes', AttributeController::class);
         Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
