@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
+use App\Http\Controllers\Api\Admin\StockMovementController;
 use App\Http\Controllers\Api\Admin\StoreController as AdminStoreController;
 use App\Http\Controllers\Api\Admin\SupplierController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -175,6 +176,7 @@ Route::prefix('admin')
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
         Route::get('stock', [StockController::class, 'index']);
+        Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('stores', AdminStoreController::class);
         Route::apiResource('goods-receipts', GoodsReceiptController::class);
