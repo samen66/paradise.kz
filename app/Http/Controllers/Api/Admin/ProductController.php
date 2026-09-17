@@ -160,6 +160,10 @@ class ProductController extends Controller
             return response()->json(['message' => 'Товар есть в приёмках — удалить нельзя, выключите его.'], 422);
         }
 
+        if ($product->writeOffItems()->exists()) {
+            return response()->json(['message' => 'Товар есть в списаниях — удалить нельзя, выключите его.'], 422);
+        }
+
         $product->delete();
 
         return response()->json(null, 204);
