@@ -96,6 +96,32 @@ class GoodsReceiptServiceTest extends TestCase
     }
 
     #[Test]
+    public function a_stale_copy_cannot_post_the_receipt_a_second_time(): void
+    {
+        $store = Store::factory()->create();
+        $product = Product::factory()->create();
+
+        $receipt = GoodsReceipt::factory()->for($store, 'store')->create();
+        GoodsReceiptItem::factory()->for($receipt, 'goodsReceipt')->create([
+            'product_id' => $product->id, 'quantity' => 5, 'unit_cost' => 10_000,
+        ]);
+        // Loaded before posting — as a second browser tab or Filament would hold it.
+        $stale = GoodsReceipt::findOrFail($receipt->id);
+
+        $this->service->post($receipt);
+
+        try {
+            $this->service->post($stale);
+            $this->fail('Expected RuntimeException');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Приёмка уже проведена.', $exception->getMessage());
+        }
+
+        $this->assertEqualsWithDelta(5.0, $this->inventory->onHand($product, $store), 0.001);
+        $this->assertSame(1, StockMovement::query()->where('documentable_id', $receipt->id)->where('documentable_type', GoodsReceipt::class)->count());
+    }
+
+    #[Test]
     public function posting_an_empty_receipt_throws(): void
     {
         $receipt = GoodsReceipt::factory()->create();
