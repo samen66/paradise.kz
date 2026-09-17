@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import api from '@/lib/api';
 import { serverMessage } from '@/lib/errors';
 import { toast } from '@/stores/toastStore';
@@ -19,16 +20,27 @@ export function useResource<T extends { id: number }>(path: string | null, param
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const paramsKey = JSON.stringify(params ?? {});
+  // Guards against an earlier request's response overwriting a later one's
+  // (e.g. page/params change quickly): only the most recent reload() call
+  // is allowed to commit state when its response comes back.
+  const requestIdRef = useRef(0);
 
   const reload = useCallback(async () => {
     if (!path) {
       return;
     }
 
+    const requestId = ++requestIdRef.current;
+
     setLoading(true);
 
     try {
       const res = await api.get<ListBody<T>>(path, { params: { ...JSON.parse(paramsKey), page } });
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       const body = res.data;
 
       if (Array.isArray(body)) {
@@ -39,9 +51,13 @@ export function useResource<T extends { id: number }>(path: string | null, param
         setMeta(body.last_page ? { current_page: body.current_page ?? 1, last_page: body.last_page } : null);
       }
     } catch {
-      setItems([]);
+      if (requestId === requestIdRef.current) {
+        setItems([]);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [path, paramsKey, page]);
 
@@ -53,13 +69,21 @@ export function useResource<T extends { id: number }>(path: string | null, param
   }, [reload]);
 
   const create = async (payload: unknown): Promise<T> => {
-    const res = await api.post(path as string, payload);
+    if (!path) {
+      throw new Error('useResource: path is not set');
+    }
+
+    const res = await api.post(path, payload);
     await reload();
 
     return (res.data?.data ?? res.data) as T;
   };
 
   const update = async (id: number, payload: unknown): Promise<T> => {
+    if (!path) {
+      throw new Error('useResource: path is not set');
+    }
+
     const res = await api.put(`${path}/${id}`, payload);
     await reload();
 
@@ -78,6 +102,11 @@ export function useResource<T extends { id: number }>(path: string | null, param
 
       if (message) {
         toast.error(message);
+      } else if (isAxiosError(error) && error.response && error.response.status < 500 && ![401, 403].includes(error.response.status)) {
+        // 401/403/5xx/network are already reported by the axios interceptor;
+        // this covers the remaining 4xx (404/400/409/…) that would otherwise
+        // fail silently.
+        toast.error('Не удалось удалить');
       }
 
       return false;

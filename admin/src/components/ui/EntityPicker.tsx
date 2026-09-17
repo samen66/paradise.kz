@@ -26,16 +26,26 @@ export default function EntityPicker<T extends { id: number }>({ searchPath, lab
       return;
     }
 
+    let cancelled = false;
+
     const timer = setTimeout(async () => {
       try {
         const res = await api.get(searchPath, { params: { 'filter[search]': query.trim() } });
-        setResults((res.data?.data ?? res.data ?? []) as T[]);
+
+        if (!cancelled) {
+          setResults((res.data?.data ?? res.data ?? []) as T[]);
+        }
       } catch {
-        setResults([]);
+        if (!cancelled) {
+          setResults([]);
+        }
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, searchPath]);
 
   const visible = results.filter((r) => !excludeIds.includes(r.id));
