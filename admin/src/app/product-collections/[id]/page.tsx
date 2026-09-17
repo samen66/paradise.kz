@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import api from '@/lib/api';
 import { serverMessage } from '@/lib/errors';
 import { productLabel, ru, type ProductRef } from '@/lib/text';
@@ -22,15 +23,16 @@ export default function ProductCollectionPage() {
   const { id } = useParams<{ id: string }>();
   const base = `/admin/product-collections/${id}`;
   const [collection, setCollection] = useState<CollectionDetail | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<'not_found' | 'error' | null>(null);
   const [editing, setEditing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await api.get<{ data: CollectionDetail }>(base);
       setCollection(res.data.data);
-    } catch {
-      setNotFound(true);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(isAxiosError(error) && error.response?.status === 404 ? 'not_found' : 'error');
     }
   }, [base]);
 
@@ -53,11 +55,20 @@ export default function ProductCollectionPage() {
     }
   };
 
-  if (notFound) {
+  if (loadError === 'not_found') {
     return (
       <div className="space-y-4">
         <p className="text-zinc-500">Подборка не найдена</p>
         <Link href="/product-collections" className={buttonSecondary}>← К списку подборок</Link>
+      </div>
+    );
+  }
+
+  if (loadError === 'error') {
+    return (
+      <div className="space-y-4">
+        <p className="text-zinc-500">Не удалось загрузить подборку</p>
+        <button type="button" className={buttonSecondary} onClick={() => void load()}>Повторить</button>
       </div>
     );
   }

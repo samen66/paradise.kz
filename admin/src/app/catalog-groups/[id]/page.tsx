@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { z } from 'zod';
 import api from '@/lib/api';
 import { serverMessage } from '@/lib/errors';
@@ -27,15 +28,16 @@ export default function CatalogGroupPage() {
   const router = useRouter();
   const base = `/admin/catalog-groups/${id}`;
   const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<'not_found' | 'error' | null>(null);
   const [renaming, setRenaming] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await api.get<{ data: GroupDetail }>(base);
       setGroup(res.data.data);
-    } catch {
-      setNotFound(true);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(isAxiosError(error) && error.response?.status === 404 ? 'not_found' : 'error');
     }
   }, [base]);
 
@@ -56,11 +58,20 @@ export default function CatalogGroupPage() {
     }
   };
 
-  if (notFound) {
+  if (loadError === 'not_found') {
     return (
       <div className="space-y-4">
         <p className="text-zinc-500">Группа не найдена</p>
         <Link href="/catalog-groups" className={buttonSecondary}>← К списку групп</Link>
+      </div>
+    );
+  }
+
+  if (loadError === 'error') {
+    return (
+      <div className="space-y-4">
+        <p className="text-zinc-500">Не удалось загрузить группу</p>
+        <button type="button" className={buttonSecondary} onClick={() => void load()}>Повторить</button>
       </div>
     );
   }
@@ -106,7 +117,7 @@ export default function CatalogGroupPage() {
           <>
             <button type="button" className={buttonSecondary} onClick={() => setRenaming(true)}>Переименовать</button>
             <ConfirmButton
-              question="Удалить группу? Её товары вернутся на витрину."
+              question="Удалить группу? Её товары вернутся на витрину, клиенты потеряют доступ к ним."
               onConfirm={async () => {
                 try {
                   await api.delete(base);

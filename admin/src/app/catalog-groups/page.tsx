@@ -41,7 +41,12 @@ export default function CatalogGroupsPage() {
       render: (g) => (
         <div className="flex justify-end gap-4">
           <Link href={`/catalog-groups/${g.id}`} className={buttonLink}>Открыть</Link>
-          <ConfirmButton onConfirm={() => groups.remove(g.id)}>Удалить</ConfirmButton>
+          <ConfirmButton
+            question="Удалить группу? Её товары вернутся на витрину, клиенты потеряют доступ к ним."
+            onConfirm={() => groups.remove(g.id)}
+          >
+            Удалить
+          </ConfirmButton>
         </div>
       ),
     },
