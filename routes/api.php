@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
+use App\Http\Controllers\Api\Admin\StoreController as AdminStoreController;
 use App\Http\Controllers\Api\Admin\SupplierController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
@@ -171,6 +172,7 @@ Route::prefix('admin')
         // every change is recorded in the ledger.
         Route::get('stock', [StockController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('stores', AdminStoreController::class);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });
