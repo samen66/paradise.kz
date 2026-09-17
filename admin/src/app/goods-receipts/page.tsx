@@ -12,7 +12,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { buttonPrimary, inputClass } from '@/components/ui/styles';
 import DocumentStatusBadge from '@/components/warehouse/DocumentStatusBadge';
 import StoreSelect from '@/components/warehouse/StoreSelect';
-import { ReceiptFields, receiptSchema, toReceiptForm } from '@/components/warehouse/GoodsReceiptForm';
+import { ReceiptFields, receiptSchema, toReceiptForm, toReceiptPayload } from '@/components/warehouse/GoodsReceiptForm';
 
 export default function GoodsReceiptsPage() {
   const router = useRouter();
@@ -90,7 +90,7 @@ export default function GoodsReceiptsPage() {
           schema={receiptSchema}
           defaultValues={toReceiptForm(null)}
           onSubmit={async (values) => {
-            const receipt = (await receipts.create(values)) as unknown as GoodsReceipt;
+            const receipt = (await receipts.create(toReceiptPayload(values))) as unknown as GoodsReceipt;
             router.push(`/goods-receipts/${receipt.id}`);
           }}
           onClose={() => setCreating(false)}

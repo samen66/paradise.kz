@@ -36,6 +36,21 @@ export const toReceiptForm = (r: GoodsReceipt | null): ReceiptFormValues => ({
   note: r?.note ?? '',
 });
 
+/**
+ * `<input type="datetime-local">` yields an offset-less string
+ * ("2026-09-17T14:30"). `new Date(...)` parses that as local time, but the
+ * API stores `received_at` as a UTC instant (`APP_TIMEZONE=UTC`) — sent
+ * verbatim, Laravel would read "14:30" as UTC, and every later render would
+ * shift it by the browser's offset (an Almaty admin who types 14:30 would
+ * see 19:30 after reload). Converting to an ISO string here fixes the
+ * intended local instant as its UTC equivalent before it leaves the browser;
+ * `toReceiptForm`/`toLocalInput` above do the inverse when displaying it.
+ */
+export const toReceiptPayload = (values: ReceiptFormValues): ReceiptFormValues => ({
+  ...values,
+  received_at: values.received_at ? new Date(values.received_at).toISOString() : '',
+});
+
 export function ReceiptFields({ form, suppliers }: { form: UseFormReturn<ReceiptFormValues>; suppliers: Supplier[] }) {
   const { errors } = form.formState;
 

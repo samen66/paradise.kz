@@ -21,7 +21,7 @@ import MoneyInput from '@/components/ui/MoneyInput';
 import PageHeader from '@/components/ui/PageHeader';
 import { buttonLink, buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/components/ui/styles';
 import DocumentStatusBadge from '@/components/warehouse/DocumentStatusBadge';
-import { ReceiptFields, receiptSchema, toReceiptForm } from '@/components/warehouse/GoodsReceiptForm';
+import { ReceiptFields, receiptSchema, toReceiptForm, toReceiptPayload } from '@/components/warehouse/GoodsReceiptForm';
 import { quantityField } from '@/components/warehouse/QuantityForm';
 
 const lineSchema = z.object({
@@ -217,7 +217,7 @@ export default function GoodsReceiptPage() {
           schema={receiptSchema}
           defaultValues={toReceiptForm(receipt)}
           onSubmit={async (values) => {
-            const res = await api.put<{ data: GoodsReceipt }>(base, values);
+            const res = await api.put<{ data: GoodsReceipt }>(base, toReceiptPayload(values));
             setReceipt(res.data.data);
           }}
           onClose={() => setEditingHeader(false)}
