@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { isAxiosError } from 'axios';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { serverMessage } from '@/lib/errors';
+import { toast } from '@/stores/toastStore';
 
 /**
  * Product list.
@@ -84,7 +87,15 @@ export default function ProductsPage() {
       await api.delete(`/admin/products/${id}`);
       fetchProducts();
     } catch (error) {
-      console.error('Failed to delete product', error);
+      const message = serverMessage(error);
+
+      if (message) {
+        toast.error(message);
+      } else if (isAxiosError(error) && error.response && error.response.status < 500 && ![401, 403].includes(error.response.status)) {
+        // 401/403/5xx/network are already reported by the axios interceptor;
+        // this covers the remaining 4xx that would otherwise fail silently.
+        toast.error('Не удалось удалить');
+      }
     }
   };
 
