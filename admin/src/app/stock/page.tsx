@@ -17,7 +17,8 @@ type StockRow = {
   product_id: number;
   stock: string | number;
   avg_cost: number | null;
-  product?: { id: number; name: string; code?: string | null; article?: string | null } | null;
+  // Название переводимое (ru + kk), API отдаёт его объектом — как и в списке товаров.
+  product?: { id: number; name?: { ru?: string; kk?: string } | null; code?: string | null; article?: string | null } | null;
   store?: { id: number; name: string } | null;
 };
 
@@ -138,7 +139,7 @@ export default function StockPage() {
                     return (
                       <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{row.product?.name || `#${row.product_id}`}</div>
+                          <div className="font-medium text-gray-900">{row.product?.name?.ru || `#${row.product_id}`}</div>
                           <div className="text-xs text-gray-500 mt-0.5">
                             {row.product?.article || row.product?.code || '—'}
                           </div>

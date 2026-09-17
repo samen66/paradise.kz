@@ -205,6 +205,24 @@ SELECT id, number, status FROM orders WHERE status IN ('synced','failed');
 
 ---
 
+## Автоматом вместо рук
+
+Этот прогон целиком повторяет `php artisan mvp:acceptance --fresh` — те же пять
+сценариев, только запросами через полный HTTP-стек, без веб-сервера. Она
+проверяет базу и API; то, что нужное состояние **видно на экране**, доказывают
+браузерные тесты в `storefront/`, `b2b-portal/` и `admin/`. Порядок и команды —
+в `docs/e2e-runbook.md`:
+
+```bash
+php artisan mvp:acceptance --fresh --fixtures
+cd storefront && npx playwright test   # то же для b2b-portal и admin
+```
+
+Руками этот чеклист остаётся нужен там, где ни то, ни другое не достаёт: фото
+товара, WhatsApp-сообщения, вид писем, реальный Filament.
+
+---
+
 ## Что осталось после прогона
 
 - [ ] WhatsApp: аккаунт у провайдера (GreenAPI или аналог), заполнить

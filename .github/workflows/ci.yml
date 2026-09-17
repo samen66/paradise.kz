@@ -27,6 +27,68 @@ jobs:
       - name: Run PHPUnit
         run: php artisan test --parallel
 
+  # PHPUnit runs on sqlite :memory:; the acceptance walkthrough has to pass on
+  # the database production actually uses — NOT NULL and decimal handling have
+  # already diverged between the two. Browser tests (Playwright) are not here:
+  # they need the API plus three front-ends running and get their own job later.
+  acceptance:
+    name: MVP Acceptance (MySQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        # Same image as docker-compose.prod.yml.
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: paradise
+          MYSQL_USER: paradise
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: rootsecret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    # Real environment variables win over .env, so these point every artisan
+    # call at the service container. APP_ENV must stay local or testing:
+    # mvp:acceptance refuses to write anywhere else without --force.
+    env:
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: paradise
+      DB_USERNAME: paradise
+      DB_PASSWORD: secret
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # Same as the php:8.4-fpm production image; composer.lock needs >= 8.4.1.
+          php-version: '8.4'
+          extensions: mbstring, bcmath, intl, gd, zip, exif, pcntl, pdo_mysql
+          coverage: none
+      - name: Copy .env
+        run: cp .env.example .env
+      # laravel/framework 13.16 throws when a vendor package registers a
+      # DevCommand, and laravel/reverb 1.11 does exactly that, so a clean
+      # install dies in package:discover. Same patch as on local checkouts;
+      # drop it once laravel/framework is bumped past the check.
+      - name: Install Dependencies
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction --no-scripts
+          sed -i "s|^\(\s*\)DevCommands::artisan('reverb:start', 'reverb');|\1// &|" vendor/laravel/reverb/src/Reverb.php
+          composer run-script post-autoload-dump
+      - name: Generate key
+        run: php artisan key:generate
+      - name: Migrate & seed
+        run: php artisan migrate --seed --force
+      - name: Run acceptance
+        run: php artisan mvp:acceptance --fresh --no-interaction
+
   frontend-typecheck:
     name: Frontend Typecheck & Build (${{ matrix.app }})
     runs-on: ubuntu-latest

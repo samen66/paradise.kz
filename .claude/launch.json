@@ -4,13 +4,21 @@
     {
       "name": "laravel-serve",
       "runtimeExecutable": "php",
-      "runtimeArgs": ["artisan", "serve"],
+      "runtimeArgs": [
+        "artisan",
+        "serve"
+      ],
       "port": 8000
     },
     {
       "name": "storefront-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "storefront",
+        "run",
+        "dev"
+      ],
       "port": 3000
     }
   ]
