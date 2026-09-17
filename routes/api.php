@@ -22,6 +22,8 @@ use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\StoreController as AdminStoreController;
 use App\Http\Controllers\Api\Admin\SupplierController;
 use App\Http\Controllers\Api\Admin\UserController;
+use App\Http\Controllers\Api\Admin\WriteOffController;
+use App\Http\Controllers\Api\Admin\WriteOffItemController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\CartController as B2bCartController;
 use App\Http\Controllers\Api\CategoryController;
@@ -178,6 +180,9 @@ Route::prefix('admin')
         Route::apiResource('goods-receipts', GoodsReceiptController::class);
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post']);
         Route::apiResource('goods-receipts.items', GoodsReceiptItemController::class)->except('show')->scoped();
+        Route::apiResource('write-offs', WriteOffController::class);
+        Route::post('write-offs/{write_off}/post', [WriteOffController::class, 'post']);
+        Route::apiResource('write-offs.items', WriteOffItemController::class)->except('show')->scoped();
         Route::get('users', [UserController::class, 'index']);
         Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });

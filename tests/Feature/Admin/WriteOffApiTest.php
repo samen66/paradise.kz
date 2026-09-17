@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Admin;
+
+use App\Models\Product;
+use App\Models\Store;
+use App\Models\WriteOff;
+use App\Models\WriteOffItem;
+use App\Services\Inventory\FifoInventoryService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\Feature\Admin\Concerns\ActsAsStaff;
+use Tests\TestCase;
+
+class WriteOffApiTest extends TestCase
+{
+    use ActsAsStaff;
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpStaff();
+    }
+
+    #[Test]
+    public function only_staff_may_manage_write_offs(): void
+    {
+        $this->assertStaffOnly('GET', '/api/admin/write-offs');
+    }
+
+    #[Test]
+    public function a_draft_is_created_filtered_updated_partially_and_deleted(): void
+    {
+        $this->actingAsManager();
+        $store = Store::factory()->create();
+
+        $id = $this->postJson('/api/admin/write-offs', [
+            'store_id' => $store->id,
+            'reason' => 'damaged',
+            'note' => 'Порван чехол',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.label', 'Списание №1')
+            ->assertJsonPath('data.total_cost', null)
+            ->json('data.id');
+
+        WriteOff::factory()->create(['reason' => 'lost']);
+
+        $this->getJson("/api/admin/write-offs?filter[reason]=damaged&filter[store_id]={$store->id}")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $id)
+            ->assertJsonPath('data.0.items_count', 0);
+
+        $this->putJson("/api/admin/write-offs/{$id}", ['reason' => 'regrading'])
+            ->assertOk()
+            ->assertJsonPath('data.reason', 'regrading')
+            ->assertJsonPath('data.note', 'Порван чехол');
+
+        $this->deleteJson("/api/admin/write-offs/{$id}")->assertNoContent();
+        $this->assertDatabaseMissing('write_offs', ['id' => $id]);
+    }
+
+    #[Test]
+    public function store_and_a_known_reason_are_required(): void
+    {
+        $this->actingAsManager();
+
+        $this->postJson('/api/admin/write-offs', ['reason' => 'stolen'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['store_id', 'reason']);
+    }
+
+    #[Test]
+    public function posting_issues_stock_and_reports_the_cost(): void
+    {
+        $manager = $this->actingAsManager();
+        $store = Store::factory()->create();
+        $product = Product::factory()->create();
+        $inventory = app(FifoInventoryService::class);
+        $inventory->receive($product, $store, 2, 10_000);
+        $inventory->receive($product, $store, 2, 30_000);
+
+        $writeOff = WriteOff::factory()->for($store, 'store')->create();
+        WriteOffItem::factory()->for($writeOff, 'writeOff')->create(['product_id' => $product->id, 'quantity' => 3]);
+
+        $this->postJson("/api/admin/write-offs/{$writeOff->id}/post")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'posted')
+            ->assertJsonPath('data.user.id', $manager->id)
+            ->assertJsonPath('data.total_cost', 50_000);
+
+        $this->assertEqualsWithDelta(1.0, $inventory->onHand($product, $store), 0.001);
+
+        $this->putJson("/api/admin/write-offs/{$writeOff->id}", ['note' => 'x'])->assertUnprocessable();
+        $this->deleteJson("/api/admin/write-offs/{$writeOff->id}")->assertUnprocessable();
+        $this->postJson("/api/admin/write-offs/{$writeOff->id}/post")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Списание уже проведено.');
+    }
+
+    #[Test]
+    public function a_shortage_is_explained_and_nothing_is_written(): void
+    {
+        $this->actingAsManager();
+        $store = Store::factory()->create();
+        $product = Product::factory()->create(['name' => ['ru' => 'Диван Атланта']]);
+        app(FifoInventoryService::class)->receive($product, $store, 1.5, 10_000);
+
+        $writeOff = WriteOff::factory()->for($store, 'store')->create();
+        WriteOffItem::factory()->for($writeOff, 'writeOff')->create(['product_id' => $product->id, 'quantity' => 2]);
+
+        $this->postJson("/api/admin/write-offs/{$writeOff->id}/post")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Не хватает: Диван Атланта — нужно 2, доступно 1.5.');
+
+        $this->assertFalse($writeOff->fresh()->isPosted());
+    }
+}
