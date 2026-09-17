@@ -237,7 +237,11 @@
     "status": {
       "pending": "Өңделуде",
       "synced": "Расталды",
-      "failed": "Өңделуде"
+      "failed": "Өңделуде",
+      "confirmed": "Расталды",
+      "in_delivery": "Жеткізілуде",
+      "completed": "Орындалды",
+      "cancelled": "Бас тартылды"
     },
     "receivingPickup": "Өзі алып кету",
     "receivingDelivery": "Жеткізу",
@@ -252,7 +256,26 @@
     "profileSaved": "Сақталды",
     "nameLabel": "Аты",
     "phoneLabel": "Телефон",
-    "emailLabel": "Email"
+    "emailLabel": "Email",
+    "allOrders": "Барлық тапсырыстар",
+    "items": "Тауарлар",
+    "article": "Арт.",
+    "receiving": "Алу",
+    "pickupFrom": "Қоймадан өзі алып кету",
+    "apartment": "пәтер",
+    "payment": "Төлем",
+    "comment": "Түсініктеме",
+    "summary": "Сома",
+    "itemsCount": "Тауарлар, {count} дана",
+    "deliveryCost": "Жеткізу",
+    "total": "Барлығы",
+    "loadFailed": "Тапсырыс табылмады немесе жүктеу мүмкін болмады.",
+    "paymentStatus": {
+      "unpaid": "Төленбеген",
+      "paid": "Төленді",
+      "cancelled": "Төлем жойылды",
+      "failed": "Төлем қатесі"
+    }
   },
   "tracking": {
     "title": "Тапсырысты қадағалау",

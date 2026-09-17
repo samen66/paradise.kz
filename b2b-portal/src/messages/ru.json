@@ -237,7 +237,11 @@
     "status": {
       "pending": "В обработке",
       "synced": "Подтверждён",
-      "failed": "В обработке"
+      "failed": "В обработке",
+      "confirmed": "Подтверждён",
+      "in_delivery": "В доставке",
+      "completed": "Выполнен",
+      "cancelled": "Отменён"
     },
     "receivingPickup": "Самовывоз",
     "receivingDelivery": "Доставка",
@@ -252,7 +256,26 @@
     "profileSaved": "Сохранено",
     "nameLabel": "Имя",
     "phoneLabel": "Телефон",
-    "emailLabel": "Email"
+    "emailLabel": "Email",
+    "allOrders": "Все заказы",
+    "items": "Товары",
+    "article": "Арт.",
+    "receiving": "Получение",
+    "pickupFrom": "Самовывоз со склада",
+    "apartment": "кв.",
+    "payment": "Оплата",
+    "comment": "Комментарий",
+    "summary": "Сумма",
+    "itemsCount": "Товары, {count} поз.",
+    "deliveryCost": "Доставка",
+    "total": "Итого",
+    "loadFailed": "Заказ не найден или не удалось его загрузить.",
+    "paymentStatus": {
+      "unpaid": "Не оплачен",
+      "paid": "Оплачен",
+      "cancelled": "Оплата отменена",
+      "failed": "Ошибка оплаты"
+    }
   },
   "tracking": {
     "title": "Отследить заказ",

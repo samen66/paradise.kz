@@ -214,12 +214,14 @@ export interface OrderItem {
   quantity: number;
   price: number;
   image?: string | null;
+  article?: string | null;
 }
 
 export interface Order {
   id: number;
   number: string;
   status: string;
+  payment_status?: string;
   total: number;
   comment: string | null;
   contact_email: string | null;
