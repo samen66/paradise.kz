@@ -131,4 +131,14 @@ class GoodsReceiptServiceTest extends TestCase
 
         $this->service->post($receipt);
     }
+
+    #[Test]
+    public function line_cost_rounds_the_exact_half_up_instead_of_flooring_a_float_rounding_error(): void
+    {
+        // 0.820 * 75 = 61.5 exactly; half-up rounds to 62. A float multiply
+        // ((float) '0.820' * 75 === 61.49999999999999) would floor to 61.
+        $item = GoodsReceiptItem::factory()->create(['quantity' => '0.820', 'unit_cost' => 75]);
+
+        $this->assertSame(62, $item->lineCost());
+    }
 }

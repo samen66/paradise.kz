@@ -19,9 +19,6 @@ class GoodsReceiptController extends Controller
 {
     use RefusesPostedDocuments;
 
-    /** Line cost summed in SQL so the list costs one query per page. */
-    private const TOTAL_COST_SQL = '(select coalesce(sum(round(quantity * unit_cost)), 0) from goods_receipt_items where goods_receipt_items.goods_receipt_id = goods_receipts.id)';
-
     public function index(Request $request): JsonResponse
     {
         $receipts = QueryBuilder::for(GoodsReceipt::class)
@@ -29,14 +26,26 @@ class GoodsReceiptController extends Controller
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('store_id'),
             )
-            ->select('goods_receipts.*')
-            ->selectRaw(self::TOTAL_COST_SQL.' as total_cost')
-            ->withCasts(['total_cost' => 'integer'])
             ->withCount('items')
-            ->with(['store:id,name', 'supplier:id,name'])
+            // Lines are loaded (not summed in SQL) so total_cost agrees, to
+            // the тиын, with GoodsReceiptItem::lineCost() used by show() —
+            // a SQL sum(round(quantity * unit_cost)) on DECIMAL columns can
+            // round differently than the integer arithmetic lineCost() uses.
+            ->with([
+                'store:id,name',
+                'supplier:id,name',
+                'items:id,goods_receipt_id,quantity,unit_cost',
+            ])
             ->orderByDesc('id')
             ->paginate(20)
             ->appends($request->query());
+
+        $receipts->getCollection()->transform(function (GoodsReceipt $receipt): GoodsReceipt {
+            $receipt->setAttribute('total_cost', $receipt->totalCost());
+            $receipt->unsetRelation('items');
+
+            return $receipt;
+        });
 
         return response()->json($receipts);
     }

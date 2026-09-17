@@ -56,6 +56,26 @@ class GoodsReceiptApiTest extends TestCase
     }
 
     #[Test]
+    public function total_cost_rounds_half_up_exactly_in_the_list_and_the_show_response(): void
+    {
+        // quantity 0.820 x unit_cost 75 = 61.5 exactly; half-up rounds to 62.
+        // A naive `(float) '0.820' * 75` is 61.49999999999999 in PHP, which
+        // floors to 61 — this line is the regression guard for that.
+        $this->actingAsManager();
+        $receipt = GoodsReceipt::factory()->create();
+        GoodsReceiptItem::factory()->for($receipt, 'goodsReceipt')->create(['quantity' => '0.820', 'unit_cost' => 75]);
+
+        $this->getJson('/api/admin/goods-receipts')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $receipt->id)
+            ->assertJsonPath('data.0.total_cost', 62);
+
+        $this->getJson("/api/admin/goods-receipts/{$receipt->id}")
+            ->assertOk()
+            ->assertJsonPath('data.total_cost', 62);
+    }
+
+    #[Test]
     public function a_draft_is_created_shown_updated_partially_and_deleted(): void
     {
         $this->actingAsManager();
