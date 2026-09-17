@@ -57,13 +57,16 @@
 
 | Ресурс | Эндпоинты | Правила |
 |---|---|---|
-| Склады (`Store`) | `apiResource stores` | `name` (обяз.), `code`, `type` (`warehouse`\|`retail_point`), `address`, `is_active`, `is_default`. `is_default` — ровно у одного: установка в одной транзакции снимает флаг с остальных. `source`/`external_id` не принимаются и не отдаются. Удаление склада, у которого есть движения, партии, приёмки, списания или заказы → 422. Выключение или удаление последнего активного склада → 422 |
+| Склады (`Store`) | `apiResource stores` | `name` (обяз.), `code`, `type` (`warehouse`\|`retail_point`), `address`, `is_active`, `is_default`. `is_default` — не более чем у одного (установка в одной транзакции снимает флаг с остальных; снять флаг с текущего дефолтного или удалить его никто не переизбирает — складов без дефолта быть может). `source`/`external_id` не принимаются и не отдаются. Удаление склада, у которого есть движения, партии, приёмки, списания или заказы → 422. Выключение или удаление последнего активного склада → 422 |
 | Поставщики (`Supplier`) | `apiResource suppliers` (index: `filter[search]` по названию и БИН) | `name` (обяз.), `bin`, `phone`, `email`, `note`, `is_active`. Удаление поставщика с приёмками → 422 |
-| Приёмки (`GoodsReceipt`) | `apiResource goods-receipts` (index: фильтры `status`, `store_id`; пагинация) + `POST goods-receipts/{goods_receipt}/post` | Шапка: `supplier_id`, `store_id` (обяз.), `number`, `received_at`, `note`. Index/show отдают `items_count`, `total_cost` (тиын), `store`, `supplier`, `user` (id, name). Изменение/удаление проведённой → 422 «Документ проведён». `post` → `GoodsReceiptService::post`; `RuntimeException` → 422 с текстом |
-| Позиции приёмки | `goods-receipts/{goods_receipt}/items` — index/store/update/destroy (scoped) | `product_id`, `quantity` (> 0, до 3 знаков), `unit_cost` (₸ → тиын через `ConvertsTengeToTiyn`). Для проведённой — 422 |
-| Списания (`WriteOff`) | `apiResource write-offs` (фильтры `status`, `store_id`, `reason`; пагинация) + `POST write-offs/{write_off}/post` | Шапка: `store_id` (обяз.), `reason` (обяз.), `note`. Изменение/удаление проведённого → 422. `post` → `WriteOffService::post` |
-| Позиции списания | `write-offs/{write_off}/items` — index/store/update/destroy (scoped) | `product_id`, `quantity` (> 0, до 3 знаков). Index отдаёт у позиции `available` — текущий остаток товара на складе документа. Для проведённого — 422 |
-| Движения (`StockMovement`) | `GET stock-movements` | Только чтение. Фильтры: `product_id`, `store_id`, `type`, `from`, `to` (даты). Сортировка `-created_at`, пагинация 50. Строка: `id`, `created_at`, `store {id, name}`, `product {id, name, code}`, `type`, `qty_delta`, `unit_cost`, `balance_after`, `document {type: receipt\|write_off\|order, id, label} \| null`, `user {id, name} \| null`, `note` |
+| Приёмки (`GoodsReceipt`) | `apiResource goods-receipts` (index: фильтры `status`, `store_id`; пагинация) + `POST goods-receipts/{goods_receipt}/post` | Шапка: `supplier_id`, `store_id` (обяз.), `number`, `received_at` (ISO-инстант, фронт шлёт `new Date(...).toISOString()` от локального ввода), `note`. Index/show отдают `items_count`, `total_cost` (тиын, сумма `GoodsReceiptItem::lineCost()` — точная целочисленная half-up арифметика по позициям, не SQL SUM; `admin/src/lib/warehouse.ts` зеркалит ту же формулу для клиентского пересчёта), `store`, `supplier`, `user` (id, name). Изменение/удаление проведённой → 422 «Документ проведён — изменить нельзя.», под блокировкой строки документа (`RefusesPostedDocuments::whileDraft()`). `post` → `GoodsReceiptService::post`; `RuntimeException` → 422 с текстом |
+| Позиции приёмки | `goods-receipts/{goods_receipt}/items` — index/store/update/destroy (scoped) | `product_id`, `quantity` (> 0, до 3 знаков), `unit_cost` (₸ → тиын через `ConvertsTengeToTiyn`). Для проведённой — 422, тоже под `whileDraft()` |
+| Списания (`WriteOff`) | `apiResource write-offs` (фильтры `status`, `store_id`, `reason`; пагинация) + `POST write-offs/{write_off}/post` | Шапка: `store_id` (обяз.), `reason` (обяз.), `note`. Изменение/удаление проведённого → 422, под `whileDraft()`. `post` → `WriteOffService::post`; `total_cost` (только у проведённого) — сумма по движениям документа поштучно округлённой стоимости (`round(|qty_delta| × unit_cost)` на движение, как в `FifoInventoryService::issue()`), не сумма-затем-округление |
+| Позиции списания | `write-offs/{write_off}/items` — index/store/update/destroy (scoped) | `product_id`, `quantity` (> 0, до 3 знаков). Index отдаёт у позиции `available` — текущий остаток товара на складе документа. Для проведённого — 422, под `whileDraft()` |
+| Движения (`StockMovement`) | `GET stock-movements` | Только чтение. Фильтры: `product_id`, `store_id`, `type`, `from`, `to` (дата `YYYY-MM-DD` → границы календарного дня в таймзоне приложения, либо точный ISO-инстант — так шлёт `admin/`, переводя локальный день менеджера в UTC; нераспознанное значение не матчит ничего), `document` (`receipt:<id>` \| `write_off:<id>` \| `order:<id>`). Сортировка `-created_at`, пагинация 50. Строка: `id`, `created_at`, `store {id, name}`, `product {id, name: {ru, kk}, code}`, `type`, `qty_delta`, `unit_cost`, `balance_after`, `document {type: receipt\|write_off\|order, id, label} \| null`, `user {id, name} \| null`, `note` |
+
+Удаление товара также запрещено (422), если он есть в позициях списания
+(`writeOffItems()`), — так же, как для позиций приёмки.
 
 ### Сервисы
 
@@ -76,6 +79,10 @@
   `posted_at`, `user_id`.
 - `GoodsReceiptService::post` получает ту же блокировку и повторную проверку
   статуса внутри транзакции.
+- `RefusesPostedDocuments::whileDraft()` — не только `post()`, но и любая
+  правка черновика (шапка и позиции обоих документов) перечитывает документ
+  с `lockForUpdate()` внутри транзакции и перепроверяет статус, чтобы
+  конкурентное «Провести» не проскочило между проверкой контроллера и записью.
 
 ### Общие правила (как на этапе 1)
 
@@ -119,7 +126,10 @@
 ## 3. Права, ошибки, конкурентность
 
 - Доступ — `admin` и `manager`, без отдельного права на проведение.
-- Двойное проведение исключено блокировкой строки документа в сервисах.
+- Двойное проведение исключено блокировкой строки документа в сервисах; та же
+  блокировка (`whileDraft()`) стоит на каждой правке черновика — шапки и
+  позиций, — чтобы «Провести» не проскочило между проверкой контроллера и
+  записью.
 - Нехватка при списании откатывает всю транзакцию.
 - Ошибки на клиенте — механизм этапа 1 (интерсептор, 422 в форму или toast).
 - Filament-ресурсы склада работают до этапа 5 на тех же данных; списания есть

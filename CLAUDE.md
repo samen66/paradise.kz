@@ -23,15 +23,18 @@ and stock. The MoySklad integration it used to mirror from has been removed;
 
 - **`admin/` (Next.js)** — operational screens for managers: orders and status
   changes, products (with photos, prices by type, per-client prices,
-  attributes, variants), read-only stock, B2B client approval, categories,
-  brands, attributes, price types, catalog groups, product collections.
+  attributes, variants), stock with the movement ledger, goods receipts,
+  write-offs, warehouses, suppliers, B2B client approval, categories, brands,
+  attributes, price types, catalog groups, product collections.
   Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`). Shared UI lives
   in `admin/src/components/ui`, data access in `admin/src/lib/crud.ts`.
 - **Filament (`/admin` on the API host)** — being retired stage by stage
-  (`docs/superpowers/specs/2026-09-17-admin-catalog-migration-design.md`).
-  Still the only place for goods receipts, warehouses (Stores), suppliers,
-  CMS pages, banners, reviews, shorts, catalog settings and user editing.
-  `admin/` links out to it (`ERP_ADMIN_URL` in `admin/src/lib/api.ts`).
+  (`docs/superpowers/specs/2026-09-17-admin-catalog-migration-design.md`,
+  `docs/superpowers/specs/2026-09-17-admin-warehouse-design.md`).
+  Still the only place for CMS pages, banners, reviews, shorts, catalog
+  settings and user editing; its warehouse resources still work on the same
+  data until stage 5. `admin/` links out to it (`ERP_ADMIN_URL` in
+  `admin/src/lib/api.ts`).
 
 ### Stock: the local FIFO ledger is the source of truth
 
@@ -39,6 +42,7 @@ and stock. The MoySklad integration it used to mirror from has been removed;
 Goods receipt (GoodsReceiptService::post) ──> FifoInventoryService::receive()
 Order placed  (OrderPlacementService)     ──> FifoInventoryService::issue()
 Order cancelled (OrderCancellationService) ─> return movements, original cost
+Write-off posted (WriteOffService::post)  ──> FifoInventoryService::issue(type: write_off)
 
 FifoInventoryService writes:
   batches              — FIFO cost layers
