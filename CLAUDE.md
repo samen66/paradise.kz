@@ -22,11 +22,16 @@ and stock. The MoySklad integration it used to mirror from has been removed;
 ### Two admin panels, split by job
 
 - **`admin/` (Next.js)** — operational screens for managers: orders and status
-  changes, product list/edit, read-only stock, B2B client approval, categories,
-  brands. Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`).
-- **Filament (`/admin` on the API host)** — back-office: goods receipts,
-  warehouses (Stores), suppliers, price types, CMS pages, banners, reviews,
-  catalog groups. `admin/` links out to it (`ERP_ADMIN_URL` in `admin/src/lib/api.ts`).
+  changes, products (with photos, prices by type, per-client prices,
+  attributes, variants), read-only stock, B2B client approval, categories,
+  brands, attributes, price types, catalog groups, product collections.
+  Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`). Shared UI lives
+  in `admin/src/components/ui`, data access in `admin/src/lib/crud.ts`.
+- **Filament (`/admin` on the API host)** — being retired stage by stage
+  (`docs/superpowers/specs/2026-09-17-admin-catalog-migration-design.md`).
+  Still the only place for goods receipts, warehouses (Stores), suppliers,
+  CMS pages, banners, reviews, shorts, catalog settings and user editing.
+  `admin/` links out to it (`ERP_ADMIN_URL` in `admin/src/lib/api.ts`).
 
 ### Stock: the local FIFO ledger is the source of truth
 

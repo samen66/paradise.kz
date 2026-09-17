@@ -41,14 +41,14 @@ API-хосте) удаляется из Laravel-проекта. Переноси
 | Ресурс | Эндпоинты | Поля / правила |
 |---|---|---|
 | Атрибуты (`Attribute`) | `apiResource attributes` | `name` (строка), `slug` (уникальный), `is_filterable`. Удаление атрибута со значениями → 422 |
-| Типы цен (`PriceType`) | `apiResource price-types` | `code` (уникальный), `name`, `sort_order`. Удаление используемого типа → 422 |
+| Типы цен (`PriceType`) | `apiResource price-types` | `code` (уникальный), `name`, `sort_order`. Удаление используемого типа → 422; `update` без `sort_order` в теле оставляет текущее значение (не обнуляет) |
 | Группы каталога (`CatalogGroup`) | `apiResource catalog-groups`; `POST/DELETE catalog-groups/{group}/products/{product}`; `POST/DELETE catalog-groups/{group}/users/{user}` | `name`. Пользователь — только с ролью `b2b_customer`. Привязка идемпотентна |
-| Подборки (`ProductCollection`) | `apiResource product-collections`; `PUT product-collections/{collection}/products/{product}` (body: `sort_order`, attach-or-update); `DELETE …/products/{product}` | `title`, `slug`, `sort_order`, `is_active` |
-| Цены товара (`ProductPrice`) | `products/{product}/prices` — index/store/update/destroy (scoped) | `price_type_id` (уникален в пределах товара), `price` |
-| Цены клиентов (`ClientProductPrice`) | `products/{product}/client-prices` — index/store/update/destroy | `user_id` (роль `b2b_customer`, уникален в пределах товара), `price` |
-| Атрибуты товара (`AttributeValue`) | `products/{product}/attribute-values` — index/store/update/destroy | `attribute_id`, `value` |
+| Подборки (`ProductCollection`) | `apiResource product-collections`; `PUT product-collections/{collection}/products/{product}` (body: `sort_order`, attach-or-update); `DELETE …/products/{product}` | `title`, `slug`, `sort_order`, `is_active`. `update` карточки без `sort_order` в теле оставляет текущее значение |
+| Цены товара (`ProductPrice`) | `products/{product}/prices` — index/store/update/destroy (scoped) | `price_type_id` (уникален в пределах товара), `price`. Ответ отдаёт `price_type: {id, code, name}`, не всю модель типа |
+| Цены клиентов (`ClientProductPrice`) | `products/{product}/client-prices` — index/store/update/destroy | `user_id` (роль `b2b_customer`, уникален в пределах товара), `price`. Ответ отдаёт `user: {id, company_name, email, phone}` |
+| Атрибуты товара (`AttributeValue`) | `products/{product}/attribute-values` — index/store/update/destroy | `attribute_id`, `value`. Ответ отдаёт `attribute: {id, name, slug}` |
 | Варианты (`ProductVariant`) | `products/{product}/variants` — index/store/update/destroy | `name`, `code`, `retail_price`, `b2b_price`, `barcodes[]`, `characteristics{}`. Без `stock`, `external_id`, `synced_at`; колонки `source`/`external_id` NOT NULL — новый вариант получает `source = 'local'` и UUID |
-| Медиа товара | `POST products/{product}/media` (multipart `file`), `DELETE products/{product}/media/{media}`, `PUT products/{product}/media/order` (body: `ids[]`) | Коллекция `Product::IMAGE_COLLECTION`; jpeg/png/webp, до 10 МБ; порядок — `order_column` |
+| Медиа товара | `POST products/{product}/media` (multipart `file`), `DELETE products/{product}/media/{media}`, `PUT products/{product}/media/order` (body: `ids[]`) | Коллекция `Product::IMAGE_COLLECTION`; jpeg/png/webp, до 10 МБ; порядок — `order_column`. `order` принимает только полный набор id картинок товара (никаких пропусков/чужих id) — иначе 422 |
 
 Правила, общие для всех:
 
@@ -86,8 +86,10 @@ API-хосте) удаляется из Laravel-проекта. Переноси
 | `Toaster` | уведомления, стор на zustand (`toast.success/error` доступен и вне React) |
 
 `src/lib/crud.ts` — хук `useResource(path)` (list/create/update/remove +
-перезагрузка списка). `src/lib/money.ts` — единственное место с множителем 100
-на клиенте (переносит хелперы из `products/[id]/page.tsx`).
+перезагрузка списка); игнорирует ответ устаревшего запроса (быстрая смена
+страницы/фильтра) и показывает toast, если `remove` не удался. `src/lib/money.ts`
+— единственное место с множителем 100 на клиенте (переносит хелперы из
+`products/[id]/page.tsx`).
 
 Стиль — текущий (zinc/blue, `inputClass` из карточки товара), новой дизайн-системы
 не вводим.
@@ -105,8 +107,10 @@ API-хосте) удаляется из Laravel-проекта. Переноси
   чтение со ссылкой на `/stock`.
 - `/brands`, `/categories` переводятся на общие компоненты; `BrandModal.tsx` и
   `CategoryModal.tsx` удаляются.
-- `Sidebar` — группы «Каталог», «Продажи», «Склад»; ссылка на Filament
-  (`ERP_ADMIN_URL`) остаётся до этапа 5.
+- `Sidebar` — группы «Продажи», «Каталог», «Запасы» (в этом порядке; «Склад» —
+  подпись ссылки на `/stock` внутри группы «Запасы», а не название группы);
+  ссылка на Filament (`ERP_ADMIN_URL`) остаётся до этапа 5 — она встроена в
+  страницы `/stock` и предупреждение о неактивном складе, а не в `Sidebar`.
 
 ### Ошибки на клиенте
 
@@ -135,7 +139,10 @@ API-хосте) удаляется из Laravel-проекта. Переноси
 - **admin/** — `npx tsc --noEmit && npm run build`.
 - **Playwright** (`admin/e2e`, acceptance-фикстуры): `attributes.spec.ts`,
   `catalog-groups.spec.ts`, `product-relations.spec.ts` (фото, цены по типам).
-  Существующие `orders`, `products`, `stock` остаются зелёными.
+  Существующие `orders`, `products`, `stock` остаются зелёными. Каждый спек
+  убирает за собой через API в `afterEach` (не полагаясь на состояние БД);
+  очистка загруженных медиа падает намеренно (fail closed), если не может
+  подтвердить, что удаляет именно то, что сама же загрузила.
 
 Прогон тестов — через `phpunit.xml`/`.env.testing`, `.env` не трогаем.
 
