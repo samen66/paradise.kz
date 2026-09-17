@@ -40,14 +40,14 @@ API-хосте) удаляется из Laravel-проекта. Переноси
 
 | Ресурс | Эндпоинты | Поля / правила |
 |---|---|---|
-| Атрибуты (`Attribute`) | `apiResource attributes` | `name` (ru/kk), `slug` (уникальный), `is_filterable`. Удаление атрибута со значениями → 422 |
+| Атрибуты (`Attribute`) | `apiResource attributes` | `name` (строка), `slug` (уникальный), `is_filterable`. Удаление атрибута со значениями → 422 |
 | Типы цен (`PriceType`) | `apiResource price-types` | `code` (уникальный), `name`, `sort_order`. Удаление используемого типа → 422 |
 | Группы каталога (`CatalogGroup`) | `apiResource catalog-groups`; `POST/DELETE catalog-groups/{group}/products/{product}`; `POST/DELETE catalog-groups/{group}/users/{user}` | `name`. Пользователь — только с ролью `b2b_customer`. Привязка идемпотентна |
 | Подборки (`ProductCollection`) | `apiResource product-collections`; `PUT product-collections/{collection}/products/{product}` (body: `sort_order`, attach-or-update); `DELETE …/products/{product}` | `title`, `slug`, `sort_order`, `is_active` |
 | Цены товара (`ProductPrice`) | `products/{product}/prices` — index/store/update/destroy (scoped) | `price_type_id` (уникален в пределах товара), `price` |
 | Цены клиентов (`ClientProductPrice`) | `products/{product}/client-prices` — index/store/update/destroy | `user_id` (роль `b2b_customer`, уникален в пределах товара), `price` |
 | Атрибуты товара (`AttributeValue`) | `products/{product}/attribute-values` — index/store/update/destroy | `attribute_id`, `value` |
-| Варианты (`ProductVariant`) | `products/{product}/variants` — index/store/update/destroy | `name`, `code`, `retail_price`, `b2b_price`, `barcodes[]`, `characteristics{}`. Без `stock`, `external_id`, `synced_at` |
+| Варианты (`ProductVariant`) | `products/{product}/variants` — index/store/update/destroy | `name`, `code`, `retail_price`, `b2b_price`, `barcodes[]`, `characteristics{}`. Без `stock`, `external_id`, `synced_at`; колонки `source`/`external_id` NOT NULL — новый вариант получает `source = 'local'` и UUID |
 | Медиа товара | `POST products/{product}/media` (multipart `file`), `DELETE products/{product}/media/{media}`, `PUT products/{product}/media/order` (body: `ids[]`) | Коллекция `Product::IMAGE_COLLECTION`; jpeg/png/webp, до 10 МБ; порядок — `order_column` |
 
 Правила, общие для всех:
@@ -56,8 +56,8 @@ API-хосте) удаляется из Laravel-проекта. Переноси
   `ProductSaveRequest` (`prepareForValidation` / `validated`).
 - Вложенные ресурсы — scoped bindings: `products/1/prices/{price}` чужого
   товара → 404.
-- Ответ: `{data: …}` для одной записи, Laravel-пагинатор для списков, 204 на
-  удаление — как в существующих админ-контроллерах.
+- Ответ: `{data: …}` для одной записи; справочники и связи товара — `{data: [...]}`
+  без пагинации (их десятки, не тысячи); 204 на удаление.
 - Бизнес-запреты — 422 с `message`, 404 на отсутствующую запись. Свой конверт
   ошибок не вводим.
 
@@ -68,7 +68,7 @@ API-хосте) удаляется из Laravel-проекта. Переноси
   убирается из `ProductSaveRequest`.
 - `destroy`: товар с записями в `stock_movements` → 422 (ledger не должен
   ссылаться на удалённый товар).
-- `show` дополнительно отдаёт `media` в порядке `order_column` с URL.
+- `show` отдаёт `images: [{id, file_name, url, thumb_url, order}]` в порядке `order_column`.
 
 ## 2. `admin/` — экраны и компоненты
 
@@ -83,7 +83,7 @@ API-хосте) удаляется из Laravel-проекта. Переноси
 | `EntityPicker` | поиск по API + выбор товара/клиента для привязки |
 | `ConfirmButton` | подтверждение удаления |
 | `Tabs` | вкладки |
-| `ToastProvider` | уведомления, стор на zustand |
+| `Toaster` | уведомления, стор на zustand (`toast.success/error` доступен и вне React) |
 
 `src/lib/crud.ts` — хук `useResource(path)` (list/create/update/remove +
 перезагрузка списка). `src/lib/money.ts` — единственное место с множителем 100
@@ -134,7 +134,7 @@ API-хосте) удаляется из Laravel-проекта. Переноси
   + `Storage::fake()`.
 - **admin/** — `npx tsc --noEmit && npm run build`.
 - **Playwright** (`admin/e2e`, acceptance-фикстуры): `attributes.spec.ts`,
-  `catalog-groups.spec.ts`, расширение `products.spec.ts` (цены, медиа).
+  `catalog-groups.spec.ts`, `product-relations.spec.ts` (фото, цены по типам).
   Существующие `orders`, `products`, `stock` остаются зелёными.
 
 Прогон тестов — через `phpunit.xml`/`.env.testing`, `.env` не трогаем.
