@@ -14,6 +14,13 @@ type Props = SelectHTMLAttributes<HTMLSelectElement> & {
 export default function StoreSelect({ emptyLabel = 'Выберите склад', className, ...props }: Props) {
   const stores = useResource<Store>('/admin/stores');
 
+  // Options load asynchronously: rendering the select before they arrive
+  // would show it empty even though a react-hook-form default `store_id`
+  // is already set, since the matching <option> doesn't exist yet.
+  if (stores.loading && stores.items.length === 0) {
+    return <div className={inputClass}>Загрузка…</div>;
+  }
+
   return (
     <select className={`${inputClass} ${className ?? ''}`} {...props}>
       <option value="">{emptyLabel}</option>

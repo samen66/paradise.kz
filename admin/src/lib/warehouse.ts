@@ -149,6 +149,21 @@ export const formatQty = (value: number | string | null | undefined): string =>
     ? '—'
     : Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 3 });
 
+/**
+ * Line cost in тиын (quantity × unit cost), rounded half-up — mirrors
+ * `GoodsReceiptItem::lineCost()` on the server (thousandths split on the
+ * integer milli-quantity) so the displayed per-line and total sums agree
+ * with what posting computes, without the float drift a plain
+ * `Math.round(Number(quantity) * unitCost)` can produce.
+ */
+export const lineCost = (quantity: string, unitCost: number): number => {
+  const milli = Math.round(Number(quantity) * 1000);
+  const whole = Math.trunc(milli / 1000);
+  const thousandths = milli % 1000;
+
+  return whole * unitCost + Math.trunc((thousandths * unitCost + 500) / 1000);
+};
+
 export const formatDateTime = (value: string | null | undefined): string =>
   value ? new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
