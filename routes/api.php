@@ -8,9 +8,11 @@ use App\Http\Controllers\Api\Admin\AttributeController;
 use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\CatalogGroupController;
 use App\Http\Controllers\Api\Admin\CatalogGroupMemberController;
+use App\Http\Controllers\Api\Admin\ClientProductPriceController;
 use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\ProductCollectionController;
 use App\Http\Controllers\Api\Admin\ProductCollectionProductController;
+use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
@@ -146,6 +148,9 @@ Route::prefix('admin')
         Route::apiResource('product-collections', ProductCollectionController::class);
         Route::put('product-collections/{product_collection}/products/{product}', [ProductCollectionProductController::class, 'upsert']);
         Route::delete('product-collections/{product_collection}/products/{product}', [ProductCollectionProductController::class, 'destroy']);
+        // Relations of a product; a child of another product answers 404.
+        Route::apiResource('products.prices', ProductPriceController::class)->except('show')->scoped();
+        Route::apiResource('products.client-prices', ClientProductPriceController::class)->except('show')->scoped();
         Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
