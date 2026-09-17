@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
+use App\Http\Controllers\Api\Admin\SupplierController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\CartController as B2bCartController;
@@ -169,6 +170,7 @@ Route::prefix('admin')
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
         Route::get('stock', [StockController::class, 'index']);
+        Route::apiResource('suppliers', SupplierController::class);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });
