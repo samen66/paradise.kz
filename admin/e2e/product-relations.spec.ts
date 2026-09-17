@@ -13,7 +13,9 @@ test.use({ storageState: ADMIN_SESSION });
 
 // Что завёл текущий тест — читается в afterEach как страховка на случай
 // падения раньше собственных шагов удаления через интерфейс.
-let mediaGuard: { productId: number; before: number[] } | null = null;
+// mediaGuard вооружается только когда снимок «до» надёжен (см. ниже) — иначе
+// afterEach рискует стереть все фото уже существующего товара.
+let mediaGuard: { productId: number; before: number[]; maxBeforeId: number } | null = null;
 let priceTypeGuard: { productId: number; code: string } | null = null;
 
 test.beforeEach(({ page }) => {
@@ -26,11 +28,13 @@ test.afterEach(async ({ request }) => {
   const api = adminApi(request);
 
   if (mediaGuard) {
-    const { productId, before } = mediaGuard;
+    const { productId, before, maxBeforeId } = mediaGuard;
     const media = await api.get<{ data: { id: number }[] }>(`/admin/products/${productId}/media`);
 
     for (const image of media?.data ?? []) {
-      if (!before.includes(image.id)) {
+      // Не в снимке "до" И новее любого снятого до загрузки — двойная
+      // проверка на случай, если снимок "до" неполон (пагинация и т. п.).
+      if (!before.includes(image.id) && image.id > maxBeforeId) {
         await api.delete(`/admin/products/${productId}/media/${image.id}`);
       }
     }
@@ -60,7 +64,15 @@ test("фото загружается в товар и удаляется", asyn
 
   const api = adminApi(request);
   const before = await api.get<{ data: { id: number }[] }>(`/admin/products/${product.id}/media`);
-  mediaGuard = { productId: product.id, before: (before?.data ?? []).map((i) => i.id) };
+
+  // Вооружаем страховку, только если снимок "до" точно снят: успешный ответ
+  // с массивом data. Иначе (сбой запроса, неожиданная форма) afterEach не
+  // должен трогать медиа вообще — лучше не подчистить тестовое фото, чем
+  // случайно стереть все фото общего товара "в наличии".
+  if (before && Array.isArray(before.data)) {
+    const ids = before.data.map((i) => i.id);
+    mediaGuard = { productId: product.id, before: ids, maxBeforeId: ids.length ? Math.max(...ids) : 0 };
+  }
 
   await page.goto(`/products/${product.id}`);
   await page.getByRole("tab", { name: "Фото" }).click();

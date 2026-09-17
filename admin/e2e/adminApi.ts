@@ -42,10 +42,19 @@ export function adminApi(request: APIRequestContext) {
   });
 
   return {
-    /** Never throws — a failed cleanup lookup returns null and callers skip it. */
+    /**
+     * Never throws — a failed cleanup lookup returns null and callers skip
+     * it. A non-2xx response also returns null rather than JSON-parsing an
+     * error body as if it were data: callers must not mistake `null` for
+     * "nothing to clean up" when it actually means "couldn't find out".
+     */
     async get<T = unknown>(path: string): Promise<T | null> {
       try {
         const res = await request.get(`${API_URL}${path}`, { headers: headers() });
+
+        if (!res.ok()) {
+          return null;
+        }
 
         return (await res.json()) as T;
       } catch {
