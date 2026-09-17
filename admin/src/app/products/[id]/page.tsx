@@ -4,16 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { tiynToTenge } from '@/lib/money';
+import ProductRelations from '@/components/products/ProductRelations';
 
 type Option = { id: number; name?: { ru?: string; kk?: string } | string };
-
-/**
- * Prices cross this boundary in ₸ and are stored in тиын — see
- * App\Http\Requests\Admin\ProductSaveRequest for the server half of the
- * contract. These two helpers are the only place the factor of 100 lives.
- */
-const kopecksToTenge = (value: unknown): string =>
-  value === null || value === undefined || value === '' ? '' : String(Number(value) / 100);
 
 const optionLabel = (o: Option): string =>
   (typeof o.name === 'string' ? o.name : o.name?.ru) || `#${o.id}`;
@@ -85,9 +79,6 @@ export default function EditProductPage() {
   // Read-only: a projection of the FIFO ledger, moved by receipts and orders.
   const [stock, setStock] = useState<string | null>(null);
 
-  const [images, setImages] = useState<File[]>([]);
-  const [currentMedia, setCurrentMedia] = useState<any[]>([]);
-
   useEffect(() => {
     const fetchOptions = async () => {
       try {
@@ -124,11 +115,11 @@ export default function EditProductPage() {
               article: p.article || '',
               category_id: p.category_id ? String(p.category_id) : '',
               brand_id: p.brand_id ? String(p.brand_id) : '',
-              retail_price: kopecksToTenge(p.retail_price),
-              b2b_price: kopecksToTenge(p.b2b_price),
-              compare_at_price: kopecksToTenge(p.compare_at_price),
-              min_price: kopecksToTenge(p.min_price),
-              purchase_price: kopecksToTenge(p.purchase_price),
+              retail_price: tiynToTenge(p.retail_price),
+              b2b_price: tiynToTenge(p.b2b_price),
+              compare_at_price: tiynToTenge(p.compare_at_price),
+              min_price: tiynToTenge(p.min_price),
+              purchase_price: tiynToTenge(p.purchase_price),
               b2b_min_order_qty: p.b2b_min_order_qty ? String(p.b2b_min_order_qty) : '',
               uom: p.uom || '',
               weight: p.weight === null || p.weight === undefined ? '' : String(p.weight),
@@ -139,7 +130,6 @@ export default function EditProductPage() {
               is_new_arrival: p.is_new_arrival ?? false,
             });
             setStock(p.stock === null || p.stock === undefined ? null : String(p.stock));
-            setCurrentMedia(p.media || []);
           }
         } catch (error) {
           console.error('Failed to fetch product', error);
@@ -177,10 +167,6 @@ export default function EditProductPage() {
       data.append('is_active', formData.is_active ? '1' : '0');
       data.append('is_new_arrival', formData.is_new_arrival ? '1' : '0');
 
-      images.forEach((img) => {
-        data.append('images[]', img);
-      });
-
       let url = `/admin/products`;
       if (!isCreate) {
         url += `/${id}`;
@@ -193,7 +179,9 @@ export default function EditProductPage() {
         },
       });
 
-      if (res.status === 200 || res.status === 201) {
+      if (isCreate && res.status === 201) {
+        router.push(`/products/${res.data.data.id}`);
+      } else if (res.status === 200) {
         router.push('/products');
       }
     } catch (error: any) {
@@ -417,42 +405,11 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          {/* ----------------------------------------------------------- Media */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-            <h2 className="text-lg font-semibold border-b pb-2">Media & Images</h2>
-
-            {currentMedia.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Current Images</label>
-                <div className="flex gap-4 flex-wrap">
-                  {currentMedia.map((m) => (
-                    <div key={m.id} className="relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden group">
-                      <img src={m.original_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500">Uploading new images will replace these.</p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Upload New Images</label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setImages(Array.from(e.target.files));
-                  }
-                }}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all border border-gray-200 rounded-lg p-1 bg-gray-50 cursor-pointer"
-              />
-              {images.length > 0 && (
-                <p className="text-sm text-green-600 mt-2">{images.length} file(s) selected.</p>
-              )}
-            </div>
-          </div>
+          {isCreate && (
+            <p className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-500">
+              Фото, цены по типам, цены клиентов, характеристики и варианты появятся после сохранения товара.
+            </p>
+          )}
 
           <div className="flex justify-end gap-4 pb-12">
             <Link
@@ -473,6 +430,12 @@ export default function EditProductPage() {
             </button>
           </div>
         </form>
+
+        {!isCreate && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-12">
+            <ProductRelations productId={Number(id)} />
+          </div>
+        )}
       </div>
     </div>
   );
