@@ -26,7 +26,11 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/zz-app.ini
+RUN { \
+        echo "memory_limit=512M"; \
+        echo "upload_max_filesize=12M"; \
+        echo "post_max_size=16M"; \
+    } > /usr/local/etc/php/conf.d/zz-app.ini
 
 WORKDIR /var/www/html
 
