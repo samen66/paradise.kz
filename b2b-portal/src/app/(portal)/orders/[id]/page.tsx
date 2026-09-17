@@ -15,15 +15,31 @@ export default function B2BOrderDetailPage({ params }: { params: Promise<{ id: s
   const tCheckout = useTranslations("checkout");
   const token = useB2bAuth((state) => state.token);
   const [order, setOrder] = useState<Order | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (!token) {
       return;
     }
+    setLoadFailed(false);
     void apiGet<{ data: Order }>(`/orders/${id}`, { token, locale: "ru", revalidate: false })
       .then((response) => setOrder(response.data))
-      .catch(() => setOrder(null));
+      .catch(() => {
+        setOrder(null);
+        setLoadFailed(true);
+      });
   }, [token, id]);
+
+  if (loadFailed) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 py-20 text-center">
+        <p className="text-muted">Заказ не найден или не удалось его загрузить.</p>
+        <Link href="/orders" className="text-sm font-medium text-ink underline">
+          Все заказы
+        </Link>
+      </div>
+    );
+  }
 
   if (order === null) {
     return (

@@ -237,7 +237,11 @@
     "status": {
       "pending": "В обработке",
       "synced": "Подтверждён",
-      "failed": "В обработке"
+      "failed": "В обработке",
+      "confirmed": "Подтверждён",
+      "in_delivery": "В доставке",
+      "completed": "Выполнен",
+      "cancelled": "Отменён"
     },
     "receivingPickup": "Самовывоз",
     "receivingDelivery": "Доставка",

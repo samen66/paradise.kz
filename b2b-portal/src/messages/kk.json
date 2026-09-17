@@ -237,7 +237,11 @@
     "status": {
       "pending": "Өңделуде",
       "synced": "Расталды",
-      "failed": "Өңделуде"
+      "failed": "Өңделуде",
+      "confirmed": "Расталды",
+      "in_delivery": "Жеткізілуде",
+      "completed": "Орындалды",
+      "cancelled": "Бас тартылды"
     },
     "receivingPickup": "Өзі алып кету",
     "receivingDelivery": "Жеткізу",
