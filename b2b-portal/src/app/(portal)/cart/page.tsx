@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useB2bCart } from "@/stores/useB2bCart";
+import { maxQuantityFor, useB2bCart } from "@/stores/useB2bCart";
 import { useB2bAuth } from "@/stores/useB2bAuth";
 import { apiPost } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
@@ -20,29 +20,44 @@ export default function B2BCartPage() {
   const t = useTranslations("cart");
   const tCheckout = useTranslations("checkout");
   const { token } = useB2bAuth();
-  const { items, removeItem, updateQuantity } = useB2bCart();
+  const { items, removeItem, updateQuantity, syncStock } = useB2bCart();
   const [mounted, setMounted] = useState(false);
   const [validation, setValidation] = useState<CartValidation | null>(null);
 
   useEffect(() => setMounted(true), []);
 
+  // Re-check only when what is ordered changes — not when syncStock() below
+  // refreshes the stock stored on the cart lines.
+  const cartKey = useMemo(
+    () => items.filter((item) => item?.product).map((item) => `${item.product.id}:${item.quantity}`).join(","),
+    [items],
+  );
+
   const revalidate = useCallback(async () => {
-    if (items.length === 0 || !token) {
+    if (cartKey === "" || !token) {
       setValidation(null);
       return;
     }
     try {
       const response = await apiPost<{ data: CartValidation }>(
         "/cart/validate",
-        { items: items.filter(item => item?.product).map((item) => ({ product_id: item.product.id, quantity: item.quantity })) },
+        {
+          items: cartKey.split(",").map((pair) => {
+            const [productId, quantity] = pair.split(":");
+            return { product_id: Number(productId), quantity: Number(quantity) };
+          }),
+        },
         { token, locale: "ru" },
       );
       setValidation(response.data);
+      // The warehouse may hold less than when the product was added: cap the
+      // quantity steppers with what the server sees now.
+      syncStock(Object.fromEntries(response.data.items.map((line) => [line.product_id, line.stock])));
     } catch {
       // The cart still renders from local data if validation is unreachable.
       setValidation(null);
     }
-  }, [items, token]);
+  }, [cartKey, token, syncStock]);
 
   useEffect(() => {
     if (mounted) {
@@ -73,6 +88,10 @@ export default function B2BCartPage() {
 
   const lineByProduct = new Map(validation?.items.map((line) => [line.product_id, line]) ?? []);
   const hasAvailableItems = validation === null || validation.items.some((line) => line.available);
+  // Checkout places the cart as it is, so every line must pass first — a
+  // problem line is never dropped from the order silently.
+  const hasProblems = validation !== null && validation.items.some((line) => !line.available);
+  const canCheckout = hasAvailableItems && !hasProblems;
   const validItems = items.filter((item) => item?.product);
   const subtotal =
     validation?.subtotal ?? validItems.reduce((sum, item) => sum + (item.product?.price ?? 0) * item.quantity, 0);
@@ -88,8 +107,9 @@ export default function B2BCartPage() {
             const line = lineByProduct.get(product.id);
             const price = line?.available ? line.price : product.price;
             const displayName = line?.name ?? product.name;
-            const href = `/product/${product.slug ?? product.id}`;
-            const minQty = product.b2b_min_order_qty ?? 1;
+            const href = `/product/${product.id}`;
+            const minQty = line?.min_qty ?? product.b2b_min_order_qty ?? 1;
+            const maxQty = line ? Math.floor(line.stock) : maxQuantityFor(product);
 
             return (
               <li
@@ -136,10 +156,31 @@ export default function B2BCartPage() {
                   )}
 
                   {line && !line.available ? (
-                    <span className="mt-2 inline-flex w-fit items-center rounded-full bg-sale px-2.5 py-1 text-xs font-medium text-sale-ink">
-                      {t(`problems.${line.problem ?? "unavailable"}`)}
-                      {line.problem === "insufficient_stock" ? ` (${line.stock})` : ""}
-                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex w-fit items-center rounded-full bg-sale px-2.5 py-1 text-xs font-medium text-sale-ink">
+                        {t(`problems.${line.problem ?? "unavailable"}`)}
+                        {line.problem === "insufficient_stock" ? ` — ${t("inStockOnly", { count: Math.floor(line.stock) })}` : ""}
+                        {line.problem === "below_min_qty" ? ` — ${minQty} шт.` : ""}
+                      </span>
+                      {line.problem === "insufficient_stock" && Math.floor(line.stock) >= minQty ? (
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(product.id, Math.floor(line.stock))}
+                          className="text-xs font-medium text-ink underline underline-offset-2 hover:no-underline"
+                        >
+                          {t("reduceTo", { count: Math.floor(line.stock) })}
+                        </button>
+                      ) : null}
+                      {line.problem === "below_min_qty" && line.stock >= minQty ? (
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(product.id, minQty)}
+                          className="text-xs font-medium text-ink underline underline-offset-2 hover:no-underline"
+                        >
+                          {t("raiseTo", { count: minQty })}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   <div className="mt-auto flex items-center pt-3">
@@ -159,7 +200,7 @@ export default function B2BCartPage() {
                         aria-label="+"
                         className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
                         onClick={() => updateQuantity(product.id, item.quantity + 1)}
-                        disabled={line?.stock !== undefined && item.quantity >= line.stock}
+                        disabled={maxQty !== null && item.quantity >= maxQty}
                       >
                         +
                       </button>
@@ -181,11 +222,18 @@ export default function B2BCartPage() {
             <span className="text-xl font-semibold text-ink">{formatPrice(subtotal, "ru")}</span>
           </div>
 
+          {hasProblems ? (
+            <p role="alert" className="mt-4 text-sm font-medium text-sale">
+              {t("fixBeforeCheckout")}
+            </p>
+          ) : null}
+
           <Link
             href="/checkout"
-            aria-disabled={!hasAvailableItems}
+            aria-disabled={!canCheckout}
+            tabIndex={canCheckout ? undefined : -1}
             className={`mt-5 w-full ${primaryCtaClasses} ${
-              hasAvailableItems ? "" : "pointer-events-none opacity-50"
+              canCheckout ? "" : "pointer-events-none opacity-50"
             }`}
           >
             {t("checkout")}

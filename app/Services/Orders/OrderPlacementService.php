@@ -57,6 +57,7 @@ class OrderPlacementService
         private readonly PricingService $pricing,
         private readonly FifoInventoryService $inventory,
         private readonly DeliveryCostCalculator $deliveryCalculator,
+        private readonly B2bCartChecker $cartChecker,
     ) {}
 
     /**
@@ -295,7 +296,8 @@ class OrderPlacementService
 
     /**
      * Validate every cart item and produce the order-item attribute rows for
-     * an authenticated B2B client.
+     * an authenticated B2B client. The rules live in {@see B2bCartChecker},
+     * shared with the portal's cart check, so both always agree.
      *
      * @param  array<int, array{product_id: int, quantity: int|float|string}>  $items
      * @return array{0: array<int, array<string, mixed>>, 1: array<int, Product>} Lines, and their products keyed by product id.
@@ -304,41 +306,28 @@ class OrderPlacementService
      */
     private function buildLines(User $user, Store $store, array $items): array
     {
-        $stockByProductId = $this->stockByProductId($store, $items);
         $lines = [];
         $products = [];
 
-        foreach ($items as $index => $item) {
-            $product = Product::findOrFail($item['product_id']);
-            $quantity = (float) $item['quantity'];
+        foreach ($this->cartChecker->check($user, $store, $items) as $index => $checked) {
+            $product = $checked['product'];
+            $name = $product?->name;
 
-            if (! $this->visibility->canSee($user, $product)) {
-                $this->reject($index, "Товар «{$product->name}» недоступен для заказа.");
-            }
-
-            // The order is fulfilled from exactly one warehouse, so only that
-            // warehouse's balance may be promised — including when it is zero.
-            // (The old fallback to the all-warehouse aggregate let a sold-out
-            // line pass this pre-check and fail later inside issue().)
-            $availableStock = (float) ($stockByProductId[$product->id] ?? 0);
-
-            if ($quantity > $availableStock) {
-                $this->reject($index, "Товара «{$product->name}» недостаточно на складе «{$store->name}».");
-            }
-
-            $price = $this->pricing->priceFor($user, $product);
-
-            if ($price === null) {
-                $this->reject($index, "Для товара «{$product->name}» не определена цена.");
-            }
+            match ($checked['problem']) {
+                null => null,
+                B2bCartChecker::PROBLEM_UNAVAILABLE => $this->reject($index, "Товар «{$name}» недоступен для заказа."),
+                B2bCartChecker::PROBLEM_NO_PRICE => $this->reject($index, "Для товара «{$name}» не определена цена."),
+                B2bCartChecker::PROBLEM_BELOW_MIN_QTY => $this->reject($index, "Минимальное количество для «{$name}» — {$checked['min_qty']} шт."),
+                default => $this->reject($index, "Товара «{$name}» недостаточно на складе «{$store->name}»."),
+            };
 
             $products[$product->id] = $product;
             $lines[] = [
                 'product_id' => $product->id,
                 'external_product_id' => $product->externalMapping?->external_id,
                 'name' => $product->name,
-                'quantity' => $quantity,
-                'price' => $price,
+                'quantity' => $checked['quantity'],
+                'price' => $checked['price'],
             ];
         }
 

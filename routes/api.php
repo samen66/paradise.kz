@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\CartController as B2bCartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
@@ -69,7 +70,11 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/products/{product}', [ProductController::class, 'show']);
+    // Numeric id only: slugs are the public storefront's addressing. Without
+    // the constraint MySQL would cast '3-kreslo' to 3 and resolve product 3.
+    Route::get('/products/{product}', [ProductController::class, 'show'])->whereNumber('product');
+
+    Route::post('/cart/validate', [B2bCartController::class, 'validateCart']);
 
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);

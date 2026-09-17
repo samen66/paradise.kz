@@ -12,11 +12,6 @@ import { snap } from "./shop";
  */
 test.use({ storageState: B2B_SESSION });
 
-// Карточки товара портала здесь нет намеренно: /product/{slug} в b2b-portal
-// сейчас не открывается — страница просит у API /api/products/{slug}, а этот
-// маршрут принимает только id и отдаёт 404. Пока это не починено в приложении,
-// теста на неё не будет: вечно красный тест хуже отсутствующего.
-
 /** Цена в карточке — Intl с валютой, пробелы внутри неразрывные. Сравниваем по цифрам. */
 function digitsOf(text: string): string {
   return text.replace(/\D/g, "");
@@ -65,4 +60,34 @@ test("распроданный товар портал тоже помечает
   const card = page.locator("article").filter({ hasText: product.article });
   await expect(card).toContainText("Нет в наличии");
   await expect(card.getByRole("button", { name: "В корзину" })).toHaveCount(0);
+});
+
+test("из каталога открывается карточка товара по id: оптовая цена и кнопка «В корзину»", async ({ page }) => {
+  const product = requireInStockProduct();
+
+  await page.goto(`/catalog?q=${encodeURIComponent(product.article)}`);
+  const card = page.locator("article").filter({ hasText: product.article });
+  await card.getByRole("link").first().click();
+
+  // Портал адресует товар числовым id — slug в B2B API не принимается.
+  await expect(page).toHaveURL(new RegExp(`/product/${product.id}$`));
+  await expect(page.getByRole("heading", { level: 1, name: product.name })).toBeVisible();
+  await expect(page.getByText(`Артикул: ${product.article}`)).toBeVisible();
+
+  const info = page.locator("h1").locator("..");
+  const prices = digitsOf((await info.innerText()).replace(product.article, "").replace(product.name, ""));
+  expect(prices, `на карточке должна быть оптовая цена ${product.b2b_price} ₸`).toContain(String(product.b2b_price));
+  expect(prices, `розничной цены ${product.retail_price} ₸ быть не должно`).not.toContain(String(product.retail_price));
+
+  await expect(page.getByRole("button", { name: "В корзину" })).toBeVisible();
+  await snap(page, "карточка товара портала");
+});
+
+test("старая ссылка на товар по slug показывает «Товар не найден»", async ({ page }) => {
+  const product = requireInStockProduct();
+
+  await page.goto(`/product/${product.slug}`);
+
+  await expect(page.getByRole("heading", { name: "Товар не найден" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Вернуться в каталог" })).toBeVisible();
 });

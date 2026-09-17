@@ -16,7 +16,7 @@ export function ProductCard({ product, isB2B = false, showOverlay = true, showAd
   const t = useTranslations("common");
   const outOfStockText = t("outOfStock");
 
-  const href = `/product/${product.slug ?? product.id}`;
+  const href = `/product/${product.id}`;
   const LinkComponent = isB2B ? NextLink : I18nLink;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);

@@ -187,13 +187,15 @@ export interface CartLineValidation {
   product_id: number;
   quantity: number;
   available: boolean;
-  problem: "unavailable" | "no_price" | "insufficient_stock" | null;
+  problem: "unavailable" | "no_price" | "below_min_qty" | "insufficient_stock" | null;
   name: string | null;
   slug: string | null;
   article: string | null;
   image: string | null;
   price: number | null;
   stock: number;
+  /** B2B minimum order quantity for the line. */
+  min_qty?: number;
 }
 
 export interface CartValidation {

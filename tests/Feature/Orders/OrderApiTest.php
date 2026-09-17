@@ -170,6 +170,76 @@ class OrderApiTest extends TestCase
     }
 
     #[Test]
+    public function one_line_over_stock_rejects_the_whole_order_and_draws_down_nothing(): void
+    {
+        $user = $this->approvedClient();
+        Sanctum::actingAs($user);
+
+        $store = Store::factory()->create();
+        $fine = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+        $short = Product::factory()->erpSynced()->create(['b2b_price' => 50_000]);
+        $this->stockAt($store, $fine, 10);
+        $this->stockAt($store, $short, 2);
+
+        $this->postJson('/api/orders', [
+            'store_id' => $store->id,
+            'items' => [
+                ['product_id' => $fine->id, 'quantity' => 4],
+                ['product_id' => $short->id, 'quantity' => 3],
+            ],
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors('items.1');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertEqualsWithDelta(10.0, (float) $fine->fresh()->stock, 0.001);
+        $this->assertEqualsWithDelta(2.0, (float) $short->fresh()->stock, 0.001);
+    }
+
+    #[Test]
+    public function ordering_below_the_minimum_order_quantity_is_rejected(): void
+    {
+        $user = $this->approvedClient();
+        Sanctum::actingAs($user);
+
+        $store = Store::factory()->create();
+        $product = Product::factory()->erpSynced()->create(['name' => 'Кресло', 'b2b_price' => 50_000, 'b2b_min_order_qty' => 4]);
+        $this->stockAt($store, $product, 10);
+
+        $response = $this->postJson('/api/orders', [
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 3]],
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors('items.0.quantity');
+
+        $message = $response->json('errors')['items.0.quantity'][0];
+        $this->assertStringContainsString('Кресло', $message);
+        $this->assertStringContainsString('4', $message);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    #[Test]
+    public function the_global_default_minimum_applies_when_the_product_has_none(): void
+    {
+        $user = $this->approvedClient();
+        Sanctum::actingAs($user);
+        CatalogSetting::current()->update(['b2b_default_min_order_qty' => 2]);
+
+        $store = Store::factory()->create();
+        $product = Product::factory()->erpSynced()->create(['b2b_price' => 50_000, 'b2b_min_order_qty' => null]);
+        $this->stockAt($store, $product, 10);
+
+        $this->postJson('/api/orders', [
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertStatus(422);
+
+        $this->postJson('/api/orders', [
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 2]],
+        ])->assertCreated();
+    }
+
+    #[Test]
     public function stock_at_another_store_does_not_count(): void
     {
         $user = $this->approvedClient();

@@ -356,6 +356,26 @@ class CatalogApiTest extends TestCase
     }
 
     #[Test]
+    public function product_detail_is_addressed_by_numeric_id_only(): void
+    {
+        $user = $this->approvedClient();
+        Sanctum::actingAs($user);
+
+        $product = Product::factory()->create(['slug' => 'kreslo-test']);
+
+        $this->getJson('/api/products/'.$product->id)
+            ->assertOk()
+            ->assertJsonPath('data.id', $product->id)
+            ->assertJsonPath('data.slug', 'kreslo-test');
+
+        // Slugs belong to the public storefront API; the B2B route does not
+        // match them at all. '{id}-slug' matters on MySQL, which would cast
+        // it to the id in a plain `where id = ?` binding lookup.
+        $this->getJson('/api/products/kreslo-test')->assertNotFound();
+        $this->getJson('/api/products/'.$product->id.'-kreslo-test')->assertNotFound();
+    }
+
+    #[Test]
     public function categories_returns_the_folders(): void
     {
         $user = $this->approvedClient();

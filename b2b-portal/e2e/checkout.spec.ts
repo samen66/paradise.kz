@@ -81,7 +81,7 @@ test("партнёр оформляет заказ через «Быстрый �
     await snap(page, "3. оформление заказа");
 
     const [response] = await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith("/checkout") && r.request().method() === "POST"),
+      page.waitForResponse((r) => new URL(r.url()).pathname.endsWith("/api/orders") && r.request().method() === "POST"),
       submit.click(),
     ]);
 
