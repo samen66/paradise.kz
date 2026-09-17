@@ -7,7 +7,7 @@ import api from '@/lib/api';
 import { useResource } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
 import { productLabel, ru, type ProductRef } from '@/lib/text';
-import { documentHref, formatDateTime, formatQty, MOVEMENT_TYPES, type StockMovement } from '@/lib/warehouse';
+import { dayBoundary, documentHref, formatDateTime, formatQty, MOVEMENT_TYPES, type StockMovement } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EntityPicker from '@/components/ui/EntityPicker';
 import PageHeader from '@/components/ui/PageHeader';
@@ -25,9 +25,15 @@ function MovementsView() {
 
   const params: Record<string, string> = {};
   for (const key of FILTERS) {
-    if (value(key)) {
-      params[`filter[${key}]`] = value(key);
+    if (!value(key)) {
+      continue;
     }
+    // `from`/`to` stay YYYY-MM-DD in the URL and inputs, but the request
+    // sends an exact instant in the browser's own (the manager's) local
+    // timezone — the API now parses a bare date in the app's UTC timezone,
+    // which would shift the boundary by the manager's offset otherwise.
+    params[`filter[${key}]`] =
+      key === 'from' || key === 'to' ? dayBoundary(value(key), key === 'to') : value(key);
   }
 
   const movements = useResource<StockMovement>('/admin/stock-movements', params);

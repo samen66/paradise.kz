@@ -107,6 +107,23 @@ class StockMovementApiTest extends TestCase
     }
 
     #[Test]
+    public function from_and_to_as_exact_instants_follow_the_managers_local_day(): void
+    {
+        $this->actingAsManager();
+
+        // 2026-09-16 19:30 UTC is 2026-09-17 00:30 in Almaty (UTC+5): inside
+        // the manager's "17.09" day.
+        $inAlmatyDay = StockMovement::factory()->create(['created_at' => Carbon::parse('2026-09-16 19:30:00', 'UTC')]);
+        // 2026-09-17 19:30 UTC is 2026-09-18 00:30 in Almaty: outside it.
+        StockMovement::factory()->create(['created_at' => Carbon::parse('2026-09-17 19:30:00', 'UTC')]);
+
+        $this->getJson('/api/admin/stock-movements?filter[from]=2026-09-17T00:00:00%2B05:00&filter[to]=2026-09-17T23:59:59%2B05:00')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $inAlmatyDay->id);
+    }
+
+    #[Test]
     public function an_unknown_document_kind_matches_nothing(): void
     {
         $this->actingAsManager();

@@ -167,6 +167,16 @@ export const lineCost = (quantity: string, unitCost: number): number => {
 export const formatDateTime = (value: string | null | undefined): string =>
   value ? new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
+/**
+ * Turns a `YYYY-MM-DD` from a `<input type="date">` filter into the start
+ * (or end) of that day as an ISO instant in the browser's own timezone —
+ * the manager's local day — so the API's exact-instant parsing (as opposed
+ * to its own app-timezone day rounding for a bare date) lines up with what
+ * the manager actually meant by "17.09", regardless of the server's UTC.
+ */
+export const dayBoundary = (date: string, end: boolean): string =>
+  new Date(`${date}T${end ? '23:59:59.999' : '00:00:00'}`).toISOString();
+
 export const documentHref = (document: NonNullable<StockMovement['document']>): string =>
   document.type === 'receipt'
     ? `/goods-receipts/${document.id}`

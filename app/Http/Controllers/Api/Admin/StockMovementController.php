@@ -39,7 +39,7 @@ class StockMovementController extends Controller
                 AllowedFilter::exact('store_id'),
                 AllowedFilter::exact('type'),
                 AllowedFilter::callback('from', function ($query, $value): void {
-                    $date = $this->parseDate($value)?->startOfDay();
+                    $date = $this->parseBoundary($value, end: false);
 
                     if ($date === null) {
                         $query->whereRaw('1 = 0');
@@ -50,7 +50,7 @@ class StockMovementController extends Controller
                     $query->where('created_at', '>=', $date);
                 }),
                 AllowedFilter::callback('to', function ($query, $value): void {
-                    $date = $this->parseDate($value)?->endOfDay();
+                    $date = $this->parseBoundary($value, end: true);
 
                     if ($date === null) {
                         $query->whereRaw('1 = 0');
@@ -84,14 +84,28 @@ class StockMovementController extends Controller
     }
 
     /**
-     * Parses a date filter in the app timezone; an unparsable value is treated
-     * the same way an unknown `document` kind is — the filter matches nothing
-     * rather than letting a malformed query string 500.
+     * Parses a `from`/`to` filter value. A bare `YYYY-MM-DD` — what an
+     * `<input type="date">` sends — is anchored to the start/end of that
+     * calendar day in the app timezone (UTC), matching the previous
+     * behaviour. Anything else is treated as an exact instant (e.g. an ISO
+     * string with an offset, as the admin frontend now sends so that "17.09"
+     * means the manager's Almaty day, not the UTC day) and parsed with no
+     * day-rounding. An unparsable value is treated the same way an unknown
+     * `document` kind is — the filter matches nothing rather than letting a
+     * malformed query string 500.
      */
-    private function parseDate(mixed $value): ?Carbon
+    private function parseBoundary(mixed $value, bool $end): ?Carbon
     {
+        $value = (string) $value;
+
         try {
-            return Carbon::parse((string) $value, config('app.timezone'));
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+                $date = Carbon::parse($value, config('app.timezone'));
+
+                return $end ? $date->endOfDay() : $date->startOfDay();
+            }
+
+            return Carbon::parse($value)->utc();
         } catch (\Throwable) {
             return null;
         }
