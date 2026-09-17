@@ -141,4 +141,24 @@ class GoodsReceiptServiceTest extends TestCase
 
         $this->assertSame(62, $item->lineCost());
     }
+
+    #[Test]
+    public function line_cost_does_not_overflow_for_a_large_quantity_and_unit_cost(): void
+    {
+        // Both values sit near their validated maxima (quantity up to
+        // 9999999.999, unit_cost up to 9999999999 тиын). A formula that
+        // multiplies milli-quantity by unit_cost before dividing back down
+        // overflows here: milli(1000000.001) = 1000000001, and
+        // 1000000001 * 9999999999 = 10000000008999999999 — about 1.0e19,
+        // past PHP_INT_MAX (~9.223e18) — while the true rounded line cost is
+        // a modest 1.0e16 and must come out exact:
+        //   1000000.001 * 9999999999 = 10000000008999999.999
+        //   half-up -> 10000000009000000
+        $item = GoodsReceiptItem::factory()->create([
+            'quantity' => '1000000.001',
+            'unit_cost' => 9_999_999_999,
+        ]);
+
+        $this->assertSame(10_000_000_009_000_000, $item->lineCost());
+    }
 }
