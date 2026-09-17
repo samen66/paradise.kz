@@ -29,14 +29,25 @@ const groups: { title: string | null; links: NavLink[] }[] = [
       { href: '/product-collections', label: 'Подборки' },
     ],
   },
-  { title: 'Запасы', links: [{ href: '/stock', label: 'Склад' }] },
+  {
+    title: 'Запасы',
+    links: [
+      { href: '/stock', label: 'Склад' },
+      { href: '/stock-movements', label: 'Движения' },
+      { href: '/goods-receipts', label: 'Приёмки' },
+      { href: '/write-offs', label: 'Списания' },
+      { href: '/stores', label: 'Склады' },
+      { href: '/suppliers', label: 'Поставщики' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { logout } = useAuthStore();
 
-  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
 
   return (
     <div className="flex min-h-full w-64 shrink-0 flex-col bg-zinc-900 text-white shadow-lg">
