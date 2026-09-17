@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Account\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Admin\AttributeController;
 use App\Http\Controllers\Api\Admin\BrandController;
+use App\Http\Controllers\Api\Admin\CatalogGroupController;
+use App\Http\Controllers\Api\Admin\CatalogGroupMemberController;
 use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -134,6 +136,11 @@ Route::prefix('admin')
         Route::apiResource('brands', BrandController::class);
         Route::apiResource('attributes', AttributeController::class);
         Route::apiResource('price-types', PriceTypeController::class);
+        Route::apiResource('catalog-groups', CatalogGroupController::class);
+        Route::post('catalog-groups/{catalog_group}/products/{product}', [CatalogGroupMemberController::class, 'attachProduct']);
+        Route::delete('catalog-groups/{catalog_group}/products/{product}', [CatalogGroupMemberController::class, 'detachProduct']);
+        Route::post('catalog-groups/{catalog_group}/users/{user}', [CatalogGroupMemberController::class, 'attachUser']);
+        Route::delete('catalog-groups/{catalog_group}/users/{user}', [CatalogGroupMemberController::class, 'detachUser']);
         Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
