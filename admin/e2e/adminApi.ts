@@ -69,5 +69,21 @@ export function adminApi(request: APIRequestContext) {
         // Best-effort: cleanup must never fail the test.
       }
     },
+    /**
+     * Setup, not cleanup: throws on any non-2xx so a broken precondition
+     * fails the test at its cause instead of three steps later.
+     */
+    async send<T = unknown>(method: "post" | "put", path: string, body?: unknown): Promise<T> {
+      const res = await request[method](`${API_URL}${path}`, { headers: headers(), data: body ?? {} });
+
+      if (!res.ok()) {
+        throw new Error(`${method.toUpperCase()} ${path} → ${res.status()}: ${await res.text()}`);
+      }
+
+      return (await res.json()) as T;
+    },
+    async create<T = unknown>(path: string, body: unknown): Promise<T> {
+      return this.send<T>("post", path, body);
+    },
   };
 }
