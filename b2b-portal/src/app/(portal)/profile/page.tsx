@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { apiPatch, ApiValidationError } from "@/lib/api";
+import { apiPatch, apiPost, ApiValidationError } from "@/lib/api";
 import { useB2bAuth } from "@/stores/useB2bAuth";
+import { useB2bCart } from "@/stores/useB2bCart";
 import type { ApiUser } from "@/lib/types";
 
 const inputClass =
@@ -12,8 +13,10 @@ const inputClass =
 
 export default function B2BProfilePage() {
   const t = useTranslations("account");
+  const tAuth = useTranslations("auth");
   const router = useRouter();
-  const { token, user, setUser } = useB2bAuth();
+  const { token, user, setUser, clear } = useB2bAuth();
+  const clearCart = useB2bCart((state) => state.clearCart);
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
@@ -21,6 +24,7 @@ export default function B2BProfilePage() {
   const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -47,6 +51,23 @@ export default function B2BProfilePage() {
     } catch (e) {
       setErrors(e instanceof ApiValidationError ? e.messages : ["Ошибка сохранения."]);
     }
+  }
+
+  /**
+   * Revoke the token on the API, then drop the local session and cart — the
+   * cart holds this partner's prices, so it must not survive for the next
+   * login on a shared device. A failed revoke still logs out locally.
+   */
+  async function logout() {
+    setIsLoggingOut(true);
+    try {
+      await apiPost("/auth/logout", undefined, { token });
+    } catch {
+      // Token already expired or network down — nothing more to revoke.
+    }
+    clearCart();
+    clear();
+    router.replace("/login");
   }
 
   function cancelEdit() {
@@ -166,6 +187,16 @@ export default function B2BProfilePage() {
           <p className="mt-6 text-xs text-muted">
             Для изменения юридических данных компании, пожалуйста, свяжитесь с вашим менеджером.
           </p>
+          <div className="mt-6 border-t border-line pt-6">
+            <button
+              type="button"
+              onClick={() => void logout()}
+              disabled={isLoggingOut}
+              className="w-full rounded-xl border border-line-strong bg-white px-6 py-3 text-sm font-medium text-ink transition hover:border-ink disabled:opacity-60"
+            >
+              {tAuth("logout")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
