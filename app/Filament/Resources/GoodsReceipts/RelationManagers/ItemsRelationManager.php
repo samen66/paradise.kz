@@ -5,10 +5,8 @@ namespace App\Filament\Resources\GoodsReceipts\RelationManagers;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
 use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -83,11 +81,6 @@ class ItemsRelationManager extends RelationManager
                     ->before(function (DeleteAction $action, GoodsReceiptItem $record): void {
                         $this->haltIfReceiptPosted($action, $record->goodsReceipt);
                     }),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 
