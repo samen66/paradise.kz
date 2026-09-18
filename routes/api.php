@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\WriteOffController;
 use App\Http\Controllers\Api\Admin\WriteOffItemController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\PhoneAuthController;
 use App\Http\Controllers\Api\CartController as B2bCartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
@@ -58,6 +59,12 @@ Route::prefix('auth')->group(function () {
     // admins create B2B accounts manually in Filament until it returns.
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+
+    // B2B portal: phone + SMS code. Throttled per IP on top of the per-phone
+    // limits inside OtpService.
+    Route::post('/otp/request', [PhoneAuthController::class, 'request'])->middleware('throttle:5,1');
+    Route::post('/otp/register', [PhoneAuthController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('/otp/login', [PhoneAuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
