@@ -30,6 +30,8 @@
     "cart": "Себет",
     "inStock": "Қоймада бар",
     "outOfStock": "Қоймада жоқ",
+    "stockMany": "Көп",
+    "stockPieces": "{count} дана",
     "priceOnRequest": "Бағасы сұрау бойынша",
     "addToCart": "Себетке",
     "added": "Қосылды",

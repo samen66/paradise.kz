@@ -30,6 +30,8 @@
     "cart": "Корзина",
     "inStock": "В наличии",
     "outOfStock": "Нет в наличии",
+    "stockMany": "Много",
+    "stockPieces": "{count} шт.",
     "priceOnRequest": "Цена по запросу",
     "addToCart": "В корзину",
     "added": "Добавлено",

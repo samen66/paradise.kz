@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { retailStockLabel } from "@/lib/stock";
 
 const CATALOG = [
   { id: 101, name: "Диван Milan прямой, 3-местный", price: 389900, oldPrice: 486900, rating: 4.7, reviews: 128, stock: 6, seed: "sofa-milan-1", cat: "диван", color: "серый", room: "гостиная", size: "большой" },
@@ -21,6 +22,8 @@ const CATALOG = [
 const CAT_WORDS: Record<string, string> = { "диван": "диван", "софа": "диван", "кресл": "кресло", "стол": "стол", "кроват": "кровать", "спал": "кровать", "шкаф": "шкаф", "купе": "шкаф", "тумб": "тумба" };
 const COLOR_WORDS = ["серый", "бежевый", "белый", "чёрный", "черный", "синий", "кремовый", "горчичный", "дуб"];
 const ROOM_WORDS = ["гостиная", "гостин", "спальня", "спальн", "кухня", "кухн", "офис"];
+
+const stockLabels = { many: "Много", pieces: (count: number) => `${count} шт.` };
 
 function fmtPrice(n: number) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " ₸"; }
 function ru(n: number) { return String(n).replace(".", ","); }
@@ -180,11 +183,11 @@ export function AIAssistant({ product, startOpen = false, photoSearch = true, ac
   const salesAnswer = (p: any): Message[] => {
     let txt = p.sales ? `Это один из хитов категории — товар купили уже ${p.sales} раз` : `Товар пользуется стабильным спросом`;
     txt += `, рейтинг держится на ${ru(p.rating)} из 5 (${p.reviewsCount} отзывов).`;
-    if (p.stock) txt += ` Сейчас в наличии ${p.stock} шт.`;
+    if (p.stock) txt += ` Сейчас в наличии: ${retailStockLabel(p.stock, stockLabels).toLowerCase()}.`;
     return [{ role: "bot", kind: "text", text: txt }];
   };
   const deliveryAnswer = (p: any): Message[] => {
-    let txt = p.stock ? `В наличии ${p.stock} шт на складе.` : `Товар под заказ.`;
+    let txt = p.stock ? `В наличии на складе: ${retailStockLabel(p.stock, stockLabels).toLowerCase()}.` : `Товар под заказ.`;
     if (p.delivery) txt += `\n${p.delivery}`;
     if (p.assembly) txt += `\n${p.assembly}`;
     return [{ role: "bot", kind: "text", text: txt }];

@@ -10,11 +10,23 @@ import type { Product } from "@/lib/types";
 import { AddToCartButton } from "./AddToCartButton";
 import { FavoriteButton } from "./FavoriteButton";
 import { Badge } from "./ui/Badge";
+import { retailStockLabel } from "@/lib/stock";
+import { useLiveRetailStock } from "@/lib/use-live-product";
 
 export function ProductCard({ product, isB2B = false, showOverlay = true, showAddToCart = true }: { product: Product; isB2B?: boolean; showOverlay?: boolean; showAddToCart?: boolean }) {
   const locale = useLocale();
   const t = useTranslations("common");
   const outOfStockText = t("outOfStock");
+
+  const live = useLiveRetailStock(product.id, product.stock, product.in_stock);
+  // Partners always see the exact count; retail shows "Много" from 20 up.
+  const stock = isB2B ? product.stock : live.stock;
+  const inStock = isB2B ? product.in_stock : live.inStock;
+  const stockText = stock === undefined || stock <= 0
+    ? null
+    : isB2B
+      ? t("stockPieces", { count: stock })
+      : retailStockLabel(stock, { many: t("stockMany"), pieces: (count) => t("stockPieces", { count }) });
 
   const href = isB2B ? `/b2b/product/${product.slug ?? product.id}` : `/product/${product.slug ?? product.id}`;
   const LinkComponent = isB2B ? NextLink : I18nLink;
@@ -92,17 +104,17 @@ export function ProductCard({ product, isB2B = false, showOverlay = true, showAd
             {product.article && <span className="text-xs text-muted">{product.article}</span>}
           </div>
           
-          {showAddToCart && product.in_stock && (
+          {showAddToCart && inStock && (
             <div className="flex-shrink-0">
               <AddToCartButton product={product} compact isB2B={isB2B} />
             </div>
           )}
         </div>
 
-        {product.in_stock ? (
-          product.stock !== undefined && product.stock > 0 ? (
+        {inStock ? (
+          stockText ? (
             <div className="mt-2 text-[13px] text-green-600 font-medium">
-              {t("inStock")}: {product.stock} шт.
+              {t("inStock")}: {stockText}
             </div>
           ) : (
             <div className="mt-2 text-[13px] text-green-600 font-medium">

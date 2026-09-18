@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Product, ProductVariant } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
@@ -8,7 +8,8 @@ import { StarRating } from "@/components/StarRating";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { Badge } from "@/components/ui/Badge";
-import { getEcho } from "@/lib/echo";
+import { useProductUpdates } from "@/lib/use-live-product";
+import { retailStockLabel } from "@/lib/stock";
 
 interface ProductInfoProps {
   product: Product;
@@ -33,26 +34,12 @@ export function ProductInfo({ product, locale, categoryName }: ProductInfoProps)
   const [liveStock, setLiveStock] = useState<number | undefined>(product.stock);
   const [liveInStock, setLiveInStock] = useState<boolean>(product.in_stock);
 
-  useEffect(() => {
-    const echo = getEcho();
-    if (!echo) return;
-
-    const channel = echo.channel(`product.${product.id}`);
-    
-    channel.listen("ProductUpdated", (e: any) => {
-      // e contains { id, price, old_price, stock, in_stock }
-      if (e.price !== undefined) setLivePrice(e.price);
-      if (e.old_price !== undefined) setLiveOldPrice(e.old_price);
-      if (e.stock !== undefined) setLiveStock(e.stock);
-      if (e.in_stock !== undefined) setLiveInStock(e.in_stock);
-    });
-
-    return () => {
-      channel.stopListening("ProductUpdated");
-      // Optionally leave the channel if no other components use it
-      // echo.leaveChannel(`product.${product.id}`);
-    };
-  }, [product.id]);
+  useProductUpdates(product.id, (e) => {
+    setLivePrice(e.price);
+    setLiveOldPrice(e.old_price);
+    setLiveStock(e.retail_stock ?? undefined);
+    setLiveInStock(e.retail_in_stock);
+  });
 
   const discountPercent =
     liveOldPrice && livePrice && liveOldPrice > livePrice
@@ -146,7 +133,10 @@ export function ProductInfo({ product, locale, categoryName }: ProductInfoProps)
               <span>
                 {tCommon("inStock")}
                 {displayStock !== undefined && displayStock > 0 ? (
-                  <> — <span className="tabular-nums">{displayStock} шт</span></>
+                  <> — <span className="tabular-nums">{retailStockLabel(displayStock, {
+                    many: tCommon("stockMany"),
+                    pieces: (count) => tCommon("stockPieces", { count }),
+                  })}</span></>
                 ) : null}
               </span>
               {showroomCount > 0 && (
