@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { QuantityInput } from "@/components/QuantityInput";
 import { maxQuantityFor, useB2bCart } from "@/stores/useB2bCart";
 import { useB2bAuth } from "@/stores/useB2bAuth";
 import { apiPost } from "@/lib/api";
@@ -184,27 +185,12 @@ export default function B2BCartPage() {
                   ) : null}
 
                   <div className="mt-auto flex items-center pt-3">
-                    <div className="inline-flex items-center rounded-full border border-line-strong bg-surface p-1">
-                      <button
-                        type="button"
-                        aria-label="−"
-                        className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
-                        onClick={() => updateQuantity(product.id, Math.max(minQty, item.quantity - 1))}
-                        disabled={item.quantity <= minQty}
-                      >
-                        −
-                      </button>
-                      <span className="min-w-8 text-center text-sm font-medium text-ink">{item.quantity}</span>
-                      <button
-                        type="button"
-                        aria-label="+"
-                        className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
-                        onClick={() => updateQuantity(product.id, item.quantity + 1)}
-                        disabled={maxQty !== null && item.quantity >= maxQty}
-                      >
-                        +
-                      </button>
-                    </div>
+                    <QuantityInput
+                      value={item.quantity}
+                      min={minQty}
+                      max={maxQty}
+                      onChange={(quantity) => updateQuantity(product.id, quantity)}
+                    />
                   </div>
                 </div>
               </li>
