@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Admin\WriteOffController;
 use App\Http\Controllers\Api\Admin\WriteOffItemController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\PhoneAuthController;
+use App\Http\Controllers\Api\B2bHomeController;
 use App\Http\Controllers\Api\CartController as B2bCartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
@@ -100,6 +101,9 @@ Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
     Route::patch('/addresses/{address}', [AddressController::class, 'update']);
     Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
 });
+
+// B2B portal home page: open to anonymous visitors, no prices or stock.
+Route::get('/b2b/home', B2bHomeController::class);
 
 // B2C storefront: fully anonymous — no login, no approval gate, retail
 // pricing, only the public (ungrouped) catalog. See VisibilityService and
