@@ -6,10 +6,15 @@ namespace Tests\Feature\PublicAuth;
 
 use App\Contracts\Sms\SmsSender;
 use App\Models\Order;
+use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\Auth\OtpService;
 use App\Services\Sms\ArraySmsSender;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
+use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -160,5 +165,78 @@ class OtpAuthTest extends TestCase
         $client->refresh();
         $this->assertSame(User::TYPE_B2B, $client->type);
         $this->assertTrue($client->is_approved);
+    }
+
+    #[Test]
+    public function a_consumed_code_cannot_be_consumed_again(): void
+    {
+        $this->postJson('/api/public/auth/otp/request', ['phone' => '+77071234567'])->assertOk();
+        $code = $this->sentCode();
+        $otp = $this->app->make(OtpService::class);
+
+        $this->assertSame('+77071234567', $otp->consume('+77071234567', $code));
+
+        $this->assertCodeRefused(fn () => $otp->consume('+77071234567', $code));
+    }
+
+    #[Test]
+    public function a_correct_code_also_spends_an_attempt(): void
+    {
+        $this->postJson('/api/public/auth/otp/request', ['phone' => '+77071234567'])->assertOk();
+
+        $this->postJson('/api/public/auth/otp/verify', ['phone' => '+77071234567', 'code' => $this->sentCode()])->assertOk();
+
+        $this->assertSame(1, OtpCode::query()->where('phone', '+77071234567')->value('attempts'));
+    }
+
+    #[Test]
+    public function a_correct_code_on_the_last_attempt_still_logs_in(): void
+    {
+        $this->postJson('/api/public/auth/otp/request', ['phone' => '+77071234567'])->assertOk();
+        $code = $this->sentCode();
+        $wrong = $code === '0000' ? '0001' : '0000';
+
+        for ($i = 0; $i < 4; $i++) {
+            $this->postJson('/api/public/auth/otp/verify', ['phone' => '+77071234567', 'code' => $wrong])
+                ->assertUnprocessable();
+        }
+
+        $this->postJson('/api/public/auth/otp/verify', ['phone' => '+77071234567', 'code' => $code])->assertOk();
+    }
+
+    #[Test]
+    public function a_code_consumed_by_a_parallel_request_during_the_check_is_refused(): void
+    {
+        $this->postJson('/api/public/auth/otp/request', ['phone' => '+77071234567'])->assertOk();
+        $code = $this->sentCode();
+
+        $this->duringCodeCheck(fn () => OtpCode::query()->update(['consumed_at' => now()]));
+
+        $this->assertCodeRefused(fn () => $this->app->make(OtpService::class)->consume('+77071234567', $code));
+    }
+
+    private function assertCodeRefused(callable $consume): void
+    {
+        try {
+            $consume();
+            $this->fail('The code was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertSame(['Код истёк или не запрошен. Запросите новый код.'], $e->errors()['code'] ?? null);
+        }
+    }
+
+    /**
+     * Run $parallel while the code is being checked — what a second request
+     * would do during the bcrypt comparison — then let the check pass.
+     */
+    private function duringCodeCheck(callable $parallel): void
+    {
+        $hash = Mockery::mock($this->app->make('hash'));
+        $hash->shouldReceive('check')->once()->andReturnUsing(function () use ($parallel): bool {
+            $parallel();
+
+            return true;
+        });
+        Hash::swap($hash);
     }
 }

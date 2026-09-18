@@ -22,7 +22,9 @@ use Illuminate\Validation\ValidationException;
  * stores the code hashed with a short TTL, delivers via the SmsSender driver.
  *
  * consume(): constant-time hash check with an attempt cap, then returns
- * the normalized phone. Shared by storefront login and B2B portal auth.
+ * the normalized phone. The attempt is reserved and the code burnt with
+ * conditional UPDATEs, so parallel requests cannot exceed the cap or use
+ * one code twice. Shared by storefront login and B2B portal auth.
  *
  * verify(): calls consume(), then resolves the canonical retail account for
  * the phone (creating it on first login) and claims any orders placed earlier
@@ -95,23 +97,50 @@ class OtpService
             ->latest('id')
             ->first();
 
-        if ($otp === null || $otp->attempts >= self::MAX_ATTEMPTS) {
-            throw ValidationException::withMessages([
-                'code' => ['Код истёк или не запрошен. Запросите новый код.'],
-            ]);
+        if ($otp === null || ! $this->reserveAttempt($otp)) {
+            $this->refuseExpired();
         }
 
         if (! Hash::check($code, $otp->code_hash)) {
-            $otp->increment('attempts');
-
             throw ValidationException::withMessages([
                 'code' => ['Неверный код.'],
             ]);
         }
 
-        $otp->update(['consumed_at' => now()]);
+        $consumed = OtpCode::query()
+            ->whereKey($otp->id)
+            ->whereNull('consumed_at')
+            ->update(['consumed_at' => now()]);
+
+        if ($consumed === 0) {
+            $this->refuseExpired();
+        }
 
         return $phone;
+    }
+
+    /**
+     * Spend one attempt before the (slow) hash check, in a single conditional
+     * UPDATE — parallel requests cannot all see "attempts left" and each get
+     * a guess. False when the code is already used up or burnt.
+     */
+    private function reserveAttempt(OtpCode $otp): bool
+    {
+        return OtpCode::query()
+            ->whereKey($otp->id)
+            ->whereNull('consumed_at')
+            ->where('attempts', '<', self::MAX_ATTEMPTS)
+            ->increment('attempts') === 1;
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function refuseExpired(): never
+    {
+        throw ValidationException::withMessages([
+            'code' => ['Код истёк или не запрошен. Запросите новый код.'],
+        ]);
     }
 
     /**

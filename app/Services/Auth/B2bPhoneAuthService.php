@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Auth;
 
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +25,8 @@ class B2bPhoneAuthService
     public const INTENT_REGISTER = 'register';
 
     public const INTENT_LOGIN = 'login';
+
+    private const ALREADY_REGISTERED = 'Этот номер уже зарегистрирован. Войдите.';
 
     public function __construct(
         private readonly OtpService $otp,
@@ -48,22 +51,27 @@ class B2bPhoneAuthService
         $this->accountFor($phone, self::INTENT_REGISTER);
         $this->otp->consume($phone, $code);
 
-        return DB::transaction(function () use ($phone, $name, $companyName): User {
-            $user = User::create([
-                'name' => $name,
-                'phone' => $phone,
-                'company_name' => $companyName,
-                // Never typed by anyone: the login identity is phone + SMS code.
-                'password' => Str::random(40),
-                'type' => User::TYPE_B2B,
-                'is_approved' => false,
-            ]);
+        try {
+            return DB::transaction(function () use ($phone, $name, $companyName): User {
+                $user = User::create([
+                    'name' => $name,
+                    'phone' => $phone,
+                    'company_name' => $companyName,
+                    // Never typed by anyone: the login identity is phone + SMS code.
+                    'password' => Str::random(40),
+                    'type' => User::TYPE_B2B,
+                    'is_approved' => false,
+                ]);
 
-            Role::findOrCreate('b2b_customer', 'web');
-            $user->assignRole('b2b_customer');
+                Role::findOrCreate('b2b_customer', 'web');
+                $user->assignRole('b2b_customer');
 
-            return $user;
-        });
+                return $user;
+            });
+        } catch (UniqueConstraintViolationException) {
+            // A parallel registration took the number after accountFor() ran.
+            $this->refuse(self::ALREADY_REGISTERED);
+        }
     }
 
     /**
@@ -98,7 +106,7 @@ class B2bPhoneAuthService
         }
 
         if ($intent === self::INTENT_REGISTER && $user !== null) {
-            $this->refuse('Этот номер уже зарегистрирован. Войдите.');
+            $this->refuse(self::ALREADY_REGISTERED);
         }
 
         if ($intent === self::INTENT_LOGIN && $user === null) {

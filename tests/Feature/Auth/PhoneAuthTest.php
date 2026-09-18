@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Services\Sms\ArraySmsSender;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
+use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -187,5 +189,35 @@ class PhoneAuthTest extends TestCase
 
         $this->requestCode('login')->assertOk();
         $this->requestCode('login')->assertUnprocessable()->assertJsonValidationErrors('phone');
+    }
+
+    #[Test]
+    public function a_number_registered_in_parallel_is_told_to_log_in(): void
+    {
+        $this->requestCode('register', ['name' => 'Айгерим'])->assertOk();
+        $code = $this->sentCode();
+
+        $this->duringCodeCheck(fn () => User::factory()->b2b()->create(['phone' => self::PHONE]));
+
+        $this->postJson('/api/auth/otp/register', ['phone' => self::PHONE, 'code' => $code, 'name' => 'Айгерим'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.phone.0', 'Этот номер уже зарегистрирован. Войдите.');
+
+        $this->assertSame(1, User::query()->where('phone', self::PHONE)->count());
+    }
+
+    /**
+     * Run $parallel while the code is being checked — what a second request
+     * would do during the bcrypt comparison — then let the check pass.
+     */
+    private function duringCodeCheck(callable $parallel): void
+    {
+        $hash = Mockery::mock($this->app->make('hash'));
+        $hash->shouldReceive('check')->once()->andReturnUsing(function () use ($parallel): bool {
+            $parallel();
+
+            return true;
+        });
+        Hash::swap($hash);
     }
 }

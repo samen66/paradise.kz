@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * A one-time SMS login code (stored hashed). Lifecycle is owned by
  * {@see OtpService}: issued → verified (consumed_at) or
- * expired; failed checks increment `attempts` until the row is dead.
+ * expired; every check spends one of the `attempts` until the row is dead.
  */
 class OtpCode extends Model
 {
