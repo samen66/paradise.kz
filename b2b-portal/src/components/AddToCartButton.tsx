@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart";
 import { maxQuantityFor, useB2bCart } from "@/stores/useB2bCart";
+import { QuantityInput } from "@/components/QuantityInput";
 import type { Product } from "@/lib/types";
 
 export function AddToCartButton({ product, compact = false, isB2B = false }: { product: Product; compact?: boolean; isB2B?: boolean }) {
@@ -50,49 +51,17 @@ export function AddToCartButton({ product, compact = false, isB2B = false }: { p
   }
 
   if (compact && isB2B && inB2bCart > 0) {
-    const minQty = product.b2b_min_order_qty ?? 1;
-    // Below the minimum order the line cannot stay — "−" removes it instead.
-    const removes = inB2bCart - 1 < minQty;
-    const stepperButton =
-      "grid h-8 w-8 place-items-center rounded-full text-lg leading-none text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40";
-
     return (
-      <span className="relative inline-flex">
-        <span className="inline-flex h-10 items-center rounded-full bg-ink p-1 text-white">
-          <button
-            type="button"
-            onClick={() => (removes ? b2bRemove(product.id) : b2bUpdate(product.id, inB2bCart - 1))}
-            aria-label={removes ? t("removeFromCart") : t("removeOne")}
-            title={removes ? t("removeFromCart") : t("removeOne")}
-            className={stepperButton}
-          >
-            −
-          </button>
-          <span
-            aria-live="polite"
-            aria-label={t("inCartCount", { count: inB2bCart })}
-            title={t("inCartCount", { count: inB2bCart })}
-            className="min-w-7 text-center text-sm font-semibold tabular-nums"
-          >
-            {inB2bCart}
-          </span>
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={b2bFull}
-            aria-label={b2bFull ? t("allInCart") : t("addOneMore")}
-            title={b2bFull ? t("allInCart") : t("addOneMore")}
-            className={stepperButton}
-          >
-            +
-          </button>
-        </span>
-        {limitNotice ? (
-          <span role="status" className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1 text-xs text-white shadow">
-            {limitNotice}
-          </span>
-        ) : null}
-      </span>
+      <QuantityInput
+        variant="dark"
+        value={inB2bCart}
+        min={product.b2b_min_order_qty ?? 1}
+        max={b2bMax}
+        onChange={(quantity) => b2bUpdate(product.id, quantity)}
+        // Below the minimum order the line cannot stay — "−" removes it instead.
+        onBelowMin={() => b2bRemove(product.id)}
+        label={t("quantityInCart")}
+      />
     );
   }
 

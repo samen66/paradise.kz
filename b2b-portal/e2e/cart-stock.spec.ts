@@ -41,11 +41,11 @@ test("счётчик в каталоге: «−» убирает, «+» доба
   expect(stock, "товар «в наличии» раскуплен — повторите прогон приёмки").toBeGreaterThan(0);
 
   const card = productCard(page, product.article);
-  const counter = card.getByLabel(/^В корзине: \d+ шт\.$/);
+  const counter = card.getByRole("spinbutton", { name: "Количество в корзине" });
 
   await test.step("первое нажатие превращает кнопку в счётчик, «−» на одной штуке убирает товар", async () => {
     await card.getByRole("button", { name: "В корзину" }).click();
-    await expect(counter).toHaveText("1");
+    await expect(counter).toHaveValue("1");
     await snap(page, "каталог: в корзине 1 шт");
 
     await card.getByRole("button", { name: "Убрать из корзины" }).click();
@@ -57,18 +57,18 @@ test("счётчик в каталоге: «−» убирает, «+» доба
 
   for (let count = 1; count < stock; count++) {
     await card.getByRole("button", { name: "Добавить ещё одну" }).click();
-    await expect(counter).toHaveText(String(count + 1));
+    await expect(counter).toHaveValue(String(count + 1));
   }
 
-  const full = card.getByRole("button", { name: "Весь остаток уже в корзине" });
+  const full = card.getByRole("button", { name: `Максимум ${stock} шт.` });
   await expect(full).toBeDisabled();
-  await expect(counter).toHaveText(String(stock));
+  await expect(counter).toHaveValue(String(stock));
   await snap(page, `каталог: счётчик ${stock} шт, «+» выключен`);
 
   await page.goto("/cart");
   const line = page.getByRole("listitem").filter({ hasText: product.name });
-  await expect(line).toContainText(String(stock));
-  await expect(line.getByRole("button", { name: "+" })).toBeDisabled();
+  await expect(line.getByRole("spinbutton", { name: "Количество" })).toHaveValue(String(stock));
+  await expect(line.getByRole("button", { name: `Максимум ${stock} шт.` })).toBeDisabled();
   await expect(page.getByText("Недостаточно на складе")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Оформить заказ" })).not.toHaveAttribute("aria-disabled", "true");
   await snap(page, `корзина: ${stock} шт, «+» выключен`);
@@ -107,5 +107,48 @@ test("корзина больше остатка: оформить нельзя,
     await expect(page.getByText("Недостаточно на складе")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Оформить заказ" })).not.toHaveAttribute("aria-disabled", "true");
     await snap(page, `корзина: уменьшено до ${stock} шт`);
+  });
+});
+
+test("количество в корзине вводится с клавиатуры: лишнее урезается до остатка, пустое не применяется", async ({ page }) => {
+  const product = requireInStockProduct();
+  const stock = await openCard(page, product.article);
+  expect(stock, "товар «в наличии» раскуплен — повторите прогон приёмки").toBeGreaterThan(0);
+
+  await productCard(page, product.article).getByRole("button", { name: "В корзину" }).click();
+  await page.goto("/cart");
+
+  const line = page.getByRole("listitem").filter({ hasText: product.name });
+  const quantity = line.getByRole("spinbutton", { name: "Количество" });
+  await expect(quantity).toHaveValue("1");
+
+  await test.step("число больше остатка набирается сразу и урезается до остатка с подсказкой", async () => {
+    await quantity.fill(String(stock + 50));
+    await quantity.press("Enter");
+
+    await expect(quantity).toHaveValue(String(stock));
+    await expect(line.getByRole("status")).toHaveText(`Доступно только ${stock} шт.`);
+    await expect(page.getByText("Недостаточно на складе")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Оформить заказ" })).not.toHaveAttribute("aria-disabled", "true");
+    await snap(page, `корзина: введено ${stock + 50}, стало ${stock}`);
+  });
+
+  await test.step("пустое поле и Escape возвращают прежнее количество", async () => {
+    await quantity.fill("");
+    await quantity.blur();
+    await expect(quantity).toHaveValue(String(stock));
+
+    await quantity.fill("1");
+    await quantity.press("Escape");
+    await expect(quantity).toHaveValue(String(stock));
+  });
+
+  await test.step("число в пределах остатка применяется как есть", async () => {
+    await quantity.fill("1");
+    await quantity.press("Enter");
+    await expect(quantity).toHaveValue("1");
+
+    const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}"), CART_KEY);
+    expect(saved.state.items.find((item: { product: { id: number } }) => item.product.id === product.id)?.quantity).toBe(1);
   });
 });

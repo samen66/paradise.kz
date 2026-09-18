@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { maxQuantityFor, useB2bCart } from '@/stores/useB2bCart';
+import { QuantityInput } from '@/components/QuantityInput';
 import type { Product } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -40,25 +41,14 @@ export function AddToCartB2BButton({ product }: { product: Product }) {
 
     return (
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between border border-line rounded-xl p-2 bg-surface">
-          <button
-            onClick={() => updateQuantity(product.id, Math.max(minQty, cartItem.quantity - 1))}
-            disabled={cartItem.quantity <= minQty}
-            aria-label="−"
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-white hover:bg-black/5 disabled:opacity-50 transition"
-          >
-            -
-          </button>
-          <span className="font-medium px-4">{cartItem.quantity} шт</span>
-          <button
-            onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
-            disabled={atMax}
-            aria-label="+"
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-white hover:bg-black/5 disabled:opacity-50 transition"
-          >
-            +
-          </button>
-        </div>
+        <QuantityInput
+          variant="boxed"
+          value={cartItem.quantity}
+          min={minQty}
+          max={maxQty}
+          onChange={(quantity) => updateQuantity(product.id, quantity)}
+          label={t('quantityInCart')}
+        />
         {atMax ? <p role="status" className="text-xs text-muted text-center">{t('maxInCart', { count: maxQty })}</p> : null}
         <button onClick={() => router.push('/cart')} className="w-full py-3 rounded-xl bg-ink text-white font-medium hover:bg-ink/90 transition">
           Оформить заказ
@@ -69,25 +59,14 @@ export function AddToCartB2BButton({ product }: { product: Product }) {
 
   return (
     <div className="flex gap-4 items-center">
-      <div className="flex items-center justify-between border border-line rounded-xl p-1 bg-surface w-1/3">
-        <button
-          onClick={() => setQty(Math.max(minQty, qty - 1))}
-          disabled={qty <= minQty}
-          aria-label="−"
-          className="w-12 h-12 flex items-center justify-center rounded-lg bg-white hover:bg-black/5 disabled:opacity-50 transition"
-        >
-          -
-        </button>
-        <span className="font-medium px-2">{qty}</span>
-        <button
-          onClick={() => setQty(qty + 1)}
-          disabled={maxQty !== null && qty >= maxQty}
-          aria-label="+"
-          className="w-12 h-12 flex items-center justify-center rounded-lg bg-white hover:bg-black/5 disabled:opacity-50 transition"
-        >
-          +
-        </button>
-      </div>
+      <QuantityInput
+        variant="boxed"
+        value={qty}
+        min={minQty}
+        max={maxQty}
+        onChange={setQty}
+        className="w-1/3 min-w-40"
+      />
       <div className="flex-1 flex flex-col">
         <button
           onClick={handleAdd}
