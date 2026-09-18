@@ -8,6 +8,7 @@ import { useLocale } from "next-intl";
 import { Drawer } from "./ui/Drawer";
 import type { Facets } from "@/lib/types";
 import { tValue } from "@/lib/format";
+import { useIsApproved } from "@/lib/approval";
 
 export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boolean }) {
   const t = useTranslations("catalog");
@@ -15,6 +16,9 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locale = useLocale();
+  const isApproved = useIsApproved();
+  // Stock is commercial data: a B2B client sees it only once approved.
+  const showStockFilter = !isB2B || isApproved;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [priceMin, setPriceMin] = useState(searchParams.get("price_min") ?? "");
@@ -106,26 +110,28 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
         </details>
       )}
 
-      <div className="pt-2">
-        <label
-          className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition ${
-            searchParams.get("in_stock") === "1" ? "bg-black/5 text-ink" : "text-ink hover:bg-black/5"
-          }`}
-        >
-          <input
-            type="checkbox"
-            className="peer h-4 w-4 rounded bg-surface border-line-strong text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 transition-all checked:bg-zinc-900 checked:border-zinc-900"
-            checked={searchParams.get("in_stock") === "1"}
-            onChange={(event) =>
-              apply((params) => {
-                if (event.target.checked) params.set("in_stock", "1");
-                else params.delete("in_stock");
-              })
-            }
-          />
-          <span className="font-medium">{t("onlyInStock")}</span>
-        </label>
-      </div>
+      {showStockFilter && (
+        <div className="pt-2">
+          <label
+            className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition ${
+              searchParams.get("in_stock") === "1" ? "bg-black/5 text-ink" : "text-ink hover:bg-black/5"
+            }`}
+          >
+            <input
+              type="checkbox"
+              className="peer h-4 w-4 rounded bg-surface border-line-strong text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 transition-all checked:bg-zinc-900 checked:border-zinc-900"
+              checked={searchParams.get("in_stock") === "1"}
+              onChange={(event) =>
+                apply((params) => {
+                  if (event.target.checked) params.set("in_stock", "1");
+                  else params.delete("in_stock");
+                })
+              }
+            />
+            <span className="font-medium">{t("onlyInStock")}</span>
+          </label>
+        </div>
+      )}
 
       {facets.brands.length > 0 ? (
         <div className="pt-6">

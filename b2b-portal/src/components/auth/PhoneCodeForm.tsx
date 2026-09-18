@@ -149,6 +149,7 @@ export function PhoneCodeForm({ intent, payload = {}, fields, submitLabel, onSuc
               onClick={() => {
                 setStep("phone");
                 setErrors({});
+                setError(null);
               }}
               className="text-muted hover:text-ink"
             >

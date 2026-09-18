@@ -62,7 +62,11 @@ export function WelcomeHero({ banners }: { banners: Banner[] }) {
                 aria-label={t("slide", { n: index + 1 })}
                 aria-current={index === active}
                 onClick={() => setActive(index)}
-                className={`h-1.5 rounded-full transition-all ${index === active ? "w-10 bg-white" : "w-5 bg-white/50"}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  index === active
+                    ? `w-10 ${onPhoto ? "bg-white" : "bg-ink"}`
+                    : `w-5 ${onPhoto ? "bg-white/50" : "bg-ink/30"}`
+                }`}
               />
             ))}
           </div>
