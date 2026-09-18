@@ -1881,6 +1881,7 @@ Expected: PASS.
 vendor/bin/pint --dirty --format agent
 git add routes/api.php app/Http/Controllers/Api/ProductController.php app/Http/Resources/ProductResource.php app/Console/Commands/MvpAcceptanceCommand.php tests/Feature/Catalog
 git commit -m "feat(catalog): unapproved B2B clients browse the catalog without prices or stock"
+```
 
 ---
 
