@@ -206,12 +206,20 @@ class FifoInventoryService
         $onHand = round($onHand, 3);
         $averageCost = $onHand > 0 ? (int) round($costValue / $onHand) : null;
 
-        ProductStoreStock::query()->updateOrCreate(
-            ['product_id' => $product->id, 'store_id' => $store->id],
-            ['stock' => $onHand, 'avg_cost' => $averageCost],
-        );
+        // Saved without touching the product: a touch here would fire the
+        // product's `saved` observers (storefront cache purge, live
+        // ProductUpdated broadcast) before the aggregate below is recomputed,
+        // announcing the old stock.
+        ProductStoreStock::query()
+            ->firstOrNew(['product_id' => $product->id, 'store_id' => $store->id])
+            ->fill(['stock' => $onHand, 'avg_cost' => $averageCost])
+            ->save(['touch' => false]);
 
         self::recomputeAggregateStock($product->id);
+
+        // The aggregate is written by raw SQL, which Eloquent never sees;
+        // touching a fresh copy lets the observers announce the new figure.
+        $product->fresh()?->touch();
 
         return $onHand;
     }

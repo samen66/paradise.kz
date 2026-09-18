@@ -34,6 +34,9 @@ class ProductObserver
             $tags[] = "product-{$product->slug}";
         }
 
-        RevalidateStorefrontCacheJob::dispatch($tags);
+        // After commit: stock changes happen inside FIFO transactions, and a
+        // storefront refetch that ran before the commit would re-cache the
+        // old figures.
+        RevalidateStorefrontCacheJob::dispatch($tags)->afterCommit();
     }
 }
