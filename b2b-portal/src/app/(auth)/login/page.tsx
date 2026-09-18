@@ -1,110 +1,118 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useB2bAuth } from "@/stores/useB2bAuth";
 import { apiPost, ApiError, ApiValidationError } from "@/lib/api";
 import type { ApiUser } from "@/lib/types";
+import { AuthCard, authInputClass, authPrimaryButtonClass } from "@/components/auth/AuthCard";
+import { PhoneCodeForm } from "@/components/auth/PhoneCodeForm";
+
+type Mode = "password" | "sms";
 
 export default function B2BLoginPage() {
+  const t = useTranslations("b2bAuth");
   const router = useRouter();
   const setSession = useB2bAuth((state) => state.setSession);
 
+  const [mode, setMode] = useState<Mode>("password");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const signedIn = (token: string, user: ApiUser) => {
+    setSession(token, user);
+    router.push("/catalog");
+  };
+
+  const submitPassword = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-
     try {
       const response = await apiPost<{ token: string; user: ApiUser }>("/auth/login", {
         phone,
         password,
         device_name: "b2b_web",
       });
-
-      setSession(response.token, response.user);
-
-      if (response.user.is_approved === false) {
-        router.push("/pending");
-      } else {
-        router.push("/catalog");
-      }
+      signedIn(response.token, response.user);
     } catch (err: unknown) {
       if (err instanceof ApiValidationError) {
         setError(err.messages.join(", "));
       } else if (err instanceof ApiError && err.status === 401) {
-        setError("Неверный номер телефона или пароль");
+        setError(t("wrongCredentials"));
       } else {
-        setError("Произошла ошибка при входе");
+        setError(t("genericError"));
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const tabClass = (active: boolean) =>
+    `flex-1 rounded-md py-2 text-sm font-medium transition ${active ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"}`;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <div className="font-display text-2xl font-semibold tracking-tight text-ink mb-1">
-            Paradise B2B
-          </div>
-          <h1 className="text-lg font-medium text-muted">Вход для оптовиков</h1>
-        </div>
+    <AuthCard
+      brand={t("brand")}
+      title={t("loginTitle")}
+      footer={
+        <>
+          {t("noAccount")}{" "}
+          <Link href="/register" className="text-ink font-medium hover:underline">
+            {t("toRegister")}
+          </Link>
+        </>
+      }
+    >
+      <div className="mb-6 flex gap-1 rounded-lg bg-surface p-1" role="tablist">
+        <button type="button" role="tab" aria-selected={mode === "password"} className={tabClass(mode === "password")} onClick={() => setMode("password")}>
+          {t("tabPassword")}
+        </button>
+        <button type="button" role="tab" aria-selected={mode === "sms"} className={tabClass(mode === "sms")} onClick={() => setMode("sms")}>
+          {t("tabSms")}
+        </button>
+      </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-6 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === "password" ? (
+        <form onSubmit={submitPassword} className="space-y-4">
+          {error ? <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div> : null}
           <div>
-            <label className="block text-sm font-medium text-ink mb-1">Номер телефона</label>
+            <label htmlFor="login-phone" className="block text-sm font-medium text-ink mb-1">{t("phone")}</label>
             <input
+              id="login-phone"
               type="tel"
+              autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-ink"
+              className={authInputClass}
               placeholder="+7 (___) ___-__-__"
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-ink mb-1">Пароль</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-ink mb-1">{t("password")}</label>
             <input
+              id="login-password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-ink"
+              className={authInputClass}
               placeholder="••••••••"
             />
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-ink text-white py-3 rounded-lg font-medium hover:bg-ink-hover transition-colors disabled:opacity-50 mt-4"
-          >
-            {isLoading ? "Вход..." : "Войти"}
+          <button type="submit" disabled={isLoading} className={`${authPrimaryButtonClass} mt-4`}>
+            {isLoading ? t("loggingIn") : t("login")}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-muted">
-          Нет аккаунта?{" "}
-          <Link href="/register" className="text-ink font-medium hover:underline">
-            Зарегистрироваться
-          </Link>
-        </div>
-      </div>
-    </div>
+      ) : (
+        <PhoneCodeForm intent="login" submitLabel={t("login")} onSuccess={signedIn} />
+      )}
+    </AuthCard>
   );
 }
