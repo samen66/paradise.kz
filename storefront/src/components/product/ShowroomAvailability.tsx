@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Portal } from "@/components/ui/Portal";
 
 import type { ProductShowroom } from "@/lib/types";
+import { isPlentiful } from "@/lib/stock";
 
 interface ShowroomAvailabilityProps {
   showrooms: ProductShowroom[];
@@ -23,11 +24,17 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
     return "точек";
   }
 
-  const getStatusMeta = (status: string, qty: number) => {
-    if (status === "high" || qty >= 5) {
-      return { label: "Много", bg: "var(--color-mint,#e3f3ea)", color: "var(--color-mint-ink,#1d6b4f)", dot: "#1d6b4f" };
+  // "Много" from RETAIL_EXACT_STOCK_BELOW up; below it the exact count, flagged
+  // as "Мало" once it is down to a handful.
+  const getStatusMeta = (qty: number) => {
+    const mint = { bg: "var(--color-mint,#e3f3ea)", color: "var(--color-mint-ink,#1d6b4f)", dot: "#1d6b4f" };
+    if (isPlentiful(qty)) {
+      return { label: "Много", ...mint };
     }
-    if (status === "low" || (qty > 0 && qty < 5)) {
+    if (qty >= 5) {
+      return { label: `${qty} шт`, ...mint };
+    }
+    if (qty > 0) {
       return { label: `Мало — ${qty} шт`, bg: "#fef3c7", color: "#b45309", dot: "#d97706" };
     }
     return { label: "Нет в наличии", bg: "var(--color-neutral-100,#f0eee9)", color: "var(--color-neutral-600,#5f5a50)", dot: "#8a8477" };
@@ -48,8 +55,7 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
 
         <div className="flex flex-col">
           {showrooms.map((sr) => {
-            const status = sr.stock >= 5 ? "high" : (sr.stock > 0 ? "low" : "out");
-            const meta = getStatusMeta(status, sr.stock);
+            const meta = getStatusMeta(sr.stock);
             return (
               <div
                 key={sr.store.id}
