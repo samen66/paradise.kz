@@ -31,4 +31,9 @@ class BannerFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => ['is_active' => false]);
     }
+
+    public function b2bHome(): static
+    {
+        return $this->state(fn (array $attributes): array => ['placement' => Banner::PLACEMENT_B2B_HOME]);
+    }
 }

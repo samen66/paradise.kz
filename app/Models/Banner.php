@@ -14,8 +14,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
 
 /**
- * A storefront promo banner. `placement` names the slot the storefront renders
- * it in (only `home_hero` for now); admins control order via `sort_order`.
+ * A storefront promo banner. `placement` names the slot: `home_hero`
+ * (storefront) or `b2b_home` (B2B portal home). Admins control order via
+ * `sort_order`.
  */
 class Banner extends Model implements HasMedia
 {
@@ -28,6 +29,18 @@ class Banner extends Model implements HasMedia
     public const IMAGE_COLLECTION = 'image';
 
     public const PLACEMENT_HOME_HERO = 'home_hero';
+
+    public const PLACEMENT_B2B_HOME = 'b2b_home';
+
+    /**
+     * Slots a banner can be placed in, with the label managers see.
+     *
+     * @var array<string, string>
+     */
+    public const PLACEMENTS = [
+        self::PLACEMENT_HOME_HERO => 'Главная магазина — верхний баннер',
+        self::PLACEMENT_B2B_HOME => 'B2B-главная — верхний баннер',
+    ];
 
     /** @var list<string> */
     public array $translatable = ['title', 'subtitle'];

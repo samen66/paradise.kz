@@ -74,4 +74,26 @@ class HomeTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data.collections');
     }
+
+    #[Test]
+    public function collections_hidden_from_the_storefront_are_left_out(): void
+    {
+        ProductCollection::factory()->create(['title' => 'Витрина']);
+        ProductCollection::factory()->create(['title' => 'Только B2B', 'show_on_storefront' => false]);
+
+        $response = $this->getJson('/api/public/home')->assertOk();
+
+        $this->assertSame(['Витрина'], collect($response->json('data.collections'))->pluck('title')->all());
+    }
+
+    #[Test]
+    public function b2b_home_banners_stay_off_the_storefront(): void
+    {
+        Banner::factory()->create(['title' => 'Магазин']);
+        Banner::factory()->b2bHome()->create(['title' => 'Опт']);
+
+        $response = $this->getJson('/api/public/home')->assertOk();
+
+        $this->assertSame(['Магазин'], collect($response->json('data.banners'))->pluck('title')->all());
+    }
 }

@@ -73,6 +73,7 @@ class HomeController extends Controller
 
         return ProductCollection::query()
             ->where('is_active', true)
+            ->where('show_on_storefront', true)
             ->orderBy('sort_order')
             ->with(['products' => function ($query) use ($publicProductIds): void {
                 $query->whereIn('products.id', $publicProductIds)

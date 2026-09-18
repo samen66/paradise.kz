@@ -32,4 +32,9 @@ class ProductCollectionFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => ['is_active' => false]);
     }
+
+    public function onB2bHome(): static
+    {
+        return $this->state(fn (array $attributes): array => ['show_on_b2b_home' => true]);
+    }
 }

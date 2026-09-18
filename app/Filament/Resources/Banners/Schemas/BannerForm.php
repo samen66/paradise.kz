@@ -17,9 +17,7 @@ class BannerForm
             ->components([
                 Select::make('placement')
                     ->label('Размещение')
-                    ->options([
-                        Banner::PLACEMENT_HOME_HERO => 'Главная — верхний баннер',
-                    ])
+                    ->options(Banner::PLACEMENTS)
                     ->default(Banner::PLACEMENT_HOME_HERO)
                     ->required(),
                 TextInput::make('title')
