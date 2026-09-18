@@ -39,11 +39,14 @@ class ProductController extends Controller
      * Filters: filter[category]=<external_folder_id>, filter[search]=<term>.
      * Sorts:   name, code, created_at (and their `-` descending forms).
      * Price is per-client and intentionally NOT a sortable column.
+     * Unapproved clients get the same list without prices and stock;
+     * `in_stock` is ignored for them.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
         $store = $this->stores->resolve($user, $this->requestedStoreId($request));
+        $approved = (bool) $user->is_approved;
 
         $products = QueryBuilder::for($this->visibility->visibleProductQuery($user)->with('media'))
             ->allowedFilters(
@@ -51,7 +54,12 @@ class ProductController extends Controller
                 AllowedFilter::callback('search', $this->searchFilter(...)),
                 AllowedFilter::callback('brand', $this->brandFilter(...)),
                 AllowedFilter::callback('attr', $this->attributeFilter(...)),
-                AllowedFilter::callback('in_stock', function (Builder $query, mixed $value) use ($store): void {
+                AllowedFilter::callback('in_stock', function (Builder $query, mixed $value) use ($store, $approved): void {
+                    // Unapproved clients see no stock, so the filter must not reveal it either.
+                    if (! $approved) {
+                        return;
+                    }
+
                     if (filter_var($value, FILTER_VALIDATE_BOOLEAN) && $store !== null) {
                         $query->whereIn('products.id', ProductStoreStock::query()
                             ->select('product_id')
@@ -68,6 +76,14 @@ class ProductController extends Controller
             ->defaultSort('name')
             ->paginate(self::PER_PAGE)
             ->appends($request->query());
+
+        if (! $approved) {
+            $products->getCollection()->each(function (Product $product): void {
+                $product->hide_commercial = true;
+            });
+
+            return ProductResource::collection($products);
+        }
 
         // Resolve all prices/stocks in one query each (no N+1), then attach to each row.
         $prices = $this->pricing->priceForMany($user, $products->getCollection());
@@ -98,13 +114,20 @@ class ProductController extends Controller
         $store = $this->stores->resolve($user, $this->requestedStoreId($request));
 
         $product->loadMissing('media', 'variants');
+        $product->with_description = true;
+
+        if (! $user->is_approved) {
+            $product->hide_commercial = true;
+
+            return new ProductResource($product);
+        }
+
         $product->resolved_price = $this->pricing->priceFor($user, $product);
         $product->resolved_stock = $store === null ? 0 : (float) (ProductStoreStock::query()
             ->where('product_id', $product->id)
             ->where('store_id', $store->id)
             ->value('stock') ?? 0);
         $product->show_stock_quantity = CatalogSetting::current()->show_stock_quantity;
-        $product->with_description = true;
 
         return new ProductResource($product);
     }

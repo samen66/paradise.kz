@@ -885,17 +885,31 @@ class MvpAcceptanceCommand extends Command
                 },
             ],
             [
-                'title' => 'Неодобренный клиент получает 403 на GET /api/products',
+                'title' => 'Неодобренный клиент видит GET /api/products без цен и остатков',
                 'run' => function (): true|array {
                     if (! isset($this->b2bToken)) {
-                        return $this->nothingToCheck('HTTP 403 без одобрения', 'B2B-клиент не зарегистрировался (шаг 16)');
+                        return $this->nothingToCheck('каталог без цен до одобрения', 'B2B-клиент не зарегистрировался (шаг 16)');
                     }
 
                     $response = $this->send('GET', '/api/products', null, $this->b2bToken);
 
-                    return $response['status'] === 403
-                        ? true
-                        : $this->mismatch('HTTP 403 (гейт approved)', $this->summarize($response));
+                    if ($response['status'] !== 200) {
+                        return $this->mismatch('HTTP 200', $this->summarize($response));
+                    }
+
+                    $first = data_get($response['json'], 'data.0');
+
+                    if (! is_array($first)) {
+                        return $this->mismatch('в каталоге есть товары', 'data пуст');
+                    }
+
+                    foreach (['price', 'old_price', 'stock', 'in_stock'] as $key) {
+                        if (array_key_exists($key, $first)) {
+                            return $this->mismatch("ключа {$key} нет в ответе", "{$key} = ".json_encode($first[$key]));
+                        }
+                    }
+
+                    return true;
                 },
             ],
             [

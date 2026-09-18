@@ -75,16 +75,20 @@ Route::prefix('auth')->group(function () {
         ->middleware(['auth:sanctum', 'approved']);
 });
 
-// Catalog + orders: visible only to authenticated, approved B2B clients.
+// Catalog: any B2B client, approved or not. Unapproved clients browse it
+// without prices or stock (ProductController sets `hide_commercial`).
 // `b2b` matters: retail (storefront) accounts are auto-approved, so without
 // it a retail token could read wholesale prices.
-Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
+Route::middleware(['auth:sanctum', 'b2b'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index']);
     // Numeric id only: slugs are the public storefront's addressing. Without
     // the constraint MySQL would cast '3-kreslo' to 3 and resolve product 3.
     Route::get('/products/{product}', [ProductController::class, 'show'])->whereNumber('product');
+});
 
+// Buying: approved B2B clients only.
+Route::middleware(['auth:sanctum', 'approved', 'b2b'])->group(function () {
     Route::post('/cart/validate', [B2bCartController::class, 'validateCart']);
 
     Route::get('/orders', [OrderController::class, 'index']);

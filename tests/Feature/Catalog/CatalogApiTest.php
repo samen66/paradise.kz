@@ -37,12 +37,14 @@ class CatalogApiTest extends TestCase
     }
 
     #[Test]
-    public function unapproved_user_is_blocked_from_products(): void
+    public function unapproved_user_sees_products_without_prices(): void
     {
-        $user = User::factory()->b2b()->create(); // pending
-        Sanctum::actingAs($user);
+        Sanctum::actingAs(User::factory()->b2b()->create()); // pending
+        Product::factory()->create(['b2b_price' => 200_000]);
 
-        $this->getJson('/api/products')->assertStatus(403);
+        $this->getJson('/api/products')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.price');
     }
 
     #[Test]

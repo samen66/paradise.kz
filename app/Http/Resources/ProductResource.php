@@ -16,7 +16,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * the transient `resolved_stock` attribute. Whether the exact stock number is
  * shown at all is controlled by the admin-editable `CatalogSetting` and
  * attached as the transient `show_stock_quantity` attribute; `in_stock`
- * (boolean) is always shown regardless of this setting.
+ * (boolean) is always shown regardless of this setting. When the transient
+ * `hide_commercial` attribute is truthy, `price`, `old_price`, `stock`,
+ * `in_stock` and `showrooms` are left out entirely (variants also lose their
+ * `stock`/`in_stock`) — used for B2B clients still awaiting approval.
  *
  * @mixin Product
  */
@@ -50,10 +53,10 @@ class ProductResource extends JsonResource
             // convenience for catalog cards; `images` is the full gallery.
             'images' => $images,
             'image' => $images[0]['thumb'] ?? null,
-            'stock' => $this->when($this->showStockQuantity(), $this->resolvedStock()),
-            'in_stock' => $this->resolvedStock() > 0,
-            'price' => $this->majorPrice(),
-            'old_price' => $this->majorComparePrice(),
+            'stock' => $this->when(! $this->hidesCommercialData() && $this->showStockQuantity(), fn (): float => $this->resolvedStock()),
+            'in_stock' => $this->when(! $this->hidesCommercialData(), fn (): bool => $this->resolvedStock() > 0),
+            'price' => $this->when(! $this->hidesCommercialData(), fn (): ?float => $this->majorPrice()),
+            'old_price' => $this->when(! $this->hidesCommercialData(), fn (): ?float => $this->majorComparePrice()),
             'is_new' => (bool) $this->is_new_arrival,
             'b2b_min_order_qty' => $this->resource->effectiveB2bMinOrderQty(),
             'external_folder_id' => $this->externalMapping?->external_folder_id,
@@ -102,7 +105,7 @@ class ProductResource extends JsonResource
                 ])->values()->all(),
             ),
             'showrooms' => $this->when(
-                (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('storeStocks'),
+                ! $this->hidesCommercialData() && (bool) ($this->resource->with_description ?? false) && $this->relationLoaded('storeStocks'),
                 fn (): array => $this->storeStocks->filter(fn ($s) => $s->stock > 0)->map(fn ($s) => [
                     'store' => [
                         'id' => $s->store->id,
@@ -140,17 +143,27 @@ class ProductResource extends JsonResource
     private function variantsPayload(): array
     {
         $showStockQuantity = $this->showStockQuantity();
+        $hideCommercial = $this->hidesCommercialData();
 
         return $this->variants
-            ->map(fn ($variant): array => [
-                'id' => $variant->id,
-                'external_id' => $variant->external_id,
-                'name' => $variant->name,
-                'characteristics' => $variant->characteristics ?? [],
-                'barcodes' => $variant->barcodes ?? [],
-                'stock' => $this->when($showStockQuantity, (float) $variant->stock),
-                'in_stock' => (float) $variant->stock > 0,
-            ])
+            ->map(function ($variant) use ($showStockQuantity, $hideCommercial): array {
+                $payload = [
+                    'id' => $variant->id,
+                    'external_id' => $variant->external_id,
+                    'name' => $variant->name,
+                    'characteristics' => $variant->characteristics ?? [],
+                    'barcodes' => $variant->barcodes ?? [],
+                ];
+
+                if ($hideCommercial) {
+                    return $payload;
+                }
+
+                return $payload + [
+                    'stock' => $this->when($showStockQuantity, (float) $variant->stock),
+                    'in_stock' => (float) $variant->stock > 0,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -223,5 +236,15 @@ class ProductResource extends JsonResource
     private function showStockQuantity(): bool
     {
         return (bool) ($this->resource->show_stock_quantity ?? true);
+    }
+
+    /**
+     * Whether prices and stock must be left out entirely — a B2B client still
+     * awaiting approval, or the public B2B home page. `hide_commercial` is a
+     * transient attribute set before serialization; absent means shown.
+     */
+    private function hidesCommercialData(): bool
+    {
+        return (bool) ($this->resource->hide_commercial ?? false);
     }
 }
