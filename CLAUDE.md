@@ -25,13 +25,14 @@ and stock. The MoySklad integration it used to mirror from has been removed;
   changes, products (with photos, prices by type, per-client prices,
   attributes, variants), stock with the movement ledger, goods receipts,
   write-offs, warehouses, suppliers, B2B client approval, categories, brands,
-  attributes, price types, catalog groups, product collections.
+  attributes, price types, catalog groups, product collections, banners, B2B home content,
+  collection covers.
   Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`). Shared UI lives
   in `admin/src/components/ui`, data access in `admin/src/lib/crud.ts`.
 - **Filament (`/admin` on the API host)** — being retired stage by stage
   (`docs/superpowers/specs/2026-09-17-admin-catalog-migration-design.md`,
   `docs/superpowers/specs/2026-09-17-admin-warehouse-design.md`).
-  Still the only place for CMS pages, banners, reviews, shorts, catalog
+  Still the only place for CMS pages, reviews, shorts, catalog
   settings and user editing; its warehouse resources still work on the same
   data until stage 5. `admin/` links out to it (`ERP_ADMIN_URL` in
   `admin/src/lib/api.ts`).
@@ -71,6 +72,7 @@ FifoInventoryService writes:
 - `app/Services/Catalog/` — `VisibilityService` (catalog groups; public catalog
   = products in no group), `PublicProductPresenter`, `StoreResolver`, `CategoryTree`.
 - `app/Services/Auth/OtpService.php` — phone OTP login for the storefront.
+- `B2bPhoneAuthService` — B2B portal registration/login by SMS code; never changes an existing account's type.
 
 ### ERP abstraction (dormant)
 
@@ -89,8 +91,10 @@ the contract and are not scheduled. Historical links to external systems
 |---|---|---|
 | `/api/public/*` | none (guest checkout, OTP login, catalog, facets, order tracking) | storefront |
 | `/api/account/*` | `auth:sanctum` | storefront customer account |
-| `/api/auth/*` | login/register public, the rest `auth:sanctum` | b2b-portal, admin SPA |
-| `/api/{categories,products,orders,addresses}` | `auth:sanctum` + `approved` + `b2b` | b2b-portal |
+| `/api/auth/*` | login, otp/request, otp/register, otp/login public, the rest `auth:sanctum` | b2b-portal, admin SPA |
+| `/api/{categories,products}` | `auth:sanctum` + `b2b` (unapproved: no prices/stock) | b2b-portal |
+| `/api/{cart/validate,orders,addresses}` | `auth:sanctum` + `approved` + `b2b` | b2b-portal |
+| `/api/b2b/home` | none | b2b-portal home page |
 | `/api/admin/*` | `auth:sanctum` + `role:admin\|manager` | admin SPA |
 
 All front-ends authenticate with Sanctum **bearer tokens** (no cookie/stateful
