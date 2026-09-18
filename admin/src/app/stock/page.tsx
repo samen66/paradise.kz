@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import api, { ERP_ADMIN_URL } from '@/lib/api';
+import Link from 'next/link';
+import api from '@/lib/api';
 import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
 
 /**
  * On-hand stock per product and warehouse.
  *
  * Read-only by design: quantities are a projection of the FIFO ledger, so the
- * only way to change them is to post a goods receipt or an adjustment — that
+ * only way to change them is to post a goods receipt or a write-off — that
  * way every movement leaves a trace. The link below goes to those screens.
  */
 
@@ -71,21 +72,19 @@ export default function StockPage() {
               {total > 0 && <span className="ml-2 font-medium text-gray-700">{total} позиций</span>}
             </p>
           </div>
-          <a
-            href={`${ERP_ADMIN_URL}/admin/goods-receipts`}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/goods-receipts"
             className="shrink-0 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Приёмки и корректировки →
-          </a>
+            Приёмки и списания →
+          </Link>
         </div>
 
         <NoActiveStoreWarning hasActiveStore={hasActiveStore} />
 
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
           Остаток нельзя отредактировать вручную — он считается по складскому журналу.
-          Чтобы изменить его, проведите приёмку или корректировку.
+          Чтобы изменить его, проведите приёмку или списание.
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -118,18 +117,19 @@ export default function StockPage() {
                   <th className="px-6 py-4">Склад</th>
                   <th className="px-6 py-4 text-right">Остаток</th>
                   <th className="px-6 py-4 text-right">Себестоимость</th>
+                  <th className="px-6 py-4 text-right"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       Ничего не найдено. Остатки появляются после проведения приёмки.
                     </td>
                   </tr>
@@ -155,6 +155,14 @@ export default function StockPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right text-gray-700">{money(row.avg_cost)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <Link
+                            href={`/stock-movements?product_id=${row.product_id}${row.store ? `&store_id=${row.store.id}` : ''}`}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            Движения
+                          </Link>
+                        </td>
                       </tr>
                     );
                   })

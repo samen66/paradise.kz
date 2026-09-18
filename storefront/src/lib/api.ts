@@ -85,6 +85,11 @@ async function request<T>(method: string, path: string, body: unknown, options: 
 
   let dataText = await response.text();
 
+  // Some writes answer 201 with no body (e.g. PUT /account/favorites/{id}).
+  if (dataText === "") {
+    return undefined as T;
+  }
+
   // In local development, rewrite absolute storage URLs to relative paths
   // so that Next.js rewrites can proxy them to the nginx container.
   // This bypasses docker host-gateway port conflicts on Mac.

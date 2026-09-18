@@ -23,36 +23,44 @@ class GoodsReceiptService
      */
     public function post(GoodsReceipt $receipt, ?User $user = null): GoodsReceipt
     {
-        if ($receipt->isPosted()) {
-            throw new RuntimeException('Приёмка уже проведена.');
-        }
+        $posted = DB::transaction(function () use ($receipt, $user): GoodsReceipt {
+            // Re-read under a row lock: a second tab (or Filament next to the
+            // admin app) holding a stale draft must not receive the stock twice.
+            $locked = GoodsReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
 
-        $receipt->loadMissing('items.product', 'store');
+            if ($locked->isPosted()) {
+                throw new RuntimeException('Приёмка уже проведена.');
+            }
 
-        if ($receipt->items->isEmpty()) {
-            throw new RuntimeException('Нельзя провести пустую приёмку.');
-        }
+            $locked->load('items.product', 'store');
 
-        return DB::transaction(function () use ($receipt, $user): GoodsReceipt {
-            foreach ($receipt->items as $item) {
+            if ($locked->items->isEmpty()) {
+                throw new RuntimeException('Нельзя провести пустую приёмку.');
+            }
+
+            foreach ($locked->items as $item) {
                 $this->inventory->receive(
                     product: $item->product,
-                    store: $receipt->store,
+                    store: $locked->store,
                     quantity: (float) $item->quantity,
                     unitCost: (int) $item->unit_cost,
-                    document: $receipt,
+                    document: $locked,
                     user: $user,
                 );
             }
 
-            $receipt->forceFill([
+            $locked->forceFill([
                 'status' => GoodsReceipt::STATUS_POSTED,
-                'received_at' => $receipt->received_at ?? now(),
+                'received_at' => $locked->received_at ?? now(),
                 'posted_at' => now(),
-                'user_id' => $receipt->user_id ?? $user?->id,
+                'user_id' => $locked->user_id ?? $user?->id,
             ])->save();
 
-            return $receipt;
+            return $locked;
         });
+
+        $receipt->setRawAttributes($posted->getAttributes(), true);
+
+        return $receipt;
     }
 }

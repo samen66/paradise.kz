@@ -243,6 +243,14 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * @return HasMany<WriteOffItem, $this>
+     */
+    public function writeOffItems(): HasMany
+    {
+        return $this->hasMany(WriteOffItem::class);
+    }
+
+    /**
      * @return HasMany<ProductReview, $this>
      */
     public function reviews(): HasMany

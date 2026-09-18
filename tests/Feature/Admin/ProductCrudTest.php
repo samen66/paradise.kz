@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Models\WriteOffItem;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -360,6 +361,18 @@ class ProductCrudTest extends TestCase
     public function a_product_referenced_by_a_goods_receipt_cannot_be_deleted(): void
     {
         $item = GoodsReceiptItem::factory()->create();
+
+        $this->deleteJson("/api/admin/products/{$item->product_id}")
+            ->assertUnprocessable()
+            ->assertJsonStructure(['message']);
+
+        $this->assertDatabaseHas('products', ['id' => $item->product_id]);
+    }
+
+    #[Test]
+    public function a_product_on_a_write_off_cannot_be_deleted(): void
+    {
+        $item = WriteOffItem::factory()->create();
 
         $this->deleteJson("/api/admin/products/{$item->product_id}")
             ->assertUnprocessable()

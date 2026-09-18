@@ -2,17 +2,20 @@
 
 namespace App\Filament\Resources\GoodsReceipts\RelationManagers;
 
-use Filament\Actions\BulkActionGroup;
+use App\Models\GoodsReceipt;
+use App\Models\GoodsReceiptItem;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class ItemsRelationManager extends RelationManager
 {
@@ -41,8 +44,8 @@ class ItemsRelationManager extends RelationManager
                     ->required()
                     ->minValue(0)
                     ->step('0.01')
-                    ->formatStateUsing(fn ($state) => $state !== null ? (float)$state / 100 : null)
-                    ->dehydrateStateUsing(fn ($state) => $state !== null ? (int)round((float)$state * 100) : null),
+                    ->formatStateUsing(fn ($state) => $state !== null ? (float) $state / 100 : null)
+                    ->dehydrateStateUsing(fn ($state) => $state !== null ? (int) round((float) $state * 100) : null),
             ]);
     }
 
@@ -57,23 +60,52 @@ class ItemsRelationManager extends RelationManager
                     ->label('Себестоимость (₸)')
                     ->numeric()
                     ->sortable()
-                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((float)$state / 100, 2, '.', '') : null),
+                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((float) $state / 100, 2, '.', '') : null),
             ])
             ->filters([])
             ->headerActions([
                 CreateAction::make()
-                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted()),
+                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted())
+                    ->before(function (CreateAction $action): void {
+                        $this->haltIfReceiptPosted($action, $this->getOwnerRecord());
+                    }),
             ])
             ->recordActions([
                 EditAction::make()
-                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted()),
+                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted())
+                    ->before(function (EditAction $action, GoodsReceiptItem $record): void {
+                        $this->haltIfReceiptPosted($action, $record->goodsReceipt);
+                    }),
                 DeleteAction::make()
-                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted()),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                    ->visible(fn (): bool => ! $this->getOwnerRecord()->isPosted())
+                    ->before(function (DeleteAction $action, GoodsReceiptItem $record): void {
+                        $this->haltIfReceiptPosted($action, $record->goodsReceipt);
+                    }),
             ]);
+    }
+
+    /**
+     * Re-reads the owner receipt under a row lock rather than trusting the
+     * Livewire component's in-memory copy: a page left open since before the
+     * receipt was posted would otherwise still show the create/edit/delete
+     * buttons and be able to write a line into a document the ledger already
+     * considers closed.
+     */
+    private function haltIfReceiptPosted(Action $action, GoodsReceipt $receipt): void
+    {
+        $isPosted = DB::transaction(
+            fn (): bool => GoodsReceipt::query()->lockForUpdate()->findOrFail($receipt->id)->isPosted(),
+        );
+
+        if (! $isPosted) {
+            return;
+        }
+
+        Notification::make()
+            ->title('Документ проведён — изменить нельзя.')
+            ->danger()
+            ->send();
+
+        $action->halt();
     }
 }
