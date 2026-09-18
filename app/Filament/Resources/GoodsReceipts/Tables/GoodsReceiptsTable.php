@@ -4,8 +4,6 @@ namespace App\Filament\Resources\GoodsReceipts\Tables;
 
 use App\Filament\Resources\GoodsReceipts\GoodsReceiptResource;
 use App\Models\GoodsReceipt;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -32,11 +30,6 @@ class GoodsReceiptsTable
             ->recordActions([
                 GoodsReceiptResource::postAction(),
                 EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }
