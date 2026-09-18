@@ -55,10 +55,12 @@ class BannerRequest extends FormRequest
         $validated = parent::validated();
 
         foreach (['title', 'subtitle'] as $field) {
-            $validated[$field] = array_filter(
-                $validated[$field] ?? [],
-                fn (?string $value): bool => $value !== null && $value !== '',
-            );
+            if (array_key_exists($field, $validated)) {
+                $validated[$field] = array_filter(
+                    $validated[$field],
+                    fn (?string $value): bool => $value !== null && $value !== '',
+                );
+            }
         }
 
         if (array_key_exists('sort_order', $validated)) {

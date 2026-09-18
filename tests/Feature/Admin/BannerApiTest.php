@@ -57,7 +57,10 @@ class BannerApiTest extends TestCase
             'is_active' => false,
         ])->assertOk()->assertJsonPath('data.is_active', false);
 
-        $this->assertSame('Новый заголовок', Banner::findOrFail($id)->getTranslation('title', 'ru'));
+        $banner = Banner::findOrFail($id);
+        $this->assertSame('Новый заголовок', $banner->getTranslation('title', 'ru'));
+        // Regression: PUT without subtitle should not wipe existing subtitle
+        $this->assertSame('Оптом со склада в Алматы', $banner->getTranslation('subtitle', 'ru'));
 
         $this->deleteJson("/api/admin/banners/{$id}")->assertNoContent();
         $this->assertDatabaseMissing('banners', ['id' => $id]);
