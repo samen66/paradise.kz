@@ -121,6 +121,23 @@ export interface HomeData {
   collections: HomeCollection[];
 }
 
+export interface B2bHomeCollection {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover: string | null;
+  cover_card: string | null;
+  /** Public catalog only, without price/stock keys. */
+  products: Product[];
+}
+
+export interface B2bHome {
+  banners: Banner[];
+  about: { title: string | null; text: string | null; image: string | null } | null;
+  collections: B2bHomeCollection[];
+}
+
 export interface ContentPage {
   slug: string;
   title: string;
