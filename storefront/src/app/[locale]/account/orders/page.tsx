@@ -15,14 +15,6 @@ function statusPillClass(status: string): string {
     : "bg-transparent border border-line text-ink";
 }
 
-function plural(n: number, one: string, few: string, many: string) {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
-}
-
 export default function AccountOrdersPage() {
   const t = useTranslations("account");
   const tCart = useTranslations("cart");
@@ -79,7 +71,7 @@ export default function AccountOrdersPage() {
           const isOpen = openOrder === order.id;
           const totalQty = order.items?.reduce((acc, item) => acc + Number(item.quantity), 0) || 0;
           const dateStr = new Date(order.created_at).toLocaleDateString(locale === "kk" ? "kk-KZ" : "ru-KZ");
-          const itemsLabel = `${totalQty} ${plural(totalQty, "товар", "товара", "товаров")}`;
+          const itemsLabel = t("itemsCount", { count: totalQty });
           
           return (
             <div key={order.id} className="bg-white border border-line rounded-[20px] overflow-hidden">
@@ -138,7 +130,7 @@ export default function AccountOrdersPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-ink truncate">{item.name}</div>
                           <div className="text-xs text-muted">
-                            {Number(item.quantity)} шт × {formatPrice(item.price, locale)}
+                            {Number(item.quantity)} {t("pcs")} × {formatPrice(item.price, locale)}
                           </div>
                         </div>
                         <span className="text-sm font-semibold text-ink shrink-0">
@@ -150,7 +142,7 @@ export default function AccountOrdersPage() {
                   
                   <div className="flex gap-3 flex-wrap border-t border-line pt-4 mt-1">
                     <Link href={`/account/orders/${order.id}`} className="inline-flex items-center justify-center rounded-[10px] bg-ink px-4 py-2 text-[13px] font-medium text-white transition hover:bg-ink-hover shrink-0">
-                      Подробности заказа
+                      {t("orderDetails")}
                     </Link>
                   </div>
                 </div>

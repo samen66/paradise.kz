@@ -228,7 +228,11 @@
     "status": {
       "pending": "В обработке",
       "synced": "Подтверждён",
-      "failed": "В обработке"
+      "failed": "В обработке",
+      "confirmed": "Подтверждён",
+      "in_delivery": "В доставке",
+      "completed": "Получен",
+      "cancelled": "Отменён"
     },
     "receivingPickup": "Самовывоз",
     "receivingDelivery": "Доставка",
@@ -243,7 +247,44 @@
     "profileSaved": "Сохранено",
     "nameLabel": "Имя",
     "phoneLabel": "Телефон",
-    "emailLabel": "Email"
+    "emailLabel": "Email",
+    "backToOrders": "Мои заказы",
+    "placedAt": "Оформлен {date}",
+    "itemsCount": "{count, plural, one {# товар} few {# товара} many {# товаров} other {# товара}}",
+    "orderDetails": "Подробности заказа",
+    "steps": {
+      "placed": "Оформлен",
+      "confirmed": "Подтверждён",
+      "inDelivery": "В доставке",
+      "readyForPickup": "Готов к выдаче",
+      "received": "Получен"
+    },
+    "cancelledTitle": "Заказ отменён",
+    "cancelledText": "Если это ошибка, оформите заказ заново или позвоните нам.",
+    "receivingTitle": "Получение",
+    "paymentTitle": "Оплата",
+    "apartment": "кв. {apartment}",
+    "paymentMethod": {
+      "kaspi": "Kaspi QR / Kaspi Pay",
+      "cash": "Наличными при получении"
+    },
+    "paymentStatus": {
+      "unpaid": "Не оплачен",
+      "paid": "Оплачен",
+      "cancelled": "Оплата отменена",
+      "failed": "Оплата не прошла"
+    },
+    "itemsTitle": "Товары",
+    "article": "Арт. {article}",
+    "pcs": "шт",
+    "orderComment": "Комментарий к заказу",
+    "cancelOrder": "Отменить заказ",
+    "cancelConfirm": "Отменить заказ {number}?",
+    "cancelYes": "Да, отменить",
+    "cancelNo": "Нет",
+    "cancelling": "Отменяем…",
+    "cancelHint": "Отменить заказ можно, пока менеджер его не подтвердил.",
+    "cancelFailed": "Не удалось отменить заказ. Попробуйте ещё раз."
   },
   "tracking": {
     "title": "Отследить заказ",

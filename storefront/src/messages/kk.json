@@ -228,7 +228,11 @@
     "status": {
       "pending": "Өңделуде",
       "synced": "Расталды",
-      "failed": "Өңделуде"
+      "failed": "Өңделуде",
+      "confirmed": "Расталды",
+      "in_delivery": "Жеткізілуде",
+      "completed": "Алынды",
+      "cancelled": "Бас тартылды"
     },
     "receivingPickup": "Өзі алып кету",
     "receivingDelivery": "Жеткізу",
@@ -243,7 +247,44 @@
     "profileSaved": "Сақталды",
     "nameLabel": "Аты",
     "phoneLabel": "Телефон",
-    "emailLabel": "Email"
+    "emailLabel": "Email",
+    "backToOrders": "Менің тапсырыстарым",
+    "placedAt": "{date} рәсімделді",
+    "itemsCount": "{count} тауар",
+    "orderDetails": "Тапсырыс туралы толығырақ",
+    "steps": {
+      "placed": "Рәсімделді",
+      "confirmed": "Расталды",
+      "inDelivery": "Жолда",
+      "readyForPickup": "Алуға дайын",
+      "received": "Алынды"
+    },
+    "cancelledTitle": "Тапсырыстан бас тартылды",
+    "cancelledText": "Егер бұл қате болса, тапсырысты қайта рәсімдеңіз немесе бізге қоңырау шалыңыз.",
+    "receivingTitle": "Алу",
+    "paymentTitle": "Төлем",
+    "apartment": "{apartment} пәтер",
+    "paymentMethod": {
+      "kaspi": "Kaspi QR / Kaspi Pay",
+      "cash": "Алғанда қолма-қол"
+    },
+    "paymentStatus": {
+      "unpaid": "Төленбеген",
+      "paid": "Төленді",
+      "cancelled": "Төлем болдырылмады",
+      "failed": "Төлем өтпеді"
+    },
+    "itemsTitle": "Тауарлар",
+    "article": "Арт. {article}",
+    "pcs": "дана",
+    "orderComment": "Тапсырысқа түсініктеме",
+    "cancelOrder": "Тапсырысты болдырмау",
+    "cancelConfirm": "{number} тапсырысын болдырмау керек пе?",
+    "cancelYes": "Иә, болдырмау",
+    "cancelNo": "Жоқ",
+    "cancelling": "Болдырмау…",
+    "cancelHint": "Менеджер растағанға дейін тапсырысты болдырмауға болады.",
+    "cancelFailed": "Тапсырысты болдырмау мүмкін болмады. Қайталап көріңіз."
   },
   "tracking": {
     "title": "Тапсырысты қадағалау",
