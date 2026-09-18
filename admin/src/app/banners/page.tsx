@@ -76,6 +76,11 @@ export default function BannersPage() {
           defaultValues={toBannerForm(null, placement || 'b2b_home')}
           onSubmit={async (values) => {
             const banner = await banners.create(values);
+            // A placement filter can exclude the new banner from the reloaded
+            // list — switch to its placement so the edit dialog can find it.
+            if (placement && banner.placement !== placement) {
+              setPlacement(banner.placement);
+            }
             // The photo needs an id: continue in the edit dialog.
             setEditingId(banner.id);
           }}
