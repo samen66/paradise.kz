@@ -118,6 +118,25 @@ class StoreApiTest extends TestCase
     }
 
     #[Test]
+    public function updating_a_store_still_returns_its_fresh_data_under_the_row_lock(): void
+    {
+        // Guards against a store's last-active/default checks with sqlite's
+        // lockForUpdate() being a no-op, this proves the locked read/write
+        // path still behaves correctly, not that the lock itself blocks
+        // concurrent writers.
+        $this->actingAsManager();
+        $store = Store::factory()->create(['is_active' => true, 'address' => 'Старый адрес']);
+        Store::factory()->create(['is_active' => true]);
+
+        $this->putJson("/api/admin/stores/{$store->id}", ['address' => 'Новый адрес'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $store->id)
+            ->assertJsonPath('data.address', 'Новый адрес');
+
+        $this->assertSame('Новый адрес', $store->fresh()->address);
+    }
+
+    #[Test]
     public function an_empty_store_is_deleted(): void
     {
         $this->actingAsManager();

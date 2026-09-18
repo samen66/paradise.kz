@@ -55,40 +55,54 @@ class StoreController extends Controller
     {
         $data = $request->validated();
 
-        if (array_key_exists('is_active', $data) && ! $data['is_active'] && $this->isLastActive($store)) {
-            return response()->json(['message' => 'Это последний активный склад — без него витрина и оформление заказов перестанут работать.'], 422);
-        }
+        $result = DB::transaction(function () use ($store, $data): JsonResponse|Store {
+            /** @var Store $locked */
+            $locked = Store::query()->whereKey($store->id)->lockForUpdate()->firstOrFail();
 
-        DB::transaction(function () use ($store, $data): void {
-            if (! empty($data['is_default'])) {
-                Store::query()->whereKeyNot($store->id)->update(['is_default' => false]);
+            if (array_key_exists('is_active', $data) && ! $data['is_active'] && $this->isLastActive($locked)) {
+                return response()->json(['message' => 'Это последний активный склад — без него витрина и оформление заказов перестанут работать.'], 422);
             }
 
-            $store->update($data);
+            if (! empty($data['is_default'])) {
+                Store::query()->whereKeyNot($locked->id)->update(['is_default' => false]);
+            }
+
+            $locked->update($data);
+
+            return $locked;
         });
 
-        return response()->json(['data' => $store->refresh()->makeHidden(self::HIDDEN)]);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return response()->json(['data' => $result->refresh()->makeHidden(self::HIDDEN)]);
     }
 
     public function destroy(Store $store): JsonResponse
     {
-        if ($this->hasHistory($store)) {
-            return response()->json(['message' => 'У склада есть история (движения, приёмки, списания или заказы) — удалить нельзя, выключите его.'], 422);
-        }
+        return DB::transaction(function () use ($store): JsonResponse {
+            /** @var Store $locked */
+            $locked = Store::query()->whereKey($store->id)->lockForUpdate()->firstOrFail();
 
-        if ($this->isLastActive($store)) {
-            return response()->json(['message' => 'Это последний активный склад — удалить нельзя.'], 422);
-        }
+            if ($this->hasHistory($locked)) {
+                return response()->json(['message' => 'У склада есть история (движения, приёмки, списания или заказы) — удалить нельзя, выключите его.'], 422);
+            }
 
-        $store->delete();
+            if ($this->isLastActive($locked)) {
+                return response()->json(['message' => 'Это последний активный склад — удалить нельзя.'], 422);
+            }
 
-        return response()->json(null, 204);
+            $locked->delete();
+
+            return response()->json(null, 204);
+        });
     }
 
     private function isLastActive(Store $store): bool
     {
         return $store->is_active
-            && ! Store::query()->where('is_active', true)->whereKeyNot($store->id)->exists();
+            && ! Store::query()->where('is_active', true)->whereKeyNot($store->id)->lockForUpdate()->exists();
     }
 
     private function hasHistory(Store $store): bool
