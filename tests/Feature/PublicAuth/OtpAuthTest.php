@@ -142,4 +142,23 @@ class OtpAuthTest extends TestCase
         $account = User::query()->where('phone', '+77071234567')->where('is_guest', false)->firstOrFail();
         $this->assertSame($account->id, $order->fresh()->user_id);
     }
+
+    #[Test]
+    public function a_b2b_client_cannot_sign_in_to_the_storefront_and_keeps_b2b_access(): void
+    {
+        $client = User::factory()->b2b()->approved()->create(['phone' => '+77071234567']);
+
+        $this->postJson('/api/public/auth/otp/request', ['phone' => '+77071234567'])->assertOk();
+
+        $this->postJson('/api/public/auth/otp/verify', [
+            'phone' => '+77071234567',
+            'code' => $this->sentCode(),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone');
+
+        $client->refresh();
+        $this->assertSame(User::TYPE_B2B, $client->type);
+        $this->assertTrue($client->is_approved);
+    }
 }

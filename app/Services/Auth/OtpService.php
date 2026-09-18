@@ -21,10 +21,13 @@ use Illuminate\Validation\ValidationException;
  * request(): rate-limited per phone (one SMS a minute, a handful an hour),
  * stores the code hashed with a short TTL, delivers via the SmsSender driver.
  *
- * verify(): constant-time hash check with an attempt cap, then resolves the
- * canonical retail account for the phone (creating it on first login) and
- * claims any orders placed earlier as a guest with the same number — so a
- * customer's history follows them the moment they log in.
+ * consume(): constant-time hash check with an attempt cap, then returns
+ * the normalized phone. Shared by storefront login and B2B portal auth.
+ *
+ * verify(): calls consume(), then resolves the canonical retail account for
+ * the phone (creating it on first login) and claims any orders placed earlier
+ * as a guest with the same number — so a customer's history follows them the
+ * moment they log in. B2B numbers are refused to prevent demotion.
  */
 class OtpService
 {
@@ -76,9 +79,12 @@ class OtpService
     }
 
     /**
+     * Check and burn the latest code for the phone. Shared by the storefront
+     * login (verify()) and the B2B portal (B2bPhoneAuthService).
+     *
      * @throws ValidationException
      */
-    public function verify(string $rawPhone, string $code): User
+    public function consume(string $rawPhone, string $code): string
     {
         $phone = $this->normalizedPhoneOrFail($rawPhone);
 
@@ -103,9 +109,19 @@ class OtpService
             ]);
         }
 
-        return DB::transaction(function () use ($otp, $phone): User {
-            $otp->update(['consumed_at' => now()]);
+        $otp->update(['consumed_at' => now()]);
 
+        return $phone;
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function verify(string $rawPhone, string $code): User
+    {
+        $phone = $this->consume($rawPhone, $code);
+
+        return DB::transaction(function () use ($phone): User {
             $user = $this->findOrCreateRetailUser($phone);
             $this->claimGuestOrders($user, $phone);
 
@@ -118,10 +134,20 @@ class OtpService
      * unique across all users, so any existing row (including a guest row
      * from an earlier anonymous checkout) must be reused and promoted rather
      * than inserting a second row with the same number.
+     *
+     * @throws ValidationException
      */
     private function findOrCreateRetailUser(string $phone): User
     {
         $user = User::query()->where('phone', $phone)->first();
+
+        // A wholesale client typing their number on the storefront must not be
+        // demoted to retail — that would lock them out of the B2B portal.
+        if ($user !== null && $user->type === User::TYPE_B2B) {
+            throw ValidationException::withMessages([
+                'phone' => ['Этот номер зарегистрирован как оптовый клиент — войдите на b2b.paradise.kz.'],
+            ]);
+        }
 
         if ($user !== null) {
             if ($user->type !== User::TYPE_RETAIL || $user->is_guest || ! $user->is_approved) {
@@ -167,7 +193,7 @@ class OtpService
     /**
      * @throws ValidationException
      */
-    private function normalizedPhoneOrFail(string $rawPhone): string
+    public function normalizedPhoneOrFail(string $rawPhone): string
     {
         $phone = Phone::normalize($rawPhone);
 
