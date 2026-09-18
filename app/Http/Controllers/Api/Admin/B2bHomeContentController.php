@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\Admin\Concerns\SavesTranslations;
 use App\Http\Controllers\Api\Admin\Concerns\StoresSingleImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\B2bHomeContentRequest;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
  */
 class B2bHomeContentController extends Controller
 {
+    use SavesTranslations;
     use StoresSingleImage;
 
     /**
@@ -37,8 +39,7 @@ class B2bHomeContentController extends Controller
 
     public function update(B2bHomeContentRequest $request): JsonResponse
     {
-        $content = B2bHomeContent::current();
-        $content->update($request->validated());
+        $content = $this->saveWithTranslations(B2bHomeContent::current(), $request->validated());
 
         return response()->json(['data' => $this->present($content)]);
     }

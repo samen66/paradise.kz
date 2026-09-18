@@ -132,4 +132,46 @@ class ProductCollectionApiTest extends TestCase
 
         $this->deleteJson("/api/admin/product-collections/{$collection->id}/cover")->assertOk()->assertJsonPath('data.cover_url', null);
     }
+
+    #[Test]
+    public function clearing_one_locale_of_the_description_removes_only_that_translation(): void
+    {
+        $this->actingAsManager();
+
+        $id = $this->postJson('/api/admin/product-collections', [
+            'title' => ['ru' => 'Лофт'],
+            'slug' => 'loft',
+            'description' => ['ru' => 'Металл и дерево', 'kk' => 'Металл мен ағаш'],
+        ])->assertCreated()->json('data.id');
+
+        $this->putJson("/api/admin/product-collections/{$id}", [
+            'title' => ['ru' => 'Лофт'],
+            'slug' => 'loft',
+            'description' => ['ru' => 'Металл и дерево', 'kk' => ''],
+        ])->assertOk();
+
+        $this->assertSame(['ru' => 'Металл и дерево'], ProductCollection::findOrFail($id)->getTranslations('description'));
+    }
+
+    #[Test]
+    public function a_put_without_the_description_keeps_it(): void
+    {
+        $this->actingAsManager();
+
+        $id = $this->postJson('/api/admin/product-collections', [
+            'title' => ['ru' => 'Лофт'],
+            'slug' => 'loft',
+            'description' => ['ru' => 'Металл и дерево', 'kk' => 'Металл мен ағаш'],
+        ])->assertCreated()->json('data.id');
+
+        $this->putJson("/api/admin/product-collections/{$id}", [
+            'title' => ['ru' => 'Лофт'],
+            'slug' => 'loft',
+        ])->assertOk();
+
+        $this->assertSame(
+            ['ru' => 'Металл и дерево', 'kk' => 'Металл мен ағаш'],
+            ProductCollection::findOrFail($id)->getTranslations('description'),
+        );
+    }
 }

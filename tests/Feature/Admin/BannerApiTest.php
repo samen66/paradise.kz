@@ -104,4 +104,24 @@ class BannerApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('file');
     }
+
+    #[Test]
+    public function clearing_one_locale_removes_only_that_translation(): void
+    {
+        $this->actingAsManager();
+
+        $id = $this->postJson('/api/admin/banners', [
+            'placement' => Banner::PLACEMENT_B2B_HOME,
+            'subtitle' => ['ru' => 'Оптом со склада', 'kk' => 'Қоймадан көтерме'],
+            'is_active' => true,
+        ])->assertCreated()->json('data.id');
+
+        $this->putJson("/api/admin/banners/{$id}", [
+            'placement' => Banner::PLACEMENT_B2B_HOME,
+            'subtitle' => ['ru' => 'Оптом со склада', 'kk' => ''],
+            'is_active' => true,
+        ])->assertOk()->assertJsonPath('data.subtitle', ['ru' => 'Оптом со склада']);
+
+        $this->assertSame(['ru' => 'Оптом со склада'], Banner::findOrFail($id)->getTranslations('subtitle'));
+    }
 }

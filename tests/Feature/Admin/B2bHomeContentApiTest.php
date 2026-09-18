@@ -70,4 +70,22 @@ class B2bHomeContentApiTest extends TestCase
 
         $this->deleteJson('/api/admin/b2b-home/image')->assertOk()->assertJsonPath('data.image_url', null);
     }
+
+    #[Test]
+    public function clearing_the_kazakh_text_removes_only_that_translation(): void
+    {
+        $this->actingAsManager();
+
+        $this->putJson('/api/admin/b2b-home', [
+            'about_title' => ['ru' => 'Кто мы'],
+            'about_text' => ['ru' => 'Шоурум в Алматы', 'kk' => 'Алматыдағы шоурум'],
+        ])->assertOk();
+
+        $this->putJson('/api/admin/b2b-home', [
+            'about_title' => ['ru' => 'Кто мы'],
+            'about_text' => ['ru' => 'Шоурум в Алматы', 'kk' => ''],
+        ])->assertOk()->assertJsonPath('data.about_text', ['ru' => 'Шоурум в Алматы']);
+
+        $this->assertSame(['ru' => 'Шоурум в Алматы'], B2bHomeContent::current()->getTranslations('about_text'));
+    }
 }

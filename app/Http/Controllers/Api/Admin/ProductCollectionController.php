@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\Admin\Concerns\SavesTranslations;
 use App\Http\Controllers\Api\Admin\Concerns\StoresSingleImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductCollectionRequest;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 
 class ProductCollectionController extends Controller
 {
+    use SavesTranslations;
     use StoresSingleImage;
 
     public function index(): JsonResponse
@@ -25,7 +27,7 @@ class ProductCollectionController extends Controller
 
     public function store(ProductCollectionRequest $request): JsonResponse
     {
-        return response()->json(['data' => $this->withCover(ProductCollection::create($request->validated()))], 201);
+        return response()->json(['data' => $this->withCover($this->saveWithTranslations(new ProductCollection, $request->validated()))], 201);
     }
 
     public function show(ProductCollection $productCollection): JsonResponse
@@ -39,7 +41,7 @@ class ProductCollectionController extends Controller
 
     public function update(ProductCollectionRequest $request, ProductCollection $productCollection): JsonResponse
     {
-        $productCollection->update($request->validated());
+        $this->saveWithTranslations($productCollection, $request->validated());
 
         return response()->json(['data' => $this->withCover($productCollection)]);
     }

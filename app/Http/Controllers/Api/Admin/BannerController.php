@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\Admin\Concerns\SavesTranslations;
 use App\Http\Controllers\Api\Admin\Concerns\StoresSingleImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BannerRequest;
@@ -17,6 +18,7 @@ use Illuminate\Http\Request;
  */
 class BannerController extends Controller
 {
+    use SavesTranslations;
     use StoresSingleImage;
 
     /**
@@ -55,12 +57,12 @@ class BannerController extends Controller
 
     public function store(BannerRequest $request): JsonResponse
     {
-        return response()->json(['data' => self::present(Banner::create($request->validated()))], 201);
+        return response()->json(['data' => self::present($this->saveWithTranslations(new Banner, $request->validated()))], 201);
     }
 
     public function update(BannerRequest $request, Banner $banner): JsonResponse
     {
-        $banner->update($request->validated());
+        $this->saveWithTranslations($banner, $request->validated());
 
         return response()->json(['data' => self::present($banner)]);
     }
