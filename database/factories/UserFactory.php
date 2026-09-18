@@ -55,7 +55,7 @@ class UserFactory extends Factory
             'type' => User::TYPE_B2B,
             'company_name' => fake()->company(),
             'company_bin' => (string) fake()->numerify('############'),
-            'phone' => fake()->phoneNumber(),
+            'phone' => '+77'.fake()->unique()->numerify('#########'),
             'is_approved' => false,
         ])->afterCreating(function (User $user) {
             Role::findOrCreate('b2b_customer', 'web');

@@ -3,11 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\Phone;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -52,6 +54,19 @@ class User extends Authenticatable implements FilamentUser
     public function isRetail(): bool
     {
         return $this->type === self::TYPE_RETAIL;
+    }
+
+    /**
+     * Stored as +7XXXXXXXXXX whatever the write path (Filament's form types
+     * it raw) — SMS login and registration look numbers up in that form.
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function phone(): Attribute
+    {
+        return Attribute::make(
+            set: static fn (?string $value): ?string => ($value === null ? '' : Phone::normalize($value)) ?: null,
+        );
     }
 
     /**
