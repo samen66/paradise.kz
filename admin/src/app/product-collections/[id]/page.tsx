@@ -14,6 +14,7 @@ import CrudModal from '@/components/ui/CrudModal';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EntityPicker from '@/components/ui/EntityPicker';
 import PageHeader from '@/components/ui/PageHeader';
+import SingleImageUpload from '@/components/ui/SingleImageUpload';
 import { buttonSecondary, inputClass } from '@/components/ui/styles';
 
 type CollectionProduct = ProductRef & { pivot: { sort_order: number } };
@@ -135,6 +136,13 @@ export default function ProductCollectionPage() {
         title={ru(collection.title) || 'Подборка'}
         back="/product-collections"
         actions={<button type="button" className={buttonSecondary} onClick={() => setEditing(true)}>Изменить</button>}
+      />
+      <SingleImageUpload
+        path={`${base}/cover`}
+        imageUrl={collection.cover_url ?? null}
+        label="Обложка (интерьер)"
+        hint="Показывается на B2B-главной, если включено «На B2B-главной». От 1920×1080"
+        onChange={load}
       />
       <EntityPicker<ProductRef>
         searchPath="/admin/products"

@@ -30,6 +30,13 @@ const groups: { title: string | null; links: NavLink[] }[] = [
     ],
   },
   {
+    title: 'Контент',
+    links: [
+      { href: '/banners', label: 'Баннеры' },
+      { href: '/b2b-home', label: 'B2B-главная' },
+    ],
+  },
+  {
     title: 'Запасы',
     links: [
       { href: '/stock', label: 'Склад' },
