@@ -1,9 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { useB2bAuth } from '@/stores/useB2bAuth';
+import { useIsApproved } from '@/lib/approval';
 
 export function B2BHeader() {
   const { user } = useB2bAuth();
+  const isApproved = useIsApproved();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-md">
@@ -13,7 +15,7 @@ export function B2BHeader() {
             <span className="font-medium">Оптовый портал B2B</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/" className="hover:text-ink transition">Вернуться в розничный магазин</Link>
+            <a href={process.env.NEXT_PUBLIC_B2C_URL ?? "https://paradise.kz"} className="hover:text-ink transition">Вернуться в розничный магазин</a>
           </div>
         </div>
       </div>
@@ -21,8 +23,11 @@ export function B2BHeader() {
       <div className="mx-auto grid max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex gap-4">
+            <Link href="/" className="text-sm font-medium hover:opacity-70 transition">Главная</Link>
             <Link href="/catalog" className="text-sm font-medium hover:opacity-70 transition">Каталог</Link>
-            <Link href="/orders" className="text-sm font-medium hover:opacity-70 transition">Мои заказы</Link>
+            {isApproved && (
+              <Link href="/orders" className="text-sm font-medium hover:opacity-70 transition">Мои заказы</Link>
+            )}
           </nav>
         </div>
 
@@ -42,15 +47,17 @@ export function B2BHeader() {
               </svg>
             </Link>
           )}
-          <Link
-            href="/cart"
-            className="flex items-center gap-2 text-sm font-medium text-ink transition hover:opacity-70"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true" className="h-6 w-6">
-              <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <span className="hidden lg:inline">Корзина</span>
-          </Link>
+          {isApproved && (
+            <Link
+              href="/cart"
+              className="flex items-center gap-2 text-sm font-medium text-ink transition hover:opacity-70"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true" className="h-6 w-6">
+                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              <span className="hidden lg:inline">Корзина</span>
+            </Link>
+          )}
         </div>
       </div>
     </header>

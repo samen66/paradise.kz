@@ -25,7 +25,8 @@ export interface ProductVariant {
   characteristics: Record<string, unknown>;
   barcodes: string[];
   stock?: number;
-  in_stock: boolean;
+  /** Absent for a B2B client awaiting approval. */
+  in_stock?: boolean;
 }
 
 export interface ProductReview {
@@ -64,8 +65,10 @@ export interface Product {
   images: ProductImage[];
   image: string | null;
   stock?: number;
-  in_stock: boolean;
-  price: number | null;
+  /** Absent for a B2B client awaiting approval. */
+  in_stock?: boolean;
+  /** Absent for a B2B client awaiting approval. */
+  price?: number | null;
   old_price?: number | null;
   is_new?: boolean;
   b2b_min_order_qty?: number;

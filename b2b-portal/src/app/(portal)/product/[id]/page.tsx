@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { apiGet } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { useB2bAuth } from "@/stores/useB2bAuth";
@@ -11,6 +12,7 @@ import { formatPrice } from "@/lib/format";
 import { AddToCartB2BButton } from "@/components/AddToCartB2BButton";
 
 export default function B2BProductDetail() {
+  const tApproval = useTranslations("approval");
   const params = useParams();
   // B2B products are addressed by numeric id only (GET /api/products/{id}).
   const rawId = params.id as string;
@@ -64,6 +66,8 @@ export default function B2BProductDetail() {
       </div>
     );
   }
+
+  const hidesPrice = product.price === undefined;
 
   return (
     <div className="space-y-12">
@@ -121,34 +125,43 @@ export default function B2BProductDetail() {
             </div>
           )}
 
-          <div className="bg-surface rounded-xl p-6 mb-8">
-            <div className="text-3xl font-bold text-ink mb-1">
-              {product.price !== null ? formatPrice(product.price, 'ru') : 'Цена по запросу'}
+          {hidesPrice ? (
+            <div className="bg-mint/40 rounded-xl p-6 mb-8">
+              <div className="text-xl font-semibold text-ink mb-1">{tApproval("priceAfterApproval")}</div>
+              <p className="text-sm text-muted">{tApproval("pendingText")}</p>
             </div>
-            
-            <div className="flex items-center gap-4 mt-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${product.in_stock ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                {product.in_stock ? (
-                  <span>
-                    В наличии {product.stock !== undefined ? <span className="font-medium">({product.stock} шт)</span> : null}
-                  </span>
-                ) : (
-                  <span className="text-muted">Нет в наличии</span>
-                )}
+          ) : (
+            <>
+              <div className="bg-surface rounded-xl p-6 mb-8">
+                <div className="text-3xl font-bold text-ink mb-1">
+                  {product.price !== null ? formatPrice(product.price, 'ru') : 'Цена по запросу'}
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${product.in_stock ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    {product.in_stock ? (
+                      <span>
+                        В наличии {product.stock !== undefined ? <span className="font-medium">({product.stock} шт)</span> : null}
+                      </span>
+                    ) : (
+                      <span className="text-muted">Нет в наличии</span>
+                    )}
+                  </div>
+
+                  {product.b2b_min_order_qty && product.b2b_min_order_qty > 1 && (
+                    <div className="text-muted pl-4 border-l border-line">
+                      Мин. заказ: <span className="font-medium text-ink">{product.b2b_min_order_qty} шт.</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {product.b2b_min_order_qty && product.b2b_min_order_qty > 1 && (
-                <div className="text-muted pl-4 border-l border-line">
-                  Мин. заказ: <span className="font-medium text-ink">{product.b2b_min_order_qty} шт.</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <AddToCartB2BButton product={product} />
-          </div>
+              <div className="mb-8">
+                <AddToCartB2BButton product={product} />
+              </div>
+            </>
+          )}
 
           {product.characteristics && product.characteristics.length > 0 && (
             <div className="mb-8">

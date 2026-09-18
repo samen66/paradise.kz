@@ -6,6 +6,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { apiGet } from "@/lib/api";
 import type { Facets, Paginated, Product } from "@/lib/types";
 import { useB2bAuth } from "@/stores/useB2bAuth";
+import { useIsApproved } from "@/lib/approval";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { SortSelect } from "@/components/SortSelect";
 import { Pagination } from "@/components/Pagination";
@@ -19,6 +20,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { token } = useB2bAuth();
+  const isApproved = useIsApproved();
 
   const [products, setProducts] = useState<Paginated<Product> | null>(null);
   const [facets, setFacets] = useState<Facets | null>(null);
@@ -120,7 +122,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
         </div>
 
         <div className="mb-5 flex flex-wrap items-center gap-2">
-          <InStockChip searchParams={paramsRecord} pathname={pathname} />
+          {isApproved && <InStockChip searchParams={paramsRecord} pathname={pathname} />}
           <div className="ml-auto">
             <SortSelect isB2B={true} />
           </div>

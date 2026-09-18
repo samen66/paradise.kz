@@ -28,10 +28,10 @@ export function ProductInfo({ product, locale, categoryName }: ProductInfoProps)
   const selectedVariant = variants.find(v => v.id === selectedVariantId) || null;
 
   // Local state for real-time updates
-  const [livePrice, setLivePrice] = useState<number | null>(product.price);
+  const [livePrice, setLivePrice] = useState<number | null>(product.price ?? null);
   const [liveOldPrice, setLiveOldPrice] = useState<number | null>(product.old_price ?? null);
   const [liveStock, setLiveStock] = useState<number | undefined>(product.stock);
-  const [liveInStock, setLiveInStock] = useState<boolean>(product.in_stock);
+  const [liveInStock, setLiveInStock] = useState<boolean>(product.in_stock ?? false);
 
   useEffect(() => {
     const echo = getEcho();

@@ -43,7 +43,7 @@ export function AddToCartButton({ product, compact = false, isB2B = false }: { p
         slug: product.slug,
         name: product.name,
         image: product.image,
-        price: product.price,
+        price: product.price ?? null,
       });
     }
     setJustAdded(true);

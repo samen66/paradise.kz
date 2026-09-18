@@ -14,12 +14,15 @@ import { Badge } from "./ui/Badge";
 export function ProductCard({ product, isB2B = false, showOverlay = true, showAddToCart = true }: { product: Product; isB2B?: boolean; showOverlay?: boolean; showAddToCart?: boolean }) {
   const locale = useLocale();
   const t = useTranslations("common");
+  const tApproval = useTranslations("approval");
   const outOfStockText = t("outOfStock");
 
   const href = `/product/${product.id}`;
   const LinkComponent = isB2B ? NextLink : I18nLink;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const hidesPrice = isB2B && product.price === undefined;
 
   const discountPercent =
     product.old_price && product.price && product.old_price > product.price
@@ -87,32 +90,38 @@ export function ProductCard({ product, isB2B = false, showOverlay = true, showAd
       <div className="flex flex-col flex-1 px-1 pt-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-lg font-semibold text-ink">{formatPrice(product.price, locale)}</span>
+            {hidesPrice ? (
+              <span className="text-sm font-medium text-muted">{tApproval("priceAfterApproval")}</span>
+            ) : (
+              <span className="text-lg font-semibold text-ink">{formatPrice(product.price, locale)}</span>
+            )}
             {isB2B && <span className="text-[10px] font-bold tracking-wider uppercase text-mint-ink bg-mint/40 rounded px-1.5 py-0.5">Опт</span>}
             {product.article && <span className="text-xs text-muted">{product.article}</span>}
           </div>
-          
-          {showAddToCart && product.in_stock && (
+
+          {showAddToCart && !hidesPrice && product.in_stock && (
             <div className="flex-shrink-0">
               <AddToCartButton product={product} compact isB2B={isB2B} />
             </div>
           )}
         </div>
 
-        {product.in_stock ? (
-          product.stock !== undefined && product.stock > 0 ? (
-            <div className="mt-2 text-[13px] text-green-600 font-medium">
-              {t("inStock")}: {product.stock} шт.
-            </div>
+        {!hidesPrice && (
+          product.in_stock ? (
+            product.stock !== undefined && product.stock > 0 ? (
+              <div className="mt-2 text-[13px] text-green-600 font-medium">
+                {t("inStock")}: {product.stock} шт.
+              </div>
+            ) : (
+              <div className="mt-2 text-[13px] text-green-600 font-medium">
+                {t("inStock")}
+              </div>
+            )
           ) : (
-            <div className="mt-2 text-[13px] text-green-600 font-medium">
-              {t("inStock")}
+            <div className="mt-2 text-[13px] text-gray-500 font-medium">
+              {outOfStockText}
             </div>
           )
-        ) : (
-          <div className="mt-2 text-[13px] text-gray-500 font-medium">
-            {outOfStockText}
-          </div>
         )}
 
         {isB2B && (product.b2b_min_order_qty ?? 1) > 1 && (
