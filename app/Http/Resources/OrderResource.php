@@ -25,6 +25,7 @@ class OrderResource extends JsonResource
             'id' => $this->id,
             'number' => $this->number,
             'status' => $this->status,
+            'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'total' => $this->total / 100,
             'comment' => $this->comment,
@@ -33,6 +34,7 @@ class OrderResource extends JsonResource
             'external_number' => $this->external_number,
             'store_id' => $this->store_id,
             'store_name' => $this->whenLoaded('store', fn (): ?string => $this->store?->name),
+            'store_address' => $this->whenLoaded('store', fn (): ?string => $this->store?->address),
             'delivery_method' => $this->delivery_method,
             'delivery_cost' => $this->delivery_cost / 100,
             'delivery_address' => $this->when($this->isDelivery(), fn (): array => [

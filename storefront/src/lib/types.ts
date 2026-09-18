@@ -212,17 +212,22 @@ export interface OrderItem {
   quantity: number;
   price: number;
   image?: string | null;
+  article?: string | null;
+  slug?: string | null;
 }
 
 export interface Order {
   id: number;
   number: string;
   status: string;
+  payment_method?: string | null;
+  payment_status?: string | null;
   total: number;
   comment: string | null;
   contact_email: string | null;
   store_id: number | null;
   store_name?: string | null;
+  store_address?: string | null;
   delivery_method: "pickup" | "delivery";
   delivery_cost: number;
   delivery_address?: {

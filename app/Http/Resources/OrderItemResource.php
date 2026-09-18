@@ -37,6 +37,7 @@ class OrderItemResource extends JsonResource
                 ?->getFirstMedia(Product::IMAGE_COLLECTION)
                 ?->getUrl('thumb')),
             'article' => $this->whenLoaded('product', fn (): ?string => $this->product?->article),
+            'slug' => $this->whenLoaded('product', fn (): ?string => $this->product?->slug),
         ];
     }
 }

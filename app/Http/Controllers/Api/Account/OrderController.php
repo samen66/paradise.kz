@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Services\Orders\OrderCancellationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,7 +26,7 @@ class OrderController extends Controller
     {
         $orders = $request->user()
             ->orders()
-            ->with(['items', 'store'])
+            ->with(['items.product.media', 'store'])
             ->latest('id')
             ->paginate(self::PER_PAGE);
 
@@ -38,7 +39,7 @@ class OrderController extends Controller
             abort(Response::HTTP_NOT_FOUND);
         }
 
-        return new OrderResource($order->load(['items', 'store', 'address']));
+        return new OrderResource($order->load(['items.product.media', 'store', 'address']));
     }
 
     /**
@@ -51,7 +52,7 @@ class OrderController extends Controller
         Request $request,
         Order $order,
         OrderCancellationService $cancellation,
-    ): \Illuminate\Http\JsonResponse {
+    ): JsonResponse {
         if ($order->user_id !== $request->user()->id) {
             abort(Response::HTTP_NOT_FOUND);
         }
