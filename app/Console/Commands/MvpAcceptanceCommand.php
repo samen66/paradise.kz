@@ -10,6 +10,7 @@ use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\GoodsReceipt;
 use App\Models\Order;
+use App\Models\OtpCode;
 use App\Models\PriceType;
 use App\Models\Product;
 use App\Models\ProductStoreStock;
@@ -17,6 +18,7 @@ use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\Inventory\GoodsReceiptService;
+use App\Support\Phone;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Client\ConnectionException;
@@ -25,6 +27,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -317,6 +320,25 @@ class MvpAcceptanceCommand extends Command
     private function nextTestPhone(): string
     {
         return $this->testPhone($this->phoneBase + $this->phonesTaken++);
+    }
+
+    /**
+     * Код из SMS прогону не виден (он уходит в драйвер), а вне local/testing
+     * он ещё и случайный. Прогон подменяет хеш только что выданного кода на
+     * известный — шаг проходит одинаково через kernel и по --url, база общая.
+     */
+    private function plantOtpCode(string $phone): string
+    {
+        $code = '4242';
+
+        OtpCode::query()
+            ->where('phone', Phone::normalize($phone))
+            ->whereNull('consumed_at')
+            ->latest('id')
+            ->firstOrFail()
+            ->update(['code_hash' => Hash::make($code)]);
+
+        return $code;
     }
 
     /**
@@ -814,26 +836,40 @@ class MvpAcceptanceCommand extends Command
     {
         return [
             [
-                'title' => 'POST /api/auth/register заводит B2B-клиента',
+                'title' => 'POST /api/auth/otp/register заводит B2B-клиента по коду из SMS',
                 'run' => function (): true|array {
-                    $response = $this->send('POST', '/api/auth/register', [
-                        'company_name' => "ACC Партнёр {$this->runToken}",
-                        'company_bin' => '000000000000',
-                        'email' => $this->b2bEmail,
+                    $name = "ACC Партнёр {$this->runToken}";
+
+                    $sent = $this->send('POST', '/api/auth/otp/request', [
                         'phone' => $this->b2bPhone,
-                        'password' => $this->b2bPassword,
-                        'password_confirmation' => $this->b2bPassword,
+                        'intent' => 'register',
+                        'name' => $name,
+                    ]);
+
+                    if ($sent['status'] !== 200) {
+                        return $this->mismatch('HTTP 200 на запрос кода', $this->summarize($sent));
+                    }
+
+                    $response = $this->send('POST', '/api/auth/otp/register', [
+                        'phone' => $this->b2bPhone,
+                        'code' => $this->plantOtpCode($this->b2bPhone),
+                        'name' => $name,
+                        'company_name' => $name,
                     ]);
 
                     if ($response['status'] !== 201) {
                         return $this->mismatch('HTTP 201', $this->summarize($response));
                     }
 
-                    $user = User::query()->where('phone', $this->b2bPhone)->first();
+                    $user = User::query()->where('phone', Phone::normalize($this->b2bPhone))->first();
 
                     if ($user === null) {
                         return $this->mismatch('клиент сохранён в users', "пользователя с телефоном {$this->b2bPhone} нет");
                     }
+
+                    // Вход по паролю (шаг ниже) и браузерные тесты входят с
+                    // паролем прогона — задаём его, как это сделал бы менеджер.
+                    $user->forceFill(['password' => $this->b2bPassword, 'email' => $this->b2bEmail])->save();
 
                     $this->b2bUser = $user;
                     $this->b2bToken = (string) data_get($response['json'], 'token');

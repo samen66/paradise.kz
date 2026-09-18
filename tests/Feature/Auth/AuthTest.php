@@ -21,107 +21,20 @@ class AuthTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function validRegisterPayload(array $overrides = []): array
+    #[Test]
+    public function the_old_password_registration_is_gone(): void
     {
-        return array_merge([
-            'company_name' => 'ТОО Парадайз',
-            'company_bin' => '123456789012',
-            'email' => 'client@example.com',
-            'phone' => '+77001112233',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
-        ], $overrides);
+        $this->postJson('/api/auth/register', ['phone' => '+77001112233'])->assertNotFound();
     }
 
     #[Test]
-    public function register_creates_a_pending_b2b_customer(): void
+    public function login_accepts_the_phone_in_any_format(): void
     {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
+        $user = User::factory()->b2b()->create(['phone' => '+77001112233', 'password' => 'secret123']);
 
-        $response = $this->postJson('/api/auth/register', $this->validRegisterPayload());
-
-        $response->assertCreated()
-            ->assertJsonPath('data.email', 'client@example.com')
-            ->assertJsonPath('data.is_approved', false)
-            ->assertJsonMissingPath('data.password');
-
-        $user = User::where('email', 'client@example.com')->firstOrFail();
-
-        $this->assertFalse($user->is_approved);
-        $this->assertTrue($user->hasRole('b2b_customer'));
-        // Name defaults to company_name when omitted.
-        $this->assertSame('ТОО Парадайз', $user->name);
-        // No token is issued on registration.
-        $this->assertSame(0, $user->tokens()->count());
-    }
-
-    #[Test]
-    public function register_saves_the_optional_preferred_store(): void
-    {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
-
-        $store = Store::factory()->create();
-
-        $response = $this->postJson('/api/auth/register', $this->validRegisterPayload([
-            'preferred_store_id' => $store->id,
-        ]));
-
-        $response->assertCreated();
-
-        $user = User::where('email', 'client@example.com')->firstOrFail();
-        $this->assertSame($store->id, $user->preferred_store_id);
-    }
-
-    #[Test]
-    public function register_rejects_an_unknown_preferred_store(): void
-    {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
-
-        $response = $this->postJson('/api/auth/register', $this->validRegisterPayload([
-            'preferred_store_id' => 999,
-        ]));
-
-        $response->assertStatus(422)->assertJsonValidationErrors(['preferred_store_id']);
-    }
-
-    #[Test]
-    public function register_fails_when_required_fields_are_missing(): void
-    {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
-
-        $response = $this->postJson('/api/auth/register', []);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['company_name', 'company_bin', 'email', 'phone', 'password']);
-    }
-
-    #[Test]
-    public function register_fails_with_invalid_bin_and_email(): void
-    {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
-
-        $response = $this->postJson('/api/auth/register', $this->validRegisterPayload([
-            'company_bin' => '123',
-            'email' => 'not-an-email',
-        ]));
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['company_bin', 'email']);
-    }
-
-    #[Test]
-    public function register_fails_on_duplicate_email(): void
-    {
-        $this->markTestSkipped('B2B self-registration temporarily disabled — see routes/api.php');
-
-        User::factory()->b2b()->create(['email' => 'client@example.com']);
-
-        $response = $this->postJson('/api/auth/register', $this->validRegisterPayload());
-
-        $response->assertStatus(422)->assertJsonValidationErrors(['email']);
+        $this->postJson('/api/auth/login', ['phone' => '8 (700) 111-22-33', 'password' => 'secret123'])
+            ->assertOk()
+            ->assertJsonPath('user.id', $user->id);
     }
 
     #[Test]

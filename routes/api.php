@@ -55,9 +55,6 @@ Route::get('/user', function (Request $request) {
 Route::post('/kaspi/webhook', KaspiWebhookController::class);
 
 Route::prefix('auth')->group(function () {
-    // Self-registration is temporarily disabled for the 2026-07-02 release;
-    // admins create B2B accounts manually in Filament until it returns.
-    Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 
     // B2B portal: phone + SMS code. Throttled per IP on top of the per-phone

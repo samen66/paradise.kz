@@ -6,54 +6,21 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\UpdateSettingsRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
     /**
-     * Register a new B2B client. The account starts unapproved (pending) and
-     * receives no token — an admin must approve it first.
-     */
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        $data = $request->validated();
-
-        $user = User::create([
-            'name' => $data['name'] ?? $data['company_name'],
-            'email' => $data['email'] ?? null,
-            'phone' => $data['phone'],
-            'password' => $data['password'],
-            'company_name' => $data['company_name'],
-            'company_bin' => $data['company_bin'],
-            'is_approved' => false,
-            'preferred_store_id' => $data['preferred_store_id'] ?? null,
-        ]);
-
-        // Role is normally provisioned by RolesAndPermissionsSeeder; ensure it
-        // exists so registration never fails on a fresh environment.
-        Role::findOrCreate('b2b_customer', 'web');
-        $user->assignRole('b2b_customer');
-
-        $token = $user->createToken('api')->plainTextToken;
-
-        return new JsonResponse([
-            'token' => $token,
-            'user' => new UserResource($user),
-        ], Response::HTTP_CREATED);
-    }
-
-    /**
      * Validate credentials and issue a Sanctum token. Login is allowed for
-     * unapproved clients so the SPA can render a "pending approval" screen.
+     * unapproved clients: they browse the catalog without prices.
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -64,7 +31,11 @@ class AuthController extends Controller
         // highlights the input the person actually filled.
         $field = isset($credentials['email']) ? 'email' : 'phone';
 
-        $user = User::where($field, $credentials[$field])->first();
+        // Phones were stored as typed before SMS login normalized them; match
+        // both spellings so either form of the same number signs in.
+        $user = $field === 'email'
+            ? User::where('email', $credentials['email'])->first()
+            : User::whereIn('phone', array_unique([$credentials['phone'], Phone::normalize($credentials['phone'])]))->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
