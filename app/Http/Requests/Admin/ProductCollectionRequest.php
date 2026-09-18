@@ -29,6 +29,11 @@ class ProductCollectionRequest extends FormRequest
             ],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
+            'description' => ['nullable', 'array'],
+            'description.ru' => ['nullable', 'string', 'max:2000'],
+            'description.kk' => ['nullable', 'string', 'max:2000'],
+            'show_on_storefront' => ['boolean'],
+            'show_on_b2b_home' => ['boolean'],
         ];
     }
 
@@ -39,6 +44,13 @@ class ProductCollectionRequest extends FormRequest
     {
         $validated = parent::validated();
         $validated['title'] = array_filter($validated['title'], fn (?string $value): bool => $value !== null && $value !== '');
+
+        if (array_key_exists('description', $validated)) {
+            $validated['description'] = array_filter(
+                $validated['description'] ?? [],
+                fn (?string $value): bool => $value !== null && $value !== '',
+            );
+        }
 
         if (array_key_exists('sort_order', $validated)) {
             $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);

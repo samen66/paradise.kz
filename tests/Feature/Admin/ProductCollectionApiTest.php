@@ -7,6 +7,8 @@ namespace Tests\Feature\Admin;
 use App\Models\Product;
 use App\Models\ProductCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
 use Tests\TestCase;
@@ -90,5 +92,44 @@ class ProductCollectionApiTest extends TestCase
 
         $this->deleteJson("/api/admin/product-collections/{$collection->id}/products/{$first->id}")->assertNoContent();
         $this->assertSame(1, $collection->products()->count());
+    }
+
+    #[Test]
+    public function it_saves_the_description_and_where_the_collection_shows(): void
+    {
+        $this->actingAsManager();
+
+        $id = $this->postJson('/api/admin/product-collections', [
+            'title' => ['ru' => 'Лофт'],
+            'slug' => 'loft',
+            'description' => ['ru' => 'Металл и дерево', 'kk' => 'Металл мен ағаш'],
+            'is_active' => true,
+            'show_on_storefront' => false,
+            'show_on_b2b_home' => true,
+        ])->assertCreated()->json('data.id');
+
+        $collection = ProductCollection::findOrFail($id);
+        $this->assertSame('Металл мен ағаш', $collection->getTranslation('description', 'kk'));
+        $this->assertFalse($collection->show_on_storefront);
+        $this->assertTrue($collection->show_on_b2b_home);
+
+        $this->getJson("/api/admin/product-collections/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.show_on_b2b_home', true)
+            ->assertJsonPath('data.cover_url', null);
+    }
+
+    #[Test]
+    public function a_cover_is_uploaded_and_removed(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        $this->actingAsManager();
+        $collection = ProductCollection::factory()->create();
+
+        $this->post("/api/admin/product-collections/{$collection->id}/cover", ['file' => UploadedFile::fake()->image('loft.jpg', 1920, 1080)], ['Accept' => 'application/json'])
+            ->assertOk();
+        $this->assertNotNull($this->getJson("/api/admin/product-collections/{$collection->id}")->json('data.cover_url'));
+
+        $this->deleteJson("/api/admin/product-collections/{$collection->id}/cover")->assertOk()->assertJsonPath('data.cover_url', null);
     }
 }

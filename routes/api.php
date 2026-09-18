@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Account\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Admin\AttributeController;
 use App\Http\Controllers\Api\Admin\AttributeValueController;
+use App\Http\Controllers\Api\Admin\B2bHomeContentController;
 use App\Http\Controllers\Api\Admin\BannerController;
 use App\Http\Controllers\Api\Admin\BrandController;
 use App\Http\Controllers\Api\Admin\CatalogGroupController;
@@ -180,9 +181,15 @@ Route::prefix('admin')
         Route::apiResource('product-collections', ProductCollectionController::class);
         Route::put('product-collections/{product_collection}/products/{product}', [ProductCollectionProductController::class, 'upsert']);
         Route::delete('product-collections/{product_collection}/products/{product}', [ProductCollectionProductController::class, 'destroy']);
+        Route::post('product-collections/{product_collection}/cover', [ProductCollectionController::class, 'storeCover']);
+        Route::delete('product-collections/{product_collection}/cover', [ProductCollectionController::class, 'destroyCover']);
         Route::apiResource('banners', BannerController::class)->except('show');
         Route::post('banners/{banner}/image', [BannerController::class, 'storeImage']);
         Route::delete('banners/{banner}/image', [BannerController::class, 'destroyImage']);
+        Route::get('b2b-home', [B2bHomeContentController::class, 'show']);
+        Route::put('b2b-home', [B2bHomeContentController::class, 'update']);
+        Route::post('b2b-home/image', [B2bHomeContentController::class, 'storeImage']);
+        Route::delete('b2b-home/image', [B2bHomeContentController::class, 'destroyImage']);
         // Relations of a product; a child of another product answers 404.
         Route::apiResource('products.prices', ProductPriceController::class)->except('show')->scoped();
         Route::apiResource('products.client-prices', ClientProductPriceController::class)->except('show')->scoped();
