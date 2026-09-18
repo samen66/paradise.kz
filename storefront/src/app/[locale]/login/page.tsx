@@ -1,16 +1,23 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useRouter } from "@/i18n/navigation";
+import { getPathname } from "@/i18n/navigation";
 import { apiPost, ApiValidationError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ApiUser } from "@/lib/types";
 
+/** Where to go after login: only a same-site path, never another origin. */
+function safeNextPath(next: string | null): string {
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+    ? next
+    : "/account/orders";
+}
+
 function LoginForm() {
   const t = useTranslations("auth");
-  const router = useRouter();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const setSession = useAuth((state) => state.setSession);
 
@@ -47,19 +54,26 @@ function LoginForm() {
 
     setBusy(true);
     setError(null);
+    let response: { token: string; user: ApiUser };
     try {
-      const response = await apiPost<{ token: string; user: ApiUser }>("/public/auth/otp/verify", {
+      response = await apiPost<{ token: string; user: ApiUser }>("/public/auth/otp/verify", {
         phone,
         code,
       });
-      setSession(response.token, response.user);
-      document.cookie = `laravel_session=${response.token}; path=/; max-age=86400`;
-      router.push(searchParams.get("next") ?? "/account/orders");
     } catch (e) {
       setError(e instanceof ApiValidationError ? e.messages.join(" ") : "Неверный код. Попробуйте ещё раз.");
-    } finally {
       setBusy(false);
+      return;
     }
+
+    setSession(response.token, response.user);
+    document.cookie = `laravel_session=${response.token}; path=/; max-age=86400`;
+    // A full page load, not router.push: if the visitor got here because the
+    // middleware bounced /account → /login (cookie expired, token still in
+    // localStorage), the client router has cached that redirect and would
+    // replay it, leaving a signed-in visitor on the login page. The button
+    // stays busy until the new page takes over.
+    window.location.assign(getPathname({ href: safeNextPath(searchParams.get("next")), locale }));
   }
 
   const inputClass =
