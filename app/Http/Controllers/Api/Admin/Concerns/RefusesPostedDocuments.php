@@ -16,11 +16,6 @@ use Illuminate\Support\Facades\DB;
  */
 trait RefusesPostedDocuments
 {
-    protected function refuseIfPosted(GoodsReceipt|WriteOff $document): ?JsonResponse
-    {
-        return $document->isPosted() ? $this->postedResponse() : null;
-    }
-
     /**
      * Runs a write against a freshly row-locked read of the document, inside
      * a transaction, so a concurrent `post` cannot slip in between the
