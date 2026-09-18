@@ -124,4 +124,21 @@ class BannerApiTest extends TestCase
 
         $this->assertSame(['ru' => 'Оптом со склада'], Banner::findOrFail($id)->getTranslations('subtitle'));
     }
+
+    #[Test]
+    public function the_link_is_a_site_path_or_an_http_url(): void
+    {
+        $this->actingAsManager();
+
+        foreach (['javascript:alert(1)', '//evil.example/login', 'catalog', 'ftp://files.example'] as $url) {
+            $this->postJson('/api/admin/banners', ['placement' => Banner::PLACEMENT_HOME_HERO, 'url' => $url])
+                ->assertUnprocessable()
+                ->assertJsonPath('errors.url.0', 'Ссылка должна начинаться с «/» или с http(s)://.');
+        }
+
+        foreach (['/catalog', 'https://paradise.kz/sale', 'http://example.com'] as $url) {
+            $this->postJson('/api/admin/banners', ['placement' => Banner::PLACEMENT_HOME_HERO, 'url' => $url])
+                ->assertCreated();
+        }
+    }
 }

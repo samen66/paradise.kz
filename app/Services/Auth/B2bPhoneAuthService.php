@@ -97,11 +97,9 @@ class B2bPhoneAuthService
     {
         $user = User::query()->where('phone', $phone)->first();
 
-        if ($user !== null && $user->hasAnyRole(['admin', 'manager'])) {
-            $this->refuse('Этот номер принадлежит сотруднику. Войдите в панель управления.');
-        }
-
-        if ($user !== null && $user->type !== User::TYPE_B2B) {
+        // Staff get the retail wording on purpose: the portal must not
+        // reveal which numbers belong to employees.
+        if ($user !== null && ($user->type !== User::TYPE_B2B || $user->hasAnyRole(['admin', 'manager']))) {
             $this->refuse('Этот номер используется в розничном магазине.');
         }
 

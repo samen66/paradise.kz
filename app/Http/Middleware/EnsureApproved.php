@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Blocks not-yet-approved B2B clients from approval-gated endpoints
- * (catalog, orders). Auth is assumed (run after `auth:sanctum`).
+ * Blocks not-yet-approved B2B clients from the buying endpoints: cart
+ * validation, orders and delivery addresses. The catalog is not gated —
+ * unapproved clients browse it without prices or stock. Auth is assumed
+ * (run after `auth:sanctum`).
  */
 class EnsureApproved
 {

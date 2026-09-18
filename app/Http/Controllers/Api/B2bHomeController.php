@@ -91,7 +91,7 @@ class B2bHomeController extends Controller
             ->orderBy('sort_order')
             ->with(['media', 'products' => function ($query) use ($publicProductIds): void {
                 $query->whereIn('products.id', $publicProductIds)
-                    ->with('media')
+                    ->with(['media', 'externalMapping'])
                     ->limit(self::PRODUCTS_PER_COLLECTION);
             }])
             ->get()

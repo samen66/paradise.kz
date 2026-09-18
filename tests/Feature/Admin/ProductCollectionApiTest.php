@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -173,5 +174,18 @@ class ProductCollectionApiTest extends TestCase
             ['ru' => 'Металл и дерево', 'kk' => 'Металл мен ағаш'],
             ProductCollection::findOrFail($id)->getTranslations('description'),
         );
+    }
+
+    #[Test]
+    public function the_cover_url_is_the_original_until_the_card_conversion_exists(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        Queue::fake();
+        $this->actingAsManager();
+        $collection = ProductCollection::factory()->create();
+
+        $this->post("/api/admin/product-collections/{$collection->id}/cover", ['file' => UploadedFile::fake()->image('loft.jpg', 1920, 1080)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.cover_url', $collection->fresh()->getFirstMedia(ProductCollection::COVER_COLLECTION)->getUrl());
     }
 }

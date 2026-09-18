@@ -8,7 +8,6 @@ use App\Actions\ApproveClient;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 use Throwable;
@@ -22,11 +21,16 @@ class UserController extends Controller
             ->allowedFilters(
                 AllowedFilter::exact('is_approved'),
                 AllowedFilter::callback('search', function ($query, $value): void {
-                    $query->where(function ($q) use ($value): void {
+                    // Phones are stored as +7XXXXXXXXXX: "707 123 45" matches by its digits.
+                    $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+
+                    $query->where(function ($q) use ($value, $digits): void {
                         $q->where('company_name', 'LIKE', "%{$value}%")
-                          ->orWhere('company_bin', 'LIKE', "%{$value}%")
-                          ->orWhere('email', 'LIKE', "%{$value}%")
-                          ->orWhere('phone', 'LIKE', "%{$value}%");
+                            ->orWhere('name', 'LIKE', "%{$value}%")
+                            ->orWhere('company_bin', 'LIKE', "%{$value}%")
+                            ->orWhere('email', 'LIKE', "%{$value}%")
+                            ->orWhere('phone', 'LIKE', "%{$value}%")
+                            ->when(strlen($digits) >= 4, fn ($q) => $q->orWhere('phone', 'LIKE', "%{$digits}%"));
                     });
                 }),
             )
@@ -44,9 +48,10 @@ class UserController extends Controller
 
         try {
             $user = $approveClient->handle($user);
+
             return response()->json(['data' => $user]);
         } catch (Throwable $e) {
-            return response()->json(['message' => 'Ошибка: ' . $e->getMessage()], 422);
+            return response()->json(['message' => 'Ошибка: '.$e->getMessage()], 422);
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Tests\Feature\Migrations;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -46,9 +47,13 @@ class NormalizeB2bUserPhonesTest extends TestCase
     {
         User::factory()->retail()->create(['phone' => '+77071234567']);
         $client = $this->legacyB2bClient('8 707 123 45 67');
+        Log::spy();
 
         $this->runMigration();
 
         $this->assertSame('8 707 123 45 67', $client->refresh()->phone);
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => $context === ['user_id' => $client->id, 'phone' => '8 707 123 45 67'],
+        );
     }
 }

@@ -30,7 +30,9 @@ class BannerRequest extends FormRequest
             'subtitle' => ['nullable', 'array'],
             'subtitle.ru' => ['nullable', 'string', 'max:255'],
             'subtitle.kk' => ['nullable', 'string', 'max:255'],
-            'url' => ['nullable', 'string', 'max:2048'],
+            // A site path ("/catalog") or an http(s) URL — never javascript:,
+            // data: or a protocol-relative "//host" link.
+            'url' => ['nullable', 'string', 'max:2048', 'regex:#^(/(?!/)|https?://)\S*$#i'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
         ];
@@ -44,6 +46,7 @@ class BannerRequest extends FormRequest
         return [
             'placement.required' => 'Выберите место баннера.',
             'placement.in' => 'Неизвестное место баннера.',
+            'url.regex' => 'Ссылка должна начинаться с «/» или с http(s)://.',
         ];
     }
 

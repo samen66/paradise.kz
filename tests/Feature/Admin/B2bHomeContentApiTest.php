@@ -7,6 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Models\B2bHomeContent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -87,5 +88,16 @@ class B2bHomeContentApiTest extends TestCase
         ])->assertOk()->assertJsonPath('data.about_text', ['ru' => 'Шоурум в Алматы']);
 
         $this->assertSame(['ru' => 'Шоурум в Алматы'], B2bHomeContent::current()->getTranslations('about_text'));
+    }
+
+    #[Test]
+    public function the_image_url_is_the_original_until_the_wide_conversion_exists(): void
+    {
+        Queue::fake();
+        $this->actingAsManager();
+
+        $this->post('/api/admin/b2b-home/image', ['file' => UploadedFile::fake()->image('showroom.jpg', 1600, 1200)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.image_url', B2bHomeContent::current()->getFirstMedia(B2bHomeContent::ABOUT_IMAGE_COLLECTION)->getUrl());
     }
 }

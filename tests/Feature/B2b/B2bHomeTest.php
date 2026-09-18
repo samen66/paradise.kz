@@ -9,7 +9,12 @@ use App\Models\Banner;
 use App\Models\CatalogGroup;
 use App\Models\Product;
 use App\Models\ProductCollection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -79,5 +84,51 @@ class B2bHomeTest extends TestCase
             ->assertJsonPath('data.about.title', 'Кто мы')
             ->assertJsonPath('data.about.text', 'Шоурум и склад в Алматы')
             ->assertJsonPath('data.about.image', null);
+    }
+
+    #[Test]
+    public function photos_fall_back_to_the_original_until_the_conversions_exist(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        // Conversions are queued; with the queue faked none is generated.
+        Queue::fake();
+
+        $banner = Banner::factory()->b2bHome()->create();
+        $banner->addMedia(UploadedFile::fake()->image('hero.jpg', 1920, 800))->toMediaCollection(Banner::IMAGE_COLLECTION);
+        $collection = ProductCollection::factory()->onB2bHome()->create();
+        $collection->addMedia(UploadedFile::fake()->image('loft.jpg', 1600, 900))->toMediaCollection(ProductCollection::COVER_COLLECTION);
+        $content = B2bHomeContent::current();
+        $content->update(['about_title' => ['ru' => 'Кто мы']]);
+        $content->addMedia(UploadedFile::fake()->image('showroom.jpg', 1600, 1200))->toMediaCollection(B2bHomeContent::ABOUT_IMAGE_COLLECTION);
+
+        $this->assertFalse($banner->getFirstMedia(Banner::IMAGE_COLLECTION)->hasGeneratedConversion('wide'));
+        $bannerUrl = $banner->getFirstMedia(Banner::IMAGE_COLLECTION)->getUrl();
+        $coverUrl = $collection->getFirstMedia(ProductCollection::COVER_COLLECTION)->getUrl();
+
+        $this->getJson('/api/b2b/home')
+            ->assertOk()
+            ->assertJsonPath('data.banners.0.image', $bannerUrl)
+            ->assertJsonPath('data.banners.0.image_mobile', $bannerUrl)
+            ->assertJsonPath('data.collections.0.cover', $coverUrl)
+            ->assertJsonPath('data.collections.0.cover_card', $coverUrl)
+            ->assertJsonPath('data.about.image', $content->getFirstMedia(B2bHomeContent::ABOUT_IMAGE_COLLECTION)->getUrl());
+    }
+
+    #[Test]
+    public function collection_products_load_their_external_mapping_in_one_query(): void
+    {
+        $collection = ProductCollection::factory()->onB2bHome()->create();
+        $collection->products()->attach(Product::factory()->count(3)->create()->pluck('id'));
+
+        $mappingQueries = 0;
+        DB::listen(function (QueryExecuted $query) use (&$mappingQueries): void {
+            if (str_contains($query->sql, 'product_external_mappings')) {
+                $mappingQueries++;
+            }
+        });
+
+        $this->getJson('/api/b2b/home')->assertOk()->assertJsonCount(3, 'data.collections.0.products');
+
+        $this->assertSame(1, $mappingQueries);
     }
 }

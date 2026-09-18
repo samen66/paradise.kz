@@ -143,7 +143,10 @@ class PhoneAuthTest extends TestCase
         $manager = User::factory()->create(['phone' => self::PHONE]);
         $manager->assignRole('manager');
 
-        $this->requestCode('login')->assertUnprocessable()->assertJsonValidationErrors('phone');
+        // Same wording as a retail number: the portal must not reveal staff numbers.
+        $this->requestCode('login')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.phone.0', 'Этот номер используется в розничном магазине.');
         $this->assertCount(0, $this->sms->sent);
     }
 
