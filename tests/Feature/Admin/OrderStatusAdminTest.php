@@ -148,4 +148,20 @@ class OrderStatusAdminTest extends TestCase
 
         $this->assertSame(Order::STATUS_CONFIRMED, $order->fresh()->status);
     }
+
+    /**
+     * Повторная отмена — не «ничего не изменилось», а отказ: иначе клиент
+     * решит, что операция прошла, а склад второй раз ничего не вернёт.
+     */
+    #[Test]
+    public function cancelling_an_already_cancelled_order_is_refused(): void
+    {
+        $this->actingAsManager();
+
+        $order = Order::factory()->create(['status' => Order::STATUS_CANCELLED]);
+
+        $this->patchJson("/api/admin/orders/{$order->id}", ['status' => Order::STATUS_CANCELLED])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
+    }
 }

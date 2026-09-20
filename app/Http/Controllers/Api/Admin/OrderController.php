@@ -172,11 +172,6 @@ class OrderController extends Controller
 
         $order = Order::findOrFail($id);
 
-        // Статус уже стоит — не ошибка и не работа: молча отдаём заказ.
-        if ($validated['status'] === $order->status) {
-            return response()->json(['data' => $order->fresh(['user', 'address', 'items.product.media'])]);
-        }
-
         if (! $order->canTransitionTo($validated['status'])) {
             throw ValidationException::withMessages([
                 'status' => ['Из статуса «'.$order->status.'» нельзя перейти в «'.$validated['status'].'».'],
