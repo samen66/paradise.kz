@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -163,5 +164,40 @@ class OrderStatusAdminTest extends TestCase
         $this->patchJson("/api/admin/orders/{$order->id}", ['status' => Order::STATUS_CANCELLED])
             ->assertStatus(422)
             ->assertJsonValidationErrors('status');
+    }
+
+    /**
+     * У модели User нет $hidden, поэтому отношение, загруженное целиком,
+     * вынесло бы в JSON хеш пароля. show() и update() отдают только нужные
+     * колонки — так же, как index() (см. AdminOrdersListTest).
+     */
+    #[Test]
+    public function show_never_leaks_user_secrets(): void
+    {
+        $this->actingAsManager();
+
+        $order = Order::factory()->for(User::factory()->retail())->create();
+
+        $user = $this->getJson("/api/admin/orders/{$order->id}")->assertOk()->json('data.user');
+
+        $this->assertArrayNotHasKey('password', $user);
+        $this->assertArrayNotHasKey('remember_token', $user);
+        $this->assertArrayHasKey('type', $user);
+    }
+
+    #[Test]
+    public function a_successful_status_update_never_leaks_user_secrets(): void
+    {
+        $this->actingAsManager();
+
+        $order = Order::factory()->for(User::factory()->retail())->create(['status' => Order::STATUS_PENDING]);
+
+        $user = $this->patchJson("/api/admin/orders/{$order->id}", ['status' => Order::STATUS_CONFIRMED])
+            ->assertOk()
+            ->json('data.user');
+
+        $this->assertArrayNotHasKey('password', $user);
+        $this->assertArrayNotHasKey('remember_token', $user);
+        $this->assertArrayHasKey('type', $user);
     }
 }

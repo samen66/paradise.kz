@@ -142,7 +142,9 @@ class OrderController extends Controller
     public function show(int $id): JsonResponse
     {
         $order = Order::with([
-            'user',
+            // Поимённо, а не 'user': у модели User нет $hidden, и отношение
+            // целиком утащило бы в ответ хеш пароля и remember_token.
+            'user:id,name,phone,email,type,company_name',
             'address',
             'items.product.media',
         ])->findOrFail($id);
@@ -184,6 +186,10 @@ class OrderController extends Controller
             $order->update(['status' => $validated['status']]);
         }
 
-        return response()->json(['data' => $order->fresh(['user', 'address', 'items.product.media'])]);
+        return response()->json(['data' => $order->fresh([
+            'user:id,name,phone,email,type,company_name',
+            'address',
+            'items.product.media',
+        ])]);
     }
 }
