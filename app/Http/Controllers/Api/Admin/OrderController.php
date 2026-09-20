@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Services\Orders\OrderCancellationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -23,11 +24,11 @@ class OrderController extends Controller
                 AllowedFilter::callback('search', function ($query, $value): void {
                     $query->where(function ($q) use ($value): void {
                         $q->where('id', $value)
-                          ->orWhere('number', 'LIKE', "%{$value}%")
-                          ->orWhereHas('user', function ($uq) use ($value): void {
-                              $uq->where('phone', 'LIKE', "%{$value}%")
-                                 ->orWhere('name', 'LIKE', "%{$value}%");
-                          });
+                            ->orWhere('number', 'LIKE', "%{$value}%")
+                            ->orWhereHas('user', function ($uq) use ($value): void {
+                                $uq->where('phone', 'LIKE', "%{$value}%")
+                                    ->orWhere('name', 'LIKE', "%{$value}%");
+                            });
                     });
                 }),
             )
@@ -56,6 +57,9 @@ class OrderController extends Controller
      * shelf, so it goes through {@see OrderCancellationService}. Everything
      * else is a plain update — the OrderObserver picks it up and notifies the
      * customer.
+     *
+     * Переход проверяется по {@see Order::ALLOWED_TRANSITIONS} — иначе
+     * завершённый заказ можно было бы одним PATCH вернуть в «новый».
      */
     public function update(
         Request $request,
@@ -67,6 +71,17 @@ class OrderController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
+
+        // Статус уже стоит — не ошибка и не работа: молча отдаём заказ.
+        if ($validated['status'] === $order->status) {
+            return response()->json(['data' => $order->fresh(['user', 'address', 'items.product.media'])]);
+        }
+
+        if (! $order->canTransitionTo($validated['status'])) {
+            throw ValidationException::withMessages([
+                'status' => ['Из статуса «'.$order->status.'» нельзя перейти в «'.$validated['status'].'».'],
+            ]);
+        }
 
         if ($validated['status'] === Order::STATUS_CANCELLED) {
             $cancellation->cancel($order, $request->user());

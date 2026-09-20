@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\Orders\OrderCancellationService;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -60,6 +61,32 @@ class Order extends Model
         self::STATUS_CANCELLED,
         self::STATUS_SYNCED,
         self::STATUS_FAILED,
+    ];
+
+    /**
+     * Куда заказ может уехать из каждого статуса.
+     *
+     * Отмена стоит только у `pending` и `confirmed` — ровно там, где её пускает
+     * {@see OrderCancellationService}. Разрешить больше
+     * значило бы предлагать менеджеру заведомо падающее действие.
+     *
+     * `completed` и `cancelled` терминальны: у отмены нет обратной операции,
+     * она уже вернула товар на склад. `in_delivery` умеет вернуться в
+     * `confirmed` — это единственный путь к отмене уехавшего заказа.
+     *
+     * Легаси-статусы имеют выход в рабочий поток, но входа в них нет ни
+     * откуда: присваивать `synced` / `failed` нельзя.
+     *
+     * @var array<string, list<string>>
+     */
+    public const ALLOWED_TRANSITIONS = [
+        self::STATUS_PENDING => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+        self::STATUS_CONFIRMED => [self::STATUS_IN_DELIVERY, self::STATUS_CANCELLED],
+        self::STATUS_IN_DELIVERY => [self::STATUS_COMPLETED, self::STATUS_CONFIRMED],
+        self::STATUS_COMPLETED => [],
+        self::STATUS_CANCELLED => [],
+        self::STATUS_SYNCED => [self::STATUS_CONFIRMED, self::STATUS_IN_DELIVERY, self::STATUS_COMPLETED],
+        self::STATUS_FAILED => [self::STATUS_CONFIRMED, self::STATUS_IN_DELIVERY, self::STATUS_COMPLETED],
     ];
 
     public const DELIVERY_PICKUP = 'pickup';
@@ -120,6 +147,17 @@ class Order extends Model
     public function isDelivery(): bool
     {
         return $this->delivery_method === self::DELIVERY_DELIVERY;
+    }
+
+    /**
+     * Можно ли из текущего статуса перейти в переданный.
+     *
+     * Статус, которого нет в матрице (испорченная строка в базе), никуда не
+     * ведёт: лучше отказать, чем гадать.
+     */
+    public function canTransitionTo(string $status): bool
+    {
+        return in_array($status, self::ALLOWED_TRANSITIONS[$this->status] ?? [], true);
     }
 
     /**
