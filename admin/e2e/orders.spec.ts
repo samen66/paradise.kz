@@ -5,34 +5,51 @@ import { ADMIN_SESSION } from "./session";
 /**
  * Карточка заказа: смена статуса.
  *
- * Прогон приёмки доказал, что API проводит заказ по пяти рабочим статусам и
- * отвечает 422 на мёртвые synced/failed (шаги 13 и 14). Здесь проверяется то,
- * чего он проверить не может: что мёртвых статусов нет в самом выпадающем
- * списке — то есть менеджеру их даже не предлагают.
+ * Прогон приёмки доказал, что API проводит заказ по рабочим статусам и
+ * отвечает 422 на мёртвые synced/failed. Здесь проверяется то, чего он
+ * проверить не может: что менеджеру предлагают только допустимые переходы.
  *
- * Берётся заказ на выкуп остатка: он единственный, кто остаётся новым. «Отменён»
- * не трогаем намеренно — отмена вернула бы товар на склад и развалила бы
- * проверки распроданного товара на витрине.
+ * Путь односторонний — Order::ALLOWED_TRANSITIONS не пускает заказ назад из
+ * «завершён», — поэтому тест идёт от текущего статуса до конца цепочки и
+ * пропускается, если фикстура уже исчерпана.
+ *
+ * Берётся заказ на выкуп остатка: он единственный, кто остаётся новым.
+ * «Отменён» не трогаем намеренно — отмена вернула бы товар на склад и
+ * развалила бы проверки распроданного товара на витрине.
  */
 test.use({ storageState: ADMIN_SESSION });
-
-/** Статусы, которые менеджер вправе назначить (Order::CLIENT_STATUSES). */
-const ASSIGNABLE = ["Новый", "Подтверждён", "В доставке", "Завершён", "Отменён"];
 
 /** Мёртвые статусы внешней учётной системы: остались в базе, но назначать их нельзя. */
 const LEGACY = ["Архив (отправлен)", "Архив (ошибка отправки)"];
 
-/** Рабочий путь заказа, по кругу. Отмены здесь нет: она вернула бы остаток. */
+/** Рабочий путь заказа. Он односторонний: откат назад API больше не примет. */
 const CHAIN = ["pending", "confirmed", "in_delivery", "completed"];
 
-test("в списке статусов только рабочие пять, без synced и failed", async ({ page }) => {
+test("в выпадашке только допустимые переходы, без synced и failed", async ({ page }) => {
   const order = requireOrder("buyout");
 
   await page.goto(`/orders/${order.id}`);
+  await settled(page);
 
   const select = page.getByRole("combobox");
-  await expect(select.locator("option")).toHaveText(ASSIGNABLE);
 
+  // На завершённом/отменённом заказе селекта нет вовсе — карточка показывает
+  // «Статус финальный — изменить нельзя». Это не провал, а исчерпанная фикстура.
+  test.skip(
+    (await select.count()) === 0,
+    "заказ уже в финальном статусе — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
+  );
+
+  const current = await select.inputValue();
+
+  // Из «нового» ведут ровно два пути; сам текущий статус стоит первым, чтобы
+  // селект показывал то, что есть сейчас.
+  if (current === "pending") {
+    await expect(select.locator("option")).toHaveText(["Новый", "Подтверждён", "Отменён"]);
+  }
+
+  // Главное, ради чего тест и писался: мёртвые статусы внешней системы
+  // менеджеру не предлагают ни при каком текущем статусе.
   for (const legacy of [...LEGACY, "synced", "failed"]) {
     await expect(select.locator("option").filter({ hasText: legacy })).toHaveCount(0);
   }
@@ -46,24 +63,27 @@ test("менеджер проводит заказ по рабочим стат�
   await settled(page);
 
   const select = page.getByRole("combobox");
-
-  // Стартуем с того статуса, в котором заказ сейчас, а не с того, в котором он
-  // был на момент прогона: тест должен переживать собственный повторный запуск.
   const started = CHAIN.indexOf(await select.inputValue());
+
   expect(
     started,
     "заказ выпал из рабочего пути (отменён?) — перезапустите прогон приёмки",
   ).toBeGreaterThanOrEqual(0);
 
-  for (let step = 1; step <= 3; step++) {
-    const next = CHAIN[(started + step) % CHAIN.length];
+  // Путь односторонний, поэтому повторный прогон без пересева доходит до
+  // «завершён» и дальше идти некуда — это не провал, а исчерпанная фикстура.
+  test.skip(
+    started === CHAIN.length - 1,
+    "заказ уже завершён — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
+  );
+
+  for (let step = started + 1; step < CHAIN.length; step++) {
+    const next = CHAIN[step];
     const save = page.getByRole("button", { name: "Сохранить статус" });
 
     await select.selectOption(next);
     await expect(save).toBeEnabled();
 
-    // Ждём сам запрос, а не всплывашку «Статус обновлён»: она живёт три
-    // секунды и ловится через раз, а ответ API — факт.
     const saved = page.waitForResponse(
       (response) =>
         response.url().includes(`/admin/orders/${order.id}`) &&
@@ -72,8 +92,6 @@ test("менеджер проводит заказ по рабочим стат�
     await save.click();
     expect((await saved).status(), `перевод в «${next}» не сохранился`).toBe(200);
 
-    // Перезагрузка — чтобы читать статус из API, а не из состояния формы:
-    // селект инициализируется тем, что вернул сервер.
     await page.reload();
     await settled(page);
     await expect(select).toHaveValue(next);
