@@ -26,7 +26,7 @@ class OrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $orders = $this->baseQuery()
+        $orders = $this->baseQuery($request)
             // Поимённо, а не ->with(['user']): у модели User нет $hidden, и
             // отношение целиком утащило бы в ответ хеш пароля и remember_token.
             ->with(['user:id,name,phone,email,type'])
@@ -47,9 +47,9 @@ class OrderController extends Controller
      * Вынесено отдельно, потому что счётчики вкладок считаются по этой же
      * основе — иначе они разъехались бы со списком.
      */
-    private function baseQuery(): QueryBuilder
+    private function baseQuery(?Request $request = null): QueryBuilder
     {
-        return QueryBuilder::for(Order::class)
+        return QueryBuilder::for(Order::class, $request)
             ->allowedFilters(
                 AllowedFilter::callback('status', function ($query, $value): void {
                     if ($value === self::ARCHIVED) {
@@ -96,30 +96,30 @@ class OrderController extends Controller
     /**
      * Сколько заказов на каждой вкладке.
      *
-     * Считается по той же основе, что и список, но без фильтра статуса:
-     * вкладка «Подтверждённые» должна показывать своё число и тогда, когда
-     * открыта вкладка «Новые». Сегмент и поиск, наоборот, учитываются — они
-     * сужают всю картину, а не одну вкладку.
+     * Считается по той же основе, что и список ({@see baseQuery()}), но без
+     * фильтра статуса: вкладка «Подтверждённые» должна показывать своё число
+     * и тогда, когда открыта вкладка «Новые». Сегмент и поиск, наоборот,
+     * учитываются — они сужают всю картину, а не одну вкладку.
+     *
+     * Один и тот же список allowedFilters() обслуживает и список, и счётчики:
+     * добавь фильтр в baseQuery() — он автоматически появится здесь тоже.
      *
      * @return array<string, int>
      */
     private function statusCounts(Request $request): array
     {
-        $query = Order::query();
+        $countsRequest = $request->duplicate();
 
-        $filters = $request->input('filter', []);
+        $filter = $countsRequest->input('filter', []);
 
-        if (is_array($filters)) {
-            if (($filters['segment'] ?? '') !== '') {
-                $this->applySegment($query, (string) $filters['segment']);
-            }
-
-            if (($filters['search'] ?? '') !== '') {
-                $this->applySearch($query, (string) $filters['search']);
-            }
+        if (is_array($filter)) {
+            unset($filter['status']);
         }
 
-        $raw = $query->toBase()
+        $countsRequest->merge(['filter' => $filter]);
+
+        $raw = $this->baseQuery($countsRequest)
+            ->toBase()
             ->select('status', DB::raw('COUNT(*) as aggregate'))
             ->groupBy('status')
             ->pluck('aggregate', 'status');
