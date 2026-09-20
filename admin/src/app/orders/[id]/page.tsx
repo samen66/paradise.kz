@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { formatTenge } from '@/lib/money';
 import { allowedTransitions, statusBadge, statusLabel, type OrderStatus } from '@/components/orders/orderStatus';
 
 export default function OrderDetailPage() {
@@ -138,11 +139,11 @@ export default function OrderDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 line-clamp-1">{item.name || item.product?.name?.ru || '—'}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {item.quantity} × ₸{Number(item.price).toLocaleString()}
+                          {item.quantity} × {formatTenge(Number(item.price))}
                         </div>
                       </div>
                       <div className="text-sm font-semibold text-gray-900 shrink-0">
-                        ₸{(Number(item.price) * Number(item.quantity)).toLocaleString()}
+                        {formatTenge(Number(item.price) * Number(item.quantity))}
                       </div>
                     </div>
                   );
@@ -152,7 +153,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
                 <span className="text-sm text-gray-500 font-medium">Итого</span>
-                <span className="text-lg font-bold text-gray-900">₸{Number(order.total).toLocaleString()}</span>
+                <span className="text-lg font-bold text-gray-900">{formatTenge(Number(order.total))}</span>
               </div>
             </div>
 
@@ -182,7 +183,7 @@ export default function OrderDetailPage() {
                   {order.delivery_cost != null && (
                     <div className="flex gap-2">
                       <dt className="text-gray-500 w-36 shrink-0">Стоимость:</dt>
-                      <dd className="text-gray-900">₸{Number(order.delivery_cost).toLocaleString()}</dd>
+                      <dd className="text-gray-900">{formatTenge(Number(order.delivery_cost))}</dd>
                     </div>
                   )}
                 </dl>
