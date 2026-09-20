@@ -217,7 +217,11 @@ class AdminOrdersListTest extends TestCase
             ->create(['status' => Order::STATUS_PENDING]);
         Order::factory()->count(2)->create(['status' => Order::STATUS_PENDING]);
 
-        $counts = $this->getJson('/api/admin/orders?filter[search]=Асель')
+        // Строка запроса собирается http_build_query: сырая кириллица в URL
+        // тестового клиента до сервера не доезжает, и фильтр молча ищет мусор.
+        $url = '/api/admin/orders?'.http_build_query(['filter' => ['search' => 'Асель']]);
+
+        $counts = $this->getJson($url)
             ->assertOk()
             ->json('meta.status_counts');
 
