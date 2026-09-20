@@ -79,6 +79,19 @@ b2b-аккаунт (`app/Services/Auth/OtpService.php:175`), а
 **Заодно удаляется мёртвый код:** `AllowedFilter::exact('type')` из контроллера
 и колонка «Тип» из таблицы списка.
 
+**И закрывается утечка, найденная по дороге.** Чтобы нарисовать бейдж сегмента,
+фронту нужен `user.type`, и он уже приходит — потому что `index` грузит
+`->with(['user'])`, то есть отдаёт строку пользователя целиком. У модели `User`
+нет `$hidden` (`app/Models/User.php` объявляет только `casts()`), поэтому в JSON
+списка заказов сейчас уезжают `password` (bcrypt-хеш) и `remember_token`. Дефект
+существующий, этой задачей не создан, но лежит ровно на её пути, поэтому
+устраняется здесь: `->with(['user:id,name,phone,email,type'])` плюс тест, что
+секретов в ответе нет.
+
+Это точечная правка одного эндпоинта. Отсутствие `$hidden` на модели — проблема
+шире одного экрана, и остальные места, где `User` сериализуется, нужно
+пересмотреть отдельно.
+
 ### Счётчики едут в `meta.status_counts`
 
 `index` возвращает пагинатор; к нему добавляется ключ `meta.status_counts`:
@@ -153,14 +166,26 @@ b2b-аккаунт (`app/Services/Auth/OtpService.php:175`), а
 |---|---|
 | `pending` | `confirmed`, `cancelled` |
 | `confirmed` | `in_delivery`, `cancelled` |
-| `in_delivery` | `completed`, `cancelled` |
+| `in_delivery` | `completed`, `confirmed` |
 | `completed` | — (терминальный) |
 | `cancelled` | — (терминальный) |
-| `synced`, `failed` (легаси) | `confirmed`, `in_delivery`, `completed`, `cancelled` |
+| `synced`, `failed` (легаси) | `confirmed`, `in_delivery`, `completed` |
 
-Из легаси-статусов выход открыт во весь рабочий поток — это спасательный люк для
-исторических заказов. Входа обратно в `synced` / `failed` нет ни из одного
-статуса: присваивать их больше нельзя.
+**Отмена возможна только из `pending` и `confirmed`** — это не выбор дизайна, а
+граница существующего кода: `OrderCancellationService::CANCELLABLE`
+(`app/Services/Orders/OrderCancellationService.php:39`) содержит ровно эти два
+статуса и кидает `ValidationException` на остальные. Разрешить в матрице
+`in_delivery → cancelled` значило бы рисовать менеджеру пункт меню, который
+гарантированно вернёт ошибку. Расширять `CANCELLABLE` в этой задаче не будем:
+сервис двигает FIFO-склад, и менять его ради удобства UI — неправильный размен.
+
+Поэтому у `in_delivery` есть обратный переход в `confirmed`. Это единственный
+путь к отмене заказа, который уже уехал: вернуть в «подтверждён», оттуда
+отменить. Складского сервиса это не касается.
+
+Из легаси-статусов выход открыт в рабочий поток (кроме отмены — по той же
+причине) — это спасательный люк для исторических заказов. Входа обратно в
+`synced` / `failed` нет ни из одного статуса: присваивать их больше нельзя.
 
 `cancelled` терминален жёстко: отмена вернула товар на склад через
 `OrderCancellationService`, а обратной операции (повторное списание при
@@ -199,7 +224,7 @@ Filament проходит мимо `OrderCancellationService`, то есть т�
 |---|---|
 | `admin/src/app/orders/page.tsx` | Тонкая обёртка: читает `searchParams`, держит запрос к API, раздаёт данные вниз |
 | `admin/src/components/orders/OrderTabs.tsx` | Два ряда вкладок (сегмент, статус) со счётчиками |
-| `admin/src/components/orders/OrdersTable.tsx` | Таблица, состояния загрузки и пустого списка, пагинация |
+| `admin/src/components/orders/OrdersTable.tsx` | Описание колонок поверх общего `ui/DataTable` |
 | `admin/src/components/orders/OrderRowActions.tsx` | Меню «⋯», диалог подтверждения отмены, вызов PATCH |
 | `admin/src/components/orders/orderStatus.ts` | Единственный источник лейблов, цветов и матрицы переходов |
 
@@ -210,6 +235,23 @@ Filament проходит мимо `OrderCancellationService`, то есть т�
 
 Каталог `admin/src/components/orders/` новый; он повторяет уже принятую в проекте
 раскладку `admin/src/components/{products,banners,collections,warehouse}`.
+
+**Переиспользуем существующее, а не пишем заново.** Сегодняшняя страница заказов
+живёт мимо общих компонентов админки: своя вёрстка таблицы, своя пагинация и
+палитра `gray-*` вместо домашней `zinc-*`. При переписывании она садится на то,
+что уже есть в `admin/src/components/ui`:
+
+- `DataTable` (`Column<T>`, пагинация по `PageMeta` из `@/lib/crud`) — вместо
+  рукописной `<table>` и блока «Назад / Вперёд»;
+- `PageHeader` — вместо рукописного заголовка;
+- `styles.ts` (`inputClass`, `buttonSecondary`, `cardClass`) — вместо строк
+  Tailwind по месту.
+
+Исключение — вкладки. Существующий `ui/Tabs` хранит активную вкладку в `useState`
+и сам рисует панель содержимого; нам нужны вкладки-навигация: `<Link>` с
+параметрами URL, со счётчиками и без собственного состояния. Это другая
+семантика, а не другой внешний вид, поэтому `OrderTabs` пишется отдельно, а
+`ui/Tabs` остаётся нетронутым для своих текущих потребителей.
 
 ## Тестирование
 
@@ -227,6 +269,7 @@ Filament проходит мимо `OrderCancellationService`, то есть т�
 7. `meta.status_counts` учитывает `filter[segment]`.
 8. `filter[status]=archived` возвращает заказы со статусами `synced` и `failed`
    и не возвращает рабочие.
+8а. В `data.*.user` нет `password` и `remember_token`, но есть `type`.
 
 Дополнения к `tests/Feature/Admin/OrderStatusAdminTest.php`:
 
@@ -235,15 +278,45 @@ Filament проходит мимо `OrderCancellationService`, то есть т�
 11. Переход `pending → cancelled` проходит через `OrderCancellationService`
     (товар возвращается на склад) — проверяется через `stock_movements`.
 12. Попытка присвоить `synced` возвращает 422.
+13. `in_delivery → cancelled` возвращает 422 и не двигает склад — граница
+    `OrderCancellationService::CANCELLABLE` проверена на уровне API, а не только
+    в матрице на фронте.
+14. `in_delivery → confirmed` возвращает 200 — обратный ход, открывающий путь к
+    отмене, работает.
 
 Прогон: `php artisan test --compact --filter=AdminOrdersList` и
 `--filter=OrderStatusAdmin`.
 
 ### Фронтенд
 
+Юнит-тестов у админки нет по устройству проекта — проверка это
 `cd admin && npx tsc --noEmit && npm run build`.
 
-Ручная проверка на `http://localhost:3002/orders` — на стороне владельца проекта.
+### Существующий e2e ломается и правится
+
+`admin/e2e/orders.spec.ts` написан против сегодняшнего поведения и с валидацией
+переходов перестанет проходить. Оба теста в нём требуют правки:
+
+1. **«в списке статусов только рабочие пять»** проверяет, что выпадашка карточки
+   заказа содержит ровно пять назначаемых статусов. После изменения она содержит
+   только допустимые переходы из текущего статуса. Тест переписывается: из
+   `pending` предлагаются «Подтверждён» и «Отменён», а легаси-статусов нет —
+   вторая половина проверки (отсутствие `synced` / `failed`) сохраняется как есть,
+   она и была смыслом теста.
+2. **«менеджер проводит заказ по рабочим статусам»** гоняет заказ по кольцу
+   `pending → confirmed → in_delivery → completed → pending`, чтобы переживать
+   повторный запуск без пересева. Кольцо замыкается переходом
+   `completed → pending`, который теперь вернёт 422. Тест переписывается на
+   односторонний проход: идти от текущего статуса до `completed` и остановиться,
+   а если заказ уже `completed` — пропустить тест с внятным сообщением про
+   `php artisan mvp:acceptance --fresh --fixtures`.
+
+Прогон: `cd admin && npx playwright test e2e/orders.spec.ts` поверх свежих
+фикстур приёмки (`docs/e2e-runbook.md`).
+
+### Ручная проверка
+
+`http://localhost:3002/orders` — на стороне владельца проекта.
 
 ## Затронутые файлы
 
@@ -264,3 +337,4 @@ Filament проходит мимо `OrderCancellationService`, то есть т�
 - `admin/src/components/orders/OrdersTable.tsx` — новый
 - `admin/src/components/orders/OrderRowActions.tsx` — новый
 - `admin/src/components/orders/orderStatus.ts` — новый
+- `admin/e2e/orders.spec.ts` — оба теста переписываются под новую матрицу
