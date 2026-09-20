@@ -4,38 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-
-// Statuses a manager can actually assign. Mirrors Order::CLIENT_STATUSES on
-// the backend, which rejects anything else with a 422.
-const ASSIGNABLE_STATUSES = [
-  { value: 'pending',     label: 'Новый' },
-  { value: 'confirmed',   label: 'Подтверждён' },
-  { value: 'in_delivery', label: 'В доставке' },
-  { value: 'completed',   label: 'Завершён' },
-  { value: 'cancelled',   label: 'Отменён' },
-];
-
-const STATUS_STYLES: Record<string, string> = {
-  pending:     'bg-yellow-50 text-yellow-700 border-yellow-200',
-  confirmed:   'bg-blue-50 text-blue-700 border-blue-200',
-  in_delivery: 'bg-purple-50 text-purple-700 border-purple-200',
-  completed:   'bg-green-50 text-green-700 border-green-200',
-  cancelled:   'bg-red-50 text-red-700 border-red-200',
-  // Legacy: these described an order's state in an external accounting system
-  // that no longer exists. Old orders still carry them, so they stay readable.
-  synced:      'bg-gray-100 text-gray-600 border-gray-200',
-  failed:      'bg-gray-100 text-gray-600 border-gray-200',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending:     'Новый',
-  confirmed:   'Подтверждён',
-  in_delivery: 'В доставке',
-  completed:   'Завершён',
-  cancelled:   'Отменён',
-  synced:      'Архив (отправлен)',
-  failed:      'Архив (ошибка отправки)',
-};
+import { allowedTransitions, statusBadge, statusLabel, type OrderStatus } from '@/components/orders/orderStatus';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -137,8 +106,8 @@ export default function OrderDetailPage() {
               )}
             </p>
           </div>
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-            {STATUS_LABELS[order.status] || order.status}
+          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${statusBadge(order.status)}`}>
+            {statusLabel(order.status)}
           </span>
         </div>
 
@@ -272,15 +241,19 @@ export default function OrderDetailPage() {
             {/* Change status */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="font-semibold text-gray-900 text-base mb-4">Статус заказа</h2>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-3"
-              >
-                {ASSIGNABLE_STATUSES.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+              {allowedTransitions(order.status as OrderStatus).length === 0 ? (
+                <p className="text-sm text-zinc-500">Статус финальный — изменить нельзя.</p>
+              ) : (
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-3"
+                >
+                  {[order.status as OrderStatus, ...allowedTransitions(order.status as OrderStatus)].map((s) => (
+                    <option key={s} value={s}>{statusLabel(s)}</option>
+                  ))}
+                </select>
+              )}
 
               {saveError && (
                 <p className="text-red-600 text-xs mb-3">{saveError}</p>
@@ -289,18 +262,20 @@ export default function OrderDetailPage() {
                 <p className="text-green-600 text-xs mb-3">✓ Статус обновлён</p>
               )}
 
-              <button
-                onClick={handleSave}
-                disabled={isSaving || selectedStatus === order.status}
-                className="w-full inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white shadow hover:bg-blue-700 h-10 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2" />
-                    Сохранение...
-                  </>
-                ) : 'Сохранить статус'}
-              </button>
+              {allowedTransitions(order.status as OrderStatus).length > 0 && (
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving || selectedStatus === order.status}
+                  className="w-full inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white shadow hover:bg-blue-700 h-10 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2" />
+                      Сохранение...
+                    </>
+                  ) : 'Сохранить статус'}
+                </button>
+              )}
             </div>
 
             {/* Payment */}
