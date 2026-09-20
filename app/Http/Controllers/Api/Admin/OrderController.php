@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\User;
 use App\Services\Orders\OrderCancellationService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -15,28 +17,74 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class OrderController extends Controller
 {
+    /** Псевдостатус вкладки «Архив»: в колонке status такого значения нет. */
+    private const ARCHIVED = 'archived';
+
+    /** Легаси-статусы внешней учётной системы, которых больше нет. */
+    private const LEGACY_STATUSES = [Order::STATUS_SYNCED, Order::STATUS_FAILED];
+
     public function index(): JsonResponse
     {
-        $orders = QueryBuilder::for(Order::class)
-            ->allowedFilters(
-                AllowedFilter::exact('status'),
-                AllowedFilter::exact('type'),
-                AllowedFilter::callback('search', function ($query, $value): void {
-                    $query->where(function ($q) use ($value): void {
-                        $q->where('id', $value)
-                            ->orWhere('number', 'LIKE', "%{$value}%")
-                            ->orWhereHas('user', function ($uq) use ($value): void {
-                                $uq->where('phone', 'LIKE', "%{$value}%")
-                                    ->orWhere('name', 'LIKE', "%{$value}%");
-                            });
-                    });
-                }),
-            )
-            ->with(['user'])
+        $orders = $this->baseQuery()
+            // Поимённо, а не ->with(['user']): у модели User нет $hidden, и
+            // отношение целиком утащило бы в ответ хеш пароля и remember_token.
+            ->with(['user:id,name,phone,email,type'])
             ->latest()
             ->paginate(20);
 
         return response()->json($orders);
+    }
+
+    /**
+     * Общая основа списка: фильтры сегмента, статуса и поиска.
+     *
+     * Вынесено отдельно, потому что счётчики вкладок считаются по этой же
+     * основе — иначе они разъехались бы со списком.
+     */
+    private function baseQuery(): QueryBuilder
+    {
+        return QueryBuilder::for(Order::class)
+            ->allowedFilters(
+                AllowedFilter::callback('status', function ($query, $value): void {
+                    if ($value === self::ARCHIVED) {
+                        $query->whereIn('status', self::LEGACY_STATUSES);
+
+                        return;
+                    }
+
+                    $query->where('status', $value);
+                }),
+                AllowedFilter::callback('segment', fn ($query, $value) => $this->applySegment($query, (string) $value)),
+                AllowedFilter::callback('search', fn ($query, $value) => $this->applySearch($query, (string) $value)),
+            );
+    }
+
+    /**
+     * Сегмент живёт на пользователе (users.type), не на заказе: тип клиента не
+     * переключается, поэтому снапшот на заказе не нужен.
+     *
+     * Вынесено отдельным методом, потому что счётчики вкладок применяют тот же
+     * сегмент к своему запросу — а он собирается мимо Query Builder.
+     */
+    private function applySegment(Builder $query, string $value): void
+    {
+        $type = $value === 'b2b' ? User::TYPE_B2B : User::TYPE_RETAIL;
+
+        $query->whereHas('user', function ($uq) use ($type): void {
+            $uq->where('type', $type);
+        });
+    }
+
+    private function applySearch(Builder $query, string $value): void
+    {
+        $query->where(function ($q) use ($value): void {
+            $q->where('id', $value)
+                ->orWhere('number', 'LIKE', "%{$value}%")
+                ->orWhereHas('user', function ($uq) use ($value): void {
+                    $uq->where('phone', 'LIKE', "%{$value}%")
+                        ->orWhere('name', 'LIKE', "%{$value}%");
+                });
+        });
     }
 
     public function show(int $id): JsonResponse
