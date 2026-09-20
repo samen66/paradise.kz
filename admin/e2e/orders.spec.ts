@@ -19,6 +19,12 @@ import { ADMIN_SESSION } from "./session";
  */
 test.use({ storageState: ADMIN_SESSION });
 
+// Оба теста ведут один и тот же фикстурный заказ («выкуп остатка»), и второй
+// его меняет — при fullyParallel они гоняются одновременно и первый тест
+// иногда читает статус, который второй уже успел сдвинуть. Раз общий заказ —
+// раз порядок.
+test.describe.configure({ mode: "serial" });
+
 /** Мёртвые статусы внешней учётной системы: остались в базе, но назначать их нельзя. */
 const LEGACY = ["Архив (отправлен)", "Архив (ошибка отправки)"];
 
@@ -63,19 +69,23 @@ test("менеджер проводит заказ по рабочим стат�
   await settled(page);
 
   const select = page.getByRole("combobox");
+
+  // На завершённом заказе селекта нет вовсе — карточка показывает «Статус
+  // финальный — изменить нельзя». Это не провал, а исчерпанная фикстура: тот
+  // же повторный прогон без пересева, который раньше ловил test.skip ниже по
+  // значению started, здесь ловится тем, что select.inputValue() вообще не
+  // на чем звать.
+  test.skip(
+    (await select.count()) === 0,
+    "заказ уже в финальном статусе — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
+  );
+
   const started = CHAIN.indexOf(await select.inputValue());
 
   expect(
     started,
     "заказ выпал из рабочего пути (отменён?) — перезапустите прогон приёмки",
   ).toBeGreaterThanOrEqual(0);
-
-  // Путь односторонний, поэтому повторный прогон без пересева доходит до
-  // «завершён» и дальше идти некуда — это не провал, а исчерпанная фикстура.
-  test.skip(
-    started === CHAIN.length - 1,
-    "заказ уже завершён — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
-  );
 
   for (let step = started + 1; step < CHAIN.length; step++) {
     const next = CHAIN[step];
@@ -94,7 +104,14 @@ test("менеджер проводит заказ по рабочим стат�
 
     await page.reload();
     await settled(page);
-    await expect(select).toHaveValue(next);
+
+    if (step < CHAIN.length - 1) {
+      await expect(select).toHaveValue(next);
+    } else {
+      // Последний шаг довёл заказ до «завершён»: карточка убирает select и
+      // рисует «Статус финальный — изменить нельзя» вместо него.
+      await expect(page.getByText("Статус финальный")).toBeVisible();
+    }
   }
 });
 
