@@ -141,4 +141,88 @@ class AdminOrdersListTest extends TestCase
         $this->assertArrayNotHasKey('remember_token', $user);
         $this->assertArrayHasKey('type', $user);
     }
+
+    #[Test]
+    public function every_counter_key_is_always_present(): void
+    {
+        $this->actingAsManager();
+
+        $counts = $this->getJson('/api/admin/orders')->assertOk()->json('meta.status_counts');
+
+        $this->assertSame(
+            ['all', 'pending', 'confirmed', 'in_delivery', 'completed', 'cancelled', 'archived'],
+            array_keys($counts),
+        );
+        $this->assertSame(0, $counts['pending']);
+    }
+
+    #[Test]
+    public function the_archived_counter_sums_both_legacy_statuses(): void
+    {
+        $this->actingAsManager();
+
+        Order::factory()->synced()->create();
+        Order::factory()->failed()->count(2)->create();
+
+        $counts = $this->getJson('/api/admin/orders')->assertOk()->json('meta.status_counts');
+
+        $this->assertSame(3, $counts['archived']);
+        $this->assertSame(3, $counts['all']);
+    }
+
+    /**
+     * Главное правило: счётчики не зависят от выбранной вкладки. Иначе на
+     * активной стояло бы её число, а на всех остальных — нули.
+     */
+    #[Test]
+    public function the_counters_ignore_the_active_status_tab(): void
+    {
+        $this->actingAsManager();
+
+        Order::factory()->create(['status' => Order::STATUS_PENDING]);
+        Order::factory()->count(2)->create(['status' => Order::STATUS_COMPLETED]);
+
+        $counts = $this->getJson('/api/admin/orders?filter[status]=pending')
+            ->assertOk()
+            ->json('meta.status_counts');
+
+        $this->assertSame(1, $counts['pending']);
+        $this->assertSame(2, $counts['completed']);
+        $this->assertSame(3, $counts['all']);
+    }
+
+    #[Test]
+    public function the_counters_follow_the_segment(): void
+    {
+        $this->actingAsManager();
+
+        Order::factory()->for(User::factory()->b2b()->approved())->create(['status' => Order::STATUS_PENDING]);
+        Order::factory()->for(User::factory()->retail())->count(2)->create(['status' => Order::STATUS_PENDING]);
+
+        $counts = $this->getJson('/api/admin/orders?filter[segment]=b2b')
+            ->assertOk()
+            ->json('meta.status_counts');
+
+        $this->assertSame(1, $counts['pending']);
+        $this->assertSame(1, $counts['all']);
+    }
+
+    #[Test]
+    public function the_counters_follow_the_search(): void
+    {
+        $this->actingAsManager();
+
+        $mine = Order::factory()
+            ->for(User::factory()->retail()->state(['name' => 'Асель Смагулова']))
+            ->create(['status' => Order::STATUS_PENDING]);
+        Order::factory()->count(2)->create(['status' => Order::STATUS_PENDING]);
+
+        $counts = $this->getJson('/api/admin/orders?filter[search]=Асель')
+            ->assertOk()
+            ->json('meta.status_counts');
+
+        $this->assertSame(1, $counts['pending']);
+        $this->assertSame(1, $counts['all']);
+        $this->assertNotNull($mine->id);
+    }
 }

@@ -11,6 +11,7 @@ use App\Services\Orders\OrderCancellationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -23,7 +24,7 @@ class OrderController extends Controller
     /** Легаси-статусы внешней учётной системы, которых больше нет. */
     private const LEGACY_STATUSES = [Order::STATUS_SYNCED, Order::STATUS_FAILED];
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $orders = $this->baseQuery()
             // Поимённо, а не ->with(['user']): у модели User нет $hidden, и
@@ -32,7 +33,12 @@ class OrderController extends Controller
             ->latest()
             ->paginate(20);
 
-        return response()->json($orders);
+        $payload = $orders->toArray();
+        $payload['meta'] = [
+            'status_counts' => $this->statusCounts($request),
+        ];
+
+        return response()->json($payload);
     }
 
     /**
@@ -85,6 +91,52 @@ class OrderController extends Controller
                         ->orWhere('name', 'LIKE', "%{$value}%");
                 });
         });
+    }
+
+    /**
+     * Сколько заказов на каждой вкладке.
+     *
+     * Считается по той же основе, что и список, но без фильтра статуса:
+     * вкладка «Подтверждённые» должна показывать своё число и тогда, когда
+     * открыта вкладка «Новые». Сегмент и поиск, наоборот, учитываются — они
+     * сужают всю картину, а не одну вкладку.
+     *
+     * @return array<string, int>
+     */
+    private function statusCounts(Request $request): array
+    {
+        $query = Order::query();
+
+        $filters = $request->input('filter', []);
+
+        if (is_array($filters)) {
+            if (($filters['segment'] ?? '') !== '') {
+                $this->applySegment($query, (string) $filters['segment']);
+            }
+
+            if (($filters['search'] ?? '') !== '') {
+                $this->applySearch($query, (string) $filters['search']);
+            }
+        }
+
+        $raw = $query->toBase()
+            ->select('status', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $counts = ['all' => 0];
+
+        foreach (Order::CLIENT_STATUSES as $status) {
+            $counts[$status] = (int) $raw->get($status, 0);
+        }
+
+        $counts['archived'] = array_sum(
+            array_map(static fn (string $s): int => (int) $raw->get($s, 0), self::LEGACY_STATUSES)
+        );
+
+        $counts['all'] = array_sum($raw->all());
+
+        return $counts;
     }
 
     public function show(int $id): JsonResponse
