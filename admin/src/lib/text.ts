@@ -12,3 +12,28 @@ export type ClientRef = { id: number; company_name: string | null; email: string
 
 export const clientLabel = (c: ClientRef): string =>
   [c.company_name || `Клиент #${c.id}`, c.phone || c.email].filter(Boolean).join(' · ');
+
+/**
+ * Количество без хвостовых нулей: API отдаёт `order_items.quantity` как
+ * decimal:3, и «5.000» читается как пять тысяч.
+ */
+export const formatQuantity = (value: unknown): string =>
+  Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 3 });
+
+/** Русское склонение по числу: plural(5, ['позиция', 'позиции', 'позиций']) → «позиций». */
+export const plural = (count: number, [one, few, many]: [string, string, string]): string => {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (!Number.isInteger(count)) {
+    return few;
+  }
+  if (mod10 === 1 && mod100 !== 11) {
+    return one;
+  }
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return few;
+  }
+
+  return many;
+};

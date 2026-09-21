@@ -105,3 +105,34 @@ export function statusLabel(status: string): string {
 export function statusBadge(status: string): string {
   return STATUS_BADGE[status as OrderStatus] ?? 'bg-zinc-100 text-zinc-600 border-zinc-200';
 }
+
+/** Рабочий путь заказа — шаги шкалы на карточке. */
+export const STATUS_FLOW: OrderStatus[] = ['pending', 'confirmed', 'in_delivery', 'completed'];
+
+const ACTION_LABELS: Partial<Record<OrderStatus, string>> = {
+  confirmed: 'Подтвердить заказ',
+  in_delivery: 'Передать в доставку',
+  completed: 'Завершить заказ',
+  cancelled: 'Отменить заказ',
+};
+
+/**
+ * Подпись кнопки перехода — глагол, а не название статуса: менеджер нажимает
+ * «Подтвердить заказ», а не «Подтверждён». Шаг назад из доставки называется
+ * отдельно, чтобы не выглядеть повторным подтверждением.
+ */
+export function actionLabel(from: OrderStatus, to: OrderStatus): string {
+  if (from === 'in_delivery' && to === 'confirmed') {
+    return 'Вернуть в подтверждённые';
+  }
+
+  return ACTION_LABELS[to] ?? statusLabel(to);
+}
+
+/**
+ * Основное действие — первый неразрушительный переход из матрицы: она
+ * перечисляет шаг вперёд первым. Остальные переходы идут второстепенными.
+ */
+export function primaryTransition(from: OrderStatus): OrderStatus | null {
+  return allowedTransitions(from).find((s) => !isDestructive(s)) ?? null;
+}

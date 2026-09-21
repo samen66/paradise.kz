@@ -31,33 +31,38 @@ const LEGACY = ["Архив (отправлен)", "Архив (ошибка о�
 /** Рабочий путь заказа. Он односторонний: откат назад API больше не примет. */
 const CHAIN = ["pending", "confirmed", "in_delivery", "completed"];
 
-test("в выпадашке только допустимые переходы, без synced и failed", async ({ page }) => {
+/** Кнопка шага вперёд для каждого статуса рабочего пути. */
+const NEXT_ACTION: Record<string, string> = {
+  pending: "Подтвердить заказ",
+  confirmed: "Передать в доставку",
+  in_delivery: "Завершить заказ",
+};
+
+test("на карточке только допустимые переходы, без synced и failed", async ({ page }) => {
   const order = requireOrder("buyout");
 
   await page.goto(`/orders/${order.id}`);
   await settled(page);
 
-  const select = page.getByRole("combobox");
+  const card = page.getByRole("region", { name: "Статус заказа" });
+  const current = await card.getAttribute("data-status");
 
-  // На завершённом/отменённом заказе селекта нет вовсе — карточка показывает
-  // «Статус финальный — изменить нельзя». Это не провал, а исчерпанная фикстура.
+  // На завершённом/отменённом заказе кнопок нет вовсе. Это не провал, а
+  // исчерпанная фикстура.
   test.skip(
-    (await select.count()) === 0,
+    current === "completed" || current === "cancelled",
     "заказ уже в финальном статусе — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
   );
 
-  const current = await select.inputValue();
-
-  // Из «нового» ведут ровно два пути; сам текущий статус стоит первым, чтобы
-  // селект показывал то, что есть сейчас.
+  // Из «нового» ведут ровно два пути: вперёд и отмена.
   if (current === "pending") {
-    await expect(select.locator("option")).toHaveText(["Новый", "Подтверждён", "Отменён"]);
+    await expect(card.getByRole("button")).toHaveText(["Подтвердить заказ", "Отменить заказ"]);
   }
 
   // Главное, ради чего тест и писался: мёртвые статусы внешней системы
   // менеджеру не предлагают ни при каком текущем статусе.
-  for (const legacy of [...LEGACY, "synced", "failed"]) {
-    await expect(select.locator("option").filter({ hasText: legacy })).toHaveCount(0);
+  for (const legacy of LEGACY) {
+    await expect(card.getByRole("button", { name: legacy })).toHaveCount(0);
   }
 });
 
@@ -68,19 +73,15 @@ test("менеджер проводит заказ по рабочим стат�
   await expect(page.getByRole("heading", { name: new RegExp(order.number) })).toBeVisible();
   await settled(page);
 
-  const select = page.getByRole("combobox");
+  const card = page.getByRole("region", { name: "Статус заказа" });
+  const current = (await card.getAttribute("data-status")) ?? "";
 
-  // На завершённом заказе селекта нет вовсе — карточка показывает «Статус
-  // финальный — изменить нельзя». Это не провал, а исчерпанная фикстура: тот
-  // же повторный прогон без пересева, который раньше ловил test.skip ниже по
-  // значению started, здесь ловится тем, что select.inputValue() вообще не
-  // на чем звать.
   test.skip(
-    (await select.count()) === 0,
+    current === "completed",
     "заказ уже в финальном статусе — прогоните `php artisan mvp:acceptance --fresh --fixtures`",
   );
 
-  const started = CHAIN.indexOf(await select.inputValue());
+  const started = CHAIN.indexOf(current);
 
   expect(
     started,
@@ -89,39 +90,34 @@ test("менеджер проводит заказ по рабочим стат�
 
   for (let step = started + 1; step < CHAIN.length; step++) {
     const next = CHAIN[step];
-    const save = page.getByRole("button", { name: "Сохранить статус" });
-
-    await select.selectOption(next);
-    await expect(save).toBeEnabled();
+    const action = card.getByRole("button", { name: NEXT_ACTION[CHAIN[step - 1]] });
 
     const saved = page.waitForResponse(
       (response) =>
         response.url().includes(`/admin/orders/${order.id}`) &&
         response.request().method() === "PATCH",
     );
-    await save.click();
+    await action.click();
     expect((await saved).status(), `перевод в «${next}» не сохранился`).toBe(200);
 
     await page.reload();
     await settled(page);
 
-    if (step < CHAIN.length - 1) {
-      await expect(select).toHaveValue(next);
-    } else {
-      // Последний шаг довёл заказ до «завершён»: карточка убирает select и
-      // рисует «Статус финальный — изменить нельзя» вместо него.
-      await expect(page.getByText("Статус финальный")).toBeVisible();
-    }
+    await expect(card).toHaveAttribute("data-status", next);
   }
+
+  // Последний шаг довёл заказ до «завершён»: кнопок больше нет.
+  await expect(card.getByText("Заказ завершён")).toBeVisible();
+  await expect(card.getByRole("button")).toHaveCount(0);
 });
 
 /**
  * Дождаться, пока страница договорит с API.
  *
  * Карточка тянет заказ в useEffect, а в деве React монтирует компонент дважды —
- * значит и запросов два. Если выбрать статус между их ответами, второй ответ
- * перезапишет выбор обратно на серверный, кнопка сохранения снова станет
- * неактивной, и тест повиснет на запросе, которого не будет.
+ * значит и запросов два. Если нажать кнопку перехода между их ответами,
+ * запоздавший второй ответ перерисует карточку старым статусом, и тест
+ * прочитает не то, что сохранил.
  */
 async function settled(page: import("@playwright/test").Page): Promise<void> {
   await page.waitForLoadState("networkidle");

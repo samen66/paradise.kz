@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { toast } from '@/stores/toastStore';
-import { allowedTransitions, isDestructive, statusLabel, type OrderStatus } from './orderStatus';
+import { actionLabel, allowedTransitions, isDestructive, statusLabel, type OrderStatus } from './orderStatus';
 
 type Props = {
   orderId: number;
@@ -107,7 +107,7 @@ export default function OrderRowActions({ orderId, status, onChanged }: Props) {
                       isDestructive(next) ? 'text-red-600' : 'text-zinc-700'
                     }`}
                   >
-                    {statusLabel(next)}
+                    {actionLabel(status, next)}
                   </button>
                 ))}
               </div>
