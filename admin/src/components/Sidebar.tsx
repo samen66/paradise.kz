@@ -3,64 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import { NAV_GROUPS, isActive } from '@/components/shell/navConfig';
 
-type NavLink = { href: string; label: string };
-
-// Group titles differ from link texts so tests and screen readers never
-// see two elements named, say, «Склад».
-const groups: { title: string | null; links: NavLink[] }[] = [
-  { title: null, links: [{ href: '/', label: 'Главная' }] },
-  {
-    title: 'Продажи',
-    links: [
-      { href: '/orders', label: 'Заказы' },
-      { href: '/users', label: 'Клиенты (B2B)' },
-    ],
-  },
-  {
-    title: 'Каталог',
-    links: [
-      { href: '/products', label: 'Товары' },
-      { href: '/categories', label: 'Категории' },
-      { href: '/brands', label: 'Бренды' },
-      { href: '/attributes', label: 'Атрибуты' },
-      { href: '/price-types', label: 'Типы цен' },
-      { href: '/catalog-groups', label: 'Группы каталога' },
-      { href: '/product-collections', label: 'Подборки' },
-    ],
-  },
-  {
-    title: 'Контент',
-    links: [
-      { href: '/banners', label: 'Баннеры' },
-      { href: '/b2b-home', label: 'B2B-главная' },
-    ],
-  },
-  {
-    title: 'Запасы',
-    links: [
-      { href: '/stock', label: 'Склад' },
-      { href: '/stock-movements', label: 'Движения' },
-      { href: '/goods-receipts', label: 'Приёмки' },
-      { href: '/write-offs', label: 'Списания' },
-      { href: '/stores', label: 'Склады' },
-      { href: '/suppliers', label: 'Поставщики' },
-    ],
-  },
-];
-
+/**
+ * Меню с `lg`. До `lg` навигация — нижняя панель (shell/BottomNav), поэтому
+ * здесь `hidden lg:flex`. Высоту даёт родитель AppShell (`lg:h-screen`,
+ * `lg:flex`) — сайдбар растягивается по ней.
+ */
 export default function Sidebar() {
   const pathname = usePathname();
   const { logout } = useAuthStore();
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
-
   return (
-    <div className="flex min-h-full w-64 shrink-0 flex-col bg-zinc-900 text-white shadow-lg">
+    <div className="hidden w-64 shrink-0 flex-col bg-zinc-900 text-white shadow-lg lg:flex">
       <div className="border-b border-zinc-800 p-6 text-2xl font-bold">Paradise Admin</div>
       <nav className="flex-1 space-y-4 overflow-y-auto py-4">
-        {groups.map((group) => (
+        {NAV_GROUPS.map((group) => (
           <div key={group.title ?? 'root'} className="px-4">
             {group.title && (
               <div className="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">{group.title}</div>
@@ -71,7 +29,7 @@ export default function Sidebar() {
                   <Link
                     href={link.href}
                     className={`block rounded-lg px-4 py-2 transition-colors ${
-                      isActive(link.href) ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                      isActive(pathname, link.href) ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
                     }`}
                   >
                     {link.label}

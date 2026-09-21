@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthInitializer from "@/components/AuthInitializer";
@@ -18,6 +18,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Paradise Admin",
   description: "Админ-панель Paradise.kz",
+};
+
+/**
+ * `viewportFit: 'cover'` включает `env(safe-area-inset-*)` — без него
+ * нижняя панель и шторки не знают про «домашнюю полоску» iPhone.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#fafafa",
 };
 
 export default function RootLayout({

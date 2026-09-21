@@ -211,7 +211,7 @@ export default function EditProductPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em]"></div>
       </div>
     );
@@ -226,7 +226,7 @@ export default function EditProductPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 text-gray-900">
+    <div className="text-gray-900">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Link href="/products" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">

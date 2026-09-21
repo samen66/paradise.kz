@@ -34,7 +34,7 @@ export default function OrderDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50/50 p-6 flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center text-gray-500">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent mb-3" />
           <p>Загрузка заказа...</p>
@@ -45,7 +45,7 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50/50 p-6 flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center text-gray-500">
           <p className="text-lg font-medium">Заказ не найден</p>
           <Link href="/orders" className="mt-4 inline-block text-blue-600 hover:underline text-sm">← К списку заказов</Link>
@@ -59,7 +59,7 @@ export default function OrderDetailPage() {
     : [order.delivery_city, order.delivery_street, order.delivery_building, order.delivery_apartment].filter(Boolean).join(', ');
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6">
+    <div>
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Back + Header */}

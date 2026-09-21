@@ -62,8 +62,8 @@ export default function StockPage() {
     kopecks === null ? '—' : `${(kopecks / 100).toLocaleString('ru-RU')} ₸`;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div>
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Склад</h1>

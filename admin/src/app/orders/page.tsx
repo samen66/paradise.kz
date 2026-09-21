@@ -109,8 +109,8 @@ function OrdersScreen() {
   const columns = useMemo(() => orderColumns(() => void load()), [load]);
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 p-6">
-      <div className="mx-auto max-w-7xl space-y-4">
+    <div>
+      <div className="space-y-4">
         <PageHeader title="Заказы" />
 
         <OrderTabs segment={segment} status={status} counts={counts} buildHref={buildHref} />

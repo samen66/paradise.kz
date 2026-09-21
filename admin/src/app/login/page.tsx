@@ -41,8 +41,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-md sm:p-8">
         <h2 className="mb-6 text-2xl font-bold text-center text-gray-800">Вход для Администратора</h2>
         {error && <p className="mb-4 text-sm text-red-500 text-center">{error}</p>}
         <form onSubmit={handleLogin}>

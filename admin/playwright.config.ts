@@ -39,7 +39,16 @@ export default defineConfig({
     {
       name: "Desktop",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /.*\.setup\.ts/,
+      // Мобильные спеки ищут карточки и нижнюю панель — на десктопе их нет.
+      testIgnore: [/.*\.setup\.ts/, /mobile\//],
+      dependencies: ["setup"],
+    },
+    {
+      // Заказчик работает с админкой в основном с телефона. Pixel 7 — это
+      // Chromium, отдельный WebKit ставить не нужно.
+      name: "Mobile",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /mobile\/.*\.spec\.ts/,
       dependencies: ["setup"],
     },
   ],
