@@ -40,7 +40,7 @@ test("«⋯» открывает шторку с действиями, «Зак�
 
   await page.goto(`/orders?q=${encodeURIComponent(number ?? String(id))}`);
 
-  const card = page.getByRole("listitem").filter({ hasText: new RegExp(`#${id}\\b`) });
+  const card = page.getByRole("listitem").filter({ hasText: new RegExp(`#${id}(?!\\d)`) });
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Действия" }).click();
 
