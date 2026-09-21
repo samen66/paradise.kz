@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { formatTenge } from '@/lib/money';
 import { allowedTransitions, statusBadge, statusLabel, type OrderStatus } from '@/components/orders/orderStatus';
+import { paymentMethodLabel, paymentStatusLabel } from '@/components/orders/orderPayment';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -287,13 +288,13 @@ export default function OrderDetailPage() {
                   {order.payment_method && (
                     <div className="flex gap-2">
                       <dt className="text-gray-500 w-24 shrink-0">Способ:</dt>
-                      <dd className="text-gray-900">{order.payment_method}</dd>
+                      <dd className="text-gray-900">{paymentMethodLabel(order.payment_method)}</dd>
                     </div>
                   )}
                   {order.payment_status && (
                     <div className="flex gap-2">
                       <dt className="text-gray-500 w-24 shrink-0">Статус:</dt>
-                      <dd className="text-gray-900">{order.payment_status}</dd>
+                      <dd className="text-gray-900">{paymentStatusLabel(order.payment_status)}</dd>
                     </div>
                   )}
                 </dl>
