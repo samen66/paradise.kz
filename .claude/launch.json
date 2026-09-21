@@ -20,6 +20,17 @@
         "dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "admin-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "admin",
+        "run",
+        "dev"
+      ],
+      "port": 3002
     }
   ]
 }
