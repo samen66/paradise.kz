@@ -34,14 +34,20 @@ export default function BrandsPage() {
   const [editing, setEditing] = useState<Brand | null | undefined>(undefined);
 
   const columns: Column<Brand>[] = [
-    { key: 'id', header: 'ID', render: (b) => b.id },
-    { key: 'name', header: 'Название', render: (b) => <span className="font-medium text-zinc-900">{b.name?.ru || '—'}</span> },
-    { key: 'slug', header: 'Slug', render: (b) => b.slug },
-    { key: 'status', header: 'Статус', render: (b) => (b.is_active ? 'Активен' : 'Выключен') },
+    { key: 'id', header: 'ID', mobile: 'hidden', render: (b) => b.id },
+    {
+      key: 'name',
+      header: 'Название',
+      mobile: 'title',
+      render: (b) => <span className="font-medium text-zinc-900">{b.name?.ru || '—'}</span>,
+    },
+    { key: 'slug', header: 'Slug', mobile: 'meta', render: (b) => b.slug },
+    { key: 'status', header: 'Статус', mobile: 'badge', render: (b) => (b.is_active ? 'Активен' : 'Выключен') },
     {
       key: 'actions',
       header: '',
       className: 'text-right',
+      mobile: 'actions',
       render: (b) => (
         <div className="flex justify-end gap-4">
           <button type="button" className={buttonLink} onClick={() => setEditing(b)}>Изменить</button>

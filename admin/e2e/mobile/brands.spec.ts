@@ -55,3 +55,26 @@ test("форма бренда — шторка снизу, кнопки на в�
   const navBox = (await page.getByRole("navigation", { name: "Основное меню" }).boundingBox())!;
   expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(navBox.y);
 });
+
+test("бренд виден карточкой по ролям колонок и удаляется из неё", async ({ page, request }) => {
+  const slug = `e2e-m-card-${Date.now()}`;
+  createdSlugs.push(slug);
+  await adminApi(request).create("/admin/brands", { name: { ru: "E2E карточка бренда", kk: "" }, slug, is_active: true });
+
+  await page.goto("/brands");
+
+  // На телефоне таблицы нет вовсе — только карточки.
+  await expect(page.getByRole("listitem").filter({ hasText: slug })).toBeVisible();
+  await expect(page.locator("table")).toHaveCount(0);
+
+  const card = page.getByRole("listitem").filter({ hasText: slug });
+  await expect(card).toContainText("E2E карточка бренда");
+  await expect(card).toContainText("Активен");
+  // Роли убирают подписи: title, meta и badge выводятся без «Заголовок:», а ID скрыт.
+  for (const label of ["ID", "Название", "Slug", "Статус"]) {
+    await expect(card).not.toContainText(label);
+  }
+
+  await card.getByRole("button", { name: "Удалить" }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: slug })).toHaveCount(0);
+});
