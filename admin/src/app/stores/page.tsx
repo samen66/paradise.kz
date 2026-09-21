@@ -97,7 +97,7 @@ export default function StoresPage() {
                 <Field label="Название *" htmlFor="store-name" error={errors.name?.message}>
                   <input id="store-name" className={inputClass} {...form.register('name')} />
                 </Field>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Код" htmlFor="store-code" error={errors.code?.message}>
                     <input id="store-code" className={inputClass} {...form.register('code')} />
                   </Field>

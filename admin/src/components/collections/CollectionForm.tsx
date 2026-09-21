@@ -48,7 +48,7 @@ export function CollectionFields({ form }: { form: UseFormReturn<CollectionFormV
   return (
     <>
       <TranslatableField form={form} name="title" label="Заголовок" required />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Slug *" htmlFor="col-slug" error={errors.slug?.message}>
           <input id="col-slug" className={inputClass} {...form.register('slug')} />
         </Field>

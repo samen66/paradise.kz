@@ -60,7 +60,7 @@ export function BannerFields({ form }: { form: UseFormReturn<BannerFormValues> }
       </Field>
       <TranslatableField form={form} name="title" label="Заголовок" />
       <TranslatableField form={form} name="subtitle" label="Подзаголовок" />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Ссылка" htmlFor="banner-url" error={errors.url?.message} hint="Для главной магазина: например /catalog. На B2B-главной кнопка ведёт на регистрацию">
           <input id="banner-url" className={inputClass} {...form.register('url')} />
         </Field>

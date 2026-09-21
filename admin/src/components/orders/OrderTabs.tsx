@@ -25,6 +25,7 @@ type Props = {
  * useState и сам рисует панель содержимого.
  *
  * Вкладка с нулём не прячется: исчезающие вкладки ломают мышечную память.
+ * Ряд статусов не переносится, а листается вбок: на телефоне семь вкладок в три ряда съедали пол-экрана.
  */
 export default function OrderTabs({ segment, status, counts, buildHref }: Props) {
   return (
@@ -45,7 +46,7 @@ export default function OrderTabs({ segment, status, counts, buildHref }: Props)
         ))}
       </div>
 
-      <div role="tablist" aria-label="Статус заказа" className="flex flex-wrap gap-1 px-2 py-2">
+      <div role="tablist" aria-label="Статус заказа" className="no-scrollbar flex gap-1 overflow-x-auto px-2 py-2">
         {STATUS_TABS.map((tab) => {
           const count = counts?.[tab.key];
 
@@ -55,7 +56,7 @@ export default function OrderTabs({ segment, status, counts, buildHref }: Props)
               role="tab"
               aria-selected={tab.key === status}
               href={buildHref({ status: tab.key })}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
                 tab.key === status ? 'bg-blue-50 font-medium text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'
               }`}
             >

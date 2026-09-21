@@ -67,7 +67,7 @@ export function ReceiptFields({ form, suppliers }: { form: UseFormReturn<Receipt
           ))}
         </select>
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Номер" htmlFor="gr-number" error={errors.number?.message}>
           <input id="gr-number" className={inputClass} {...form.register('number')} />
         </Field>

@@ -114,7 +114,7 @@ export default function VariantsTab({ productId }: { productId: number }) {
                 <Field label="Код" htmlFor="v-code" error={errors.code?.message}>
                   <input id="v-code" className={inputClass} {...form.register('code')} />
                 </Field>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Розничная цена, ₸" htmlFor="v-retail" error={errors.retail_price?.message}>
                     <MoneyInput id="v-retail" {...form.register('retail_price')} />
                   </Field>
