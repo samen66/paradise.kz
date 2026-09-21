@@ -56,6 +56,21 @@ test("меню «Ещё» закрывается крестиком и Escape", 
   await expect(sheet).toBeHidden();
 });
 
+test("«назад» после перехода из «Ещё» закрывает меню", async ({ page }) => {
+  await page.goto("/orders");
+
+  await page.getByRole("navigation", { name: "Основное меню" }).getByRole("link", { name: "Товары" }).click();
+  await expect(page).toHaveURL(/\/products$/);
+
+  await page.getByRole("button", { name: "Ещё" }).click();
+  const sheet = page.getByRole("dialog", { name: "Все разделы" });
+  await expect(sheet).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/orders$/);
+  await expect(sheet).toBeHidden();
+});
+
 test("«Выйти» из меню ведёт на вход", async ({ page }) => {
   // Выход только стирает токен из localStorage этого контекста — сессия
   // остальных тестов (файл ADMIN_SESSION) не страдает.

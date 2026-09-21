@@ -7,7 +7,7 @@ export default function Toaster() {
 
   return (
     <div
-      className="fixed inset-x-4 bottom-[calc(4.75rem_+_env(safe-area-inset-bottom))] z-[60] flex flex-col gap-2 md:inset-x-auto md:right-4 md:w-80 lg:bottom-4"
+      className="fixed left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(4.75rem_+_env(safe-area-inset-bottom))] z-[60] flex flex-col gap-2 md:left-auto md:right-4 md:w-80 lg:bottom-4"
       role="status"
       aria-live="polite"
     >

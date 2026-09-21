@@ -2,6 +2,14 @@
 
 import { useEffect } from 'react';
 
+// Счётчик и исходное значение живут на модуле, а не в хуке: с двумя
+// вложенными слоями (например, ActionSheet поверх Modal) React размонтирует
+// их в произвольном порядке, и «свой» previousOverflow каждого инстанса не
+// знает, что снаружи ещё остался открытый слой. Счётчик восстанавливает
+// overflow только когда закрылся последний слой, а не первый по очереди.
+let lockCount = 0;
+let previousOverflow = '';
+
 /**
  * Общее поведение всплывающих слоёв — модалки, шторки, меню «Ещё»:
  * Escape закрывает слой, а страница под ним не прокручивается.
@@ -23,11 +31,15 @@ export function useOverlay(onClose: () => void): void {
   }, [onClose]);
 
   useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (lockCount++ === 0) {
+      previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
 
     return () => {
-      document.body.style.overflow = previous;
+      if (--lockCount === 0) {
+        document.body.style.overflow = previousOverflow;
+      }
     };
   }, []);
 }

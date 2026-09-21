@@ -31,7 +31,7 @@ export default function MoreSheet({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
+      <nav aria-label="Разделы" className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
         {NAV_GROUPS.map((group) => (
           <div key={group.title ?? 'root'}>
             {group.title && (

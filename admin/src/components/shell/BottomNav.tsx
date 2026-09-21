@@ -19,7 +19,12 @@ import { PRIMARY_LINKS, isActive } from './navConfig';
  */
 export default function BottomNav() {
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = useState(false);
+  // Открытость меню держим не в булеве, а в пути, на котором его открыли:
+  // BottomNav переживает переходы между страницами, и обычный useState
+  // оставлял бы меню открытым после «назад»/«вперёд» браузера — setState в
+  // эффекте на смену pathname запрещён линтом, а так его и не нужно.
+  const [openedOn, setOpenedOn] = useState<string | null>(null);
+  const moreOpen = openedOn === pathname;
   const inPrimary = PRIMARY_LINKS.some((link) => isActive(pathname, link.href));
 
   const itemClass = (active: boolean) =>
@@ -31,7 +36,7 @@ export default function BottomNav() {
     <>
       <nav
         aria-label="Основное меню"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] lg:hidden"
       >
         <ul className="grid h-16 grid-cols-5">
           {PRIMARY_LINKS.map((link) => {
@@ -52,7 +57,7 @@ export default function BottomNav() {
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
               data-active={!inPrimary}
-              onClick={() => setMoreOpen(true)}
+              onClick={() => setOpenedOn(pathname)}
               className={itemClass(!inPrimary)}
             >
               <Icon name="more" className="h-6 w-6" />
@@ -62,7 +67,7 @@ export default function BottomNav() {
         </ul>
       </nav>
 
-      {moreOpen && <MoreSheet onClose={() => setMoreOpen(false)} />}
+      {moreOpen && <MoreSheet onClose={() => setOpenedOn(null)} />}
     </>
   );
 }
