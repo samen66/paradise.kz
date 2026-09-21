@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useIsDesktop } from '@/lib/useIsDesktop';
 import { toast } from '@/stores/toastStore';
+import ActionSheet from '@/components/ui/ActionSheet';
 import { actionLabel, allowedTransitions, isDestructive, statusLabel, type OrderStatus } from './orderStatus';
 
 type Props = {
@@ -23,12 +25,14 @@ const MENU_HEIGHT_ESTIMATE = 220;
  * просто пишет статус, а возвращает товар на склад через
  * OrderCancellationService, и отменить это нечем.
  *
- * Меню позиционируется `position: fixed` от координат кнопки-триггера, а не
+ * На телефоне «⋯» открывает ActionSheet — пункты во всю ширину экрана. На
+ * десктопе — выпадашка `position: fixed` от координат кнопки-триггера, а не
  * `absolute` внутри строки: DataTable даёт таблице `overflow-hidden` ради
  * скруглённых углов, и `absolute`-меню на нижних строках обрезало бы этим же
  * краем.
  */
 export default function OrderRowActions({ orderId, status, onChanged }: Props) {
+  const isDesktop = useIsDesktop();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
@@ -72,7 +76,10 @@ export default function OrderRowActions({ orderId, status, onChanged }: Props) {
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <Link href={`/orders/${orderId}`} className="rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50">
+      <Link
+        href={`/orders/${orderId}`}
+        className="inline-flex min-h-11 items-center rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50 md:min-h-0"
+      >
         Открыть
       </Link>
 
@@ -84,13 +91,13 @@ export default function OrderRowActions({ orderId, status, onChanged }: Props) {
             disabled={busy}
             aria-label="Действия"
             aria-expanded={open}
-            onClick={openMenu}
-            className="rounded-md px-2 py-1 text-zinc-500 hover:bg-zinc-100 disabled:opacity-50"
+            onClick={isDesktop ? openMenu : () => setOpen(true)}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-1 text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 md:min-h-0 md:min-w-0"
           >
             ⋯
           </button>
 
-          {open && menuPosition && (
+          {open && isDesktop && menuPosition && (
             <>
               {/* Клик мимо меню закрывает его. */}
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
@@ -114,6 +121,19 @@ export default function OrderRowActions({ orderId, status, onChanged }: Props) {
             </>
           )}
         </div>
+      )}
+
+      {open && !isDesktop && (
+        <ActionSheet
+          title={`Заказ #${orderId}`}
+          actions={transitions.map((next) => ({
+            key: next,
+            label: actionLabel(status, next),
+            destructive: isDestructive(next),
+            onSelect: () => void move(next),
+          }))}
+          onClose={() => setOpen(false)}
+        />
       )}
     </div>
   );
