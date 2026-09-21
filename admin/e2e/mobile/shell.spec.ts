@@ -69,6 +69,12 @@ test("«назад» после перехода из «Ещё» закрыва�
   await page.goBack();
   await expect(page).toHaveURL(/\/orders$/);
   await expect(sheet).toBeHidden();
+
+  // Регрессия: «назад» не проходит через onClose, поэтому обычный повторный
+  // переход на тот же маршрут не должен снова показать меню.
+  await page.getByRole("navigation", { name: "Основное меню" }).getByRole("link", { name: "Товары" }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await expect(sheet).toBeHidden();
 });
 
 test("«Выйти» из меню ведёт на вход", async ({ page }) => {
