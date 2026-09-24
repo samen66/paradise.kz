@@ -12,6 +12,7 @@ import Collapsible from '@/components/ui/Collapsible';
 import type { Locale } from '@/components/ui/LocaleSwitch';
 import PageHeader from '@/components/ui/PageHeader';
 import SaveBar from '@/components/ui/SaveBar';
+import SectionNav from '@/components/ui/SectionNav';
 import { buttonSecondary } from '@/components/ui/styles';
 import api, { STOREFRONT_URL } from '@/lib/api';
 import { applyServerErrors } from '@/lib/errors';
@@ -51,6 +52,20 @@ const RELATIONS: { id: string; title: string; forms: [string, string, string]; T
   { id: 'attributes', title: 'Характеристики', forms: ['значение', 'значения', 'значений'], Tab: AttributeValuesTab, order: 'order-11 lg:order-none' },
   { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab, order: 'order-12 lg:order-none' },
 ];
+
+/** Полоса переходов на телефоне. Свёрнутые блоки (FOLDABLE) при переходе раскрываются. */
+const SECTIONS = [
+  { id: 'basic', label: 'Основное' },
+  { id: 'photos', label: 'Фото' },
+  { id: 'price', label: 'Цены' },
+  { id: 'status', label: 'Статус' },
+  { id: 'catalog', label: 'Каталог' },
+  { id: 'attributes', label: 'Характеристики' },
+  { id: 'variants', label: 'Варианты' },
+  { id: 'seo', label: 'SEO' },
+];
+
+const FOLDABLE = new Set(['prices', 'client-prices', 'attributes', 'variants', 'seo']);
 
 /**
  * Карточка товара: создание и правка на одной странице.
@@ -133,6 +148,14 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       return copy;
     });
 
+  const jump = (id: string) => {
+    if (FOLDABLE.has(id)) {
+      setOpen((prev) => new Set(prev).add(id));
+    }
+
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
   /** Открывает блоки и язык с ошибками, потом прокручивает и ставит фокус на первое видимое поле. */
   const reveal = (paths: string[]) => {
     const plan = revealPlan(paths);
@@ -214,6 +237,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       <PageHeader
         title={title}
         back="/products"
+        below={<SectionNav sections={SECTIONS} onJump={jump} />}
         actions={
           product && (
             <>
