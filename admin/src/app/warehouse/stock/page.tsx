@@ -1,187 +1,273 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { warehouseHref } from '@/lib/warehouse';
-import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
+import type { PageMeta } from '@/lib/crud';
+import { formatTenge } from '@/lib/money';
+import { ru } from '@/lib/text';
+import {
+  formatQty,
+  parseStockSort,
+  parseStockStatus,
+  STOCK_SORTS,
+  warehouseHref,
+  type StockProductRow,
+  type StockProductsMeta,
+} from '@/lib/warehouse';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import EmptyState from '@/components/ui/EmptyState';
+import FilterChips from '@/components/ui/FilterChips';
+import { buttonLink, buttonSecondary, inputClass } from '@/components/ui/styles';
+import StoreSelect from '@/components/warehouse/StoreSelect';
+import { StockStoresLine, StockStoresTable } from '@/components/warehouse/StockStores';
+
+type StockBody = { data: StockProductRow[]; current_page: number; last_page: number; meta: StockProductsMeta };
+
+const STATUS_TEXT = { ok: 'text-green-700', low: 'text-amber-700', out: 'text-red-600' } as const;
+const STATUS_BADGE = { low: 'bg-amber-50 text-amber-800', out: 'bg-red-50 text-red-700' } as const;
+const STATUS_LABEL = { low: 'мало', out: 'нет' } as const;
 
 /**
- * On-hand stock per product and warehouse.
- *
- * Read-only by design: quantities are a projection of the FIFO ledger, so the
- * only way to change them is to post a goods receipt or a write-off — that
- * way every movement leaves a trace. The link below goes to those screens.
+ * Остатки по товару. Только чтение: остаток меняют приёмки, заказы и
+ * списания через FIFO-журнал. Фильтры, сортировка и страница — в адресе.
  */
+function StockView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
 
-type StockRow = {
-  id: number;
-  product_id: number;
-  stock: string | number;
-  avg_cost: number | null;
-  // Название переводимое (ru + kk), API отдаёт его объектом — как и в списке товаров.
-  product?: { id: number; name?: { ru?: string; kk?: string } | null; code?: string | null; article?: string | null } | null;
-  store?: { id: number; name: string } | null;
-};
+  const search = params.get('search') ?? '';
+  const storeId = params.get('store_id') ?? '';
+  const productId = params.get('product_id') ?? '';
+  const status = parseStockStatus(params.get('status'));
+  const sort = parseStockSort(params.get('sort'));
+  const page = Number(params.get('page')) || 1;
 
-export default function StockPage() {
-  const [rows, setRows] = useState<StockRow[]>([]);
-  const [search, setSearch] = useState('');
-  const [onlyLow, setOnlyLow] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [hasActiveStore, setHasActiveStore] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [draft, setDraft] = useState(search);
+  const [body, setBody] = useState<StockBody | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  const fetchStock = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params: Record<string, string> = { page: page.toString() };
-      if (search) params['filter[search]'] = search;
-      if (onlyLow) params['filter[low]'] = '0';
-
-      const res = await api.get('/admin/stock', { params });
-      const json = res.data;
-      setRows(json.data || []);
-      setTotalPages(json.last_page || 1);
-      setTotal(json.total || 0);
-      setHasActiveStore(json.meta?.has_active_store ?? null);
-    } catch (err) {
-      console.error('Failed to fetch stock', err);
-    } finally {
-      setIsLoading(false);
+  const setParam = (updates: Record<string, string>) => {
+    const next = new URLSearchParams(params.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
     }
-  }, [page, search, onlyLow]);
+    if (!('page' in updates)) {
+      next.delete('page');
+    }
+    router.replace(`${pathname}${next.toString() ? `?${next}` : ''}`);
+  };
+
+  // Поиск уходит в адрес с задержкой, чтобы не делать запрос на каждую букву.
+  useEffect(() => {
+    if (draft === search) {
+      return;
+    }
+    const timer = setTimeout(() => setParam({ search: draft.trim() }), 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setParam читает актуальный адрес
+  }, [draft]);
 
   useEffect(() => {
-    const t = setTimeout(fetchStock, 300);
-    return () => clearTimeout(t);
-  }, [fetchStock]);
+    let cancelled = false;
+    const query: Record<string, string> = { page: String(page), sort };
+    if (search) query['filter[search]'] = search;
+    if (storeId) query['filter[store_id]'] = storeId;
+    if (productId) query['filter[product_id]'] = productId;
+    if (status) query['filter[status]'] = status;
 
-  const money = (kopecks: number | null) =>
-    kopecks === null ? '—' : `${(kopecks / 100).toLocaleString('ru-RU')} ₸`;
+    // Fetch on URL change: the list mirrors the API, an external system.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    api
+      .get<StockBody>('/admin/stock/products', { params: query })
+      .then((res) => {
+        if (!cancelled) {
+          setBody(res.data);
+          setFailed(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [search, storeId, productId, status, sort, page, attempt]);
+
+  const counts = body?.meta.counts;
+  const rows = body?.data ?? [];
+  const meta: PageMeta | null = body ? { current_page: body.current_page, last_page: body.last_page } : null;
+  const hasFilters = Boolean(search || storeId || productId || status);
+  const unit = (row: StockProductRow) => row.product.uom || 'шт';
+
+  const columns: Column<StockProductRow>[] = [
+    {
+      key: 'product',
+      header: 'Товар',
+      mobile: 'title',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          {row.product.thumb_url ? (
+            <img src={row.product.thumb_url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-zinc-100 object-cover" />
+          ) : (
+            <span className="h-10 w-10 shrink-0 rounded-lg bg-zinc-100" aria-hidden="true" />
+          )}
+          <div className="min-w-0">
+            <div className="font-medium text-zinc-900">
+              {ru(row.product.name) || `#${row.product.id}`}
+              {row.status !== 'ok' && (
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[row.status]}`}>
+                  {STATUS_LABEL[row.status]}
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-zinc-500">{row.product.article || row.product.code || '—'}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'stock',
+      header: 'Остаток',
+      className: 'text-right',
+      mobile: 'badge',
+      render: (row) => (
+        <span className={`font-semibold ${STATUS_TEXT[row.status]}`}>
+          {formatQty(row.stock)} {unit(row)}
+        </span>
+      ),
+    },
+    { key: 'avg', header: 'Себест. ед.', className: 'text-right', mobile: 'hidden', render: (row) => formatTenge(row.avg_cost) },
+    { key: 'value', header: 'Стоимость', className: 'text-right', mobile: 'meta', render: (row) => formatTenge(row.stock_value) },
+    { key: 'stores', header: '', mobile: 'meta', hideOnDesktop: true, render: (row) => <StockStoresLine stores={row.stores} /> },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      mobile: 'actions',
+      render: (row) => (
+        <div className="flex justify-end gap-4">
+          <Link href={`${warehouseHref.movements}?product_id=${row.product.id}${storeId ? `&store_id=${storeId}` : ''}`} className={buttonLink}>
+            Движения
+          </Link>
+          <Link href={`/products/${row.product.id}`} className={buttonLink}>Открыть товар</Link>
+        </div>
+      ),
+    },
+  ];
+
+  const productName = productId ? (rows[0] ? ru(rows[0].product.name) : `Товар #${productId}`) : '';
 
   return (
-    <div>
-      <div className="space-y-6">
-        {total > 0 && <p className="text-sm text-zinc-500">{total} позиций</p>}
-
-        <NoActiveStoreWarning hasActiveStore={hasActiveStore} />
-
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
-          Остаток нельзя отредактировать вручную — он считается по складскому журналу.
-          Чтобы изменить его, проведите приёмку или списание.
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Поиск по названию, коду или артикулу..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full px-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 px-2 select-none">
-            <input
-              type="checkbox"
-              checked={onlyLow}
-              onChange={(e) => { setOnlyLow(e.target.checked); setPage(1); }}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            Только закончившиеся
-          </label>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-xs font-semibold">
-                  <th className="px-6 py-4">Товар</th>
-                  <th className="px-6 py-4">Склад</th>
-                  <th className="px-6 py-4 text-right">Остаток</th>
-                  <th className="px-6 py-4 text-right">Себестоимость</th>
-                  <th className="px-6 py-4 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      Ничего не найдено. Остатки появляются после проведения приёмки.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row) => {
-                    const qty = Number(row.stock);
-                    return (
-                      <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{row.product?.name?.ru || `#${row.product_id}`}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {row.product?.article || row.product?.code || '—'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-700">{row.store?.name || '—'}</td>
-                        <td className="px-6 py-4 text-right">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                            qty > 0
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-red-50 text-red-700 border-red-200'
-                          }`}>
-                            {qty.toLocaleString('ru-RU')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right text-gray-700">{money(row.avg_cost)}</td>
-                        <td className="px-6 py-4 text-right">
-                          <Link
-                            href={`${warehouseHref.movements}?product_id=${row.product_id}${row.store ? `&store_id=${row.store.id}` : ''}`}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                          >
-                            Движения
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          {totalPages > 1 && (
-            <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-sm text-gray-500">
-                Страница <span className="font-medium text-gray-900">{page}</span> из <span className="font-medium text-gray-900">{totalPages}</span>
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Назад
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Вперёд
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row">
+        <input
+          type="search"
+          aria-label="Поиск товара"
+          placeholder="Название, код или артикул"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className={`${inputClass} md:flex-1`}
+        />
+        <StoreSelect aria-label="Склад" emptyLabel="Все склады" className="md:max-w-64" value={storeId} onChange={(e) => setParam({ store_id: e.target.value })} />
+        <select aria-label="Сортировка" className={`${inputClass} md:max-w-56`} value={sort} onChange={(e) => setParam({ sort: e.target.value === 'name' ? '' : e.target.value })}>
+          {Object.entries(STOCK_SORTS).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
       </div>
+
+      <FilterChips
+        label="Статус остатка"
+        value={status}
+        onChange={(value) => setParam({ status: value })}
+        options={[
+          { value: '', label: 'Все', count: counts?.all },
+          { value: 'low', label: 'Заканчивается', count: counts?.low },
+          { value: 'out', label: 'Нет в наличии', count: counts?.out },
+        ]}
+      />
+
+      {productId && (
+        <p className="text-sm text-zinc-600">
+          Товар: {productName}{' '}
+          <button type="button" className={buttonLink} onClick={() => setParam({ product_id: '' })}>Показать все</button>
+        </p>
+      )}
+
+      {failed ? (
+        <EmptyState
+          title="Не удалось загрузить остатки"
+          action={<button type="button" className={buttonSecondary} onClick={() => setAttempt((n) => n + 1)}>Повторить</button>}
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          loading={loading}
+          meta={meta}
+          onPageChange={(next) => setParam({ page: next > 1 ? String(next) : '' })}
+          expandable={{
+            label: 'Показать места хранения',
+            canExpand: (row) => row.stores.length > 0,
+            render: (row) => <StockStoresTable stores={row.stores} productName={ru(row.product.name)} />,
+          }}
+          empty={
+            hasFilters ? (
+              <EmptyState
+                title="Ничего не найдено"
+                action={
+                  <button
+                    type="button"
+                    className={buttonSecondary}
+                    onClick={() => {
+                      setDraft('');
+                      router.replace(pathname);
+                    }}
+                  >
+                    Сбросить фильтры
+                  </button>
+                }
+              />
+            ) : (
+              <EmptyState title="Товаров пока нет" hint="Заведите товар в каталоге и проведите приёмку." />
+            )
+          }
+        />
+      )}
+
+      {body && (
+        <p className="text-right text-sm text-zinc-500">
+          Итого по фильтру: {status ? counts?.[status] : counts?.all} позиций
+          {!status && <> · {formatTenge(body.meta.total_value)}</>}
+        </p>
+      )}
     </div>
+  );
+}
+
+export default function StockPage() {
+  // useSearchParams needs a Suspense boundary for the static build.
+  return (
+    <Suspense fallback={null}>
+      <StockView />
+    </Suspense>
   );
 }

@@ -1,59 +1,110 @@
-import { test, expect } from "@playwright/test";
-import { requireInStockProduct, requireProduct, requireStore } from "./fixtures";
+import { test, expect, type Page } from "@playwright/test";
+import { requireInStockProduct, requireProduct } from "./fixtures";
 import { ADMIN_SESSION } from "./session";
+import { createProduct, createStore, receive, uniqueStamp } from "./warehouseApi";
 
 /**
- * Вкладка «Остатки» раздела «Склад».
- *
- * Остаток здесь только показывают — меняется он приёмками и заказами, через
- * FIFO-журнал. Прогон приёмки уже доказал, что журнал и проекция сходятся;
- * браузеру остаётся доказать, что менеджер видит на экране то же число.
- *
- * Плашка «Нет ни одного активного склада» переехала на вкладку «Обзор» —
- * без активного склада каталог молча показывает нули, а оформление заказа
- * падает. Выключить склад из теста нечем (склады живут в Filament), поэтому
- * ответ API подменяется на лету — проверяется именно реакция экрана на флаг
- * `has_active_store` из сводки склада.
+ * Вкладка «Остатки»: строка — товар, итог по местам хранения, статус,
+ * разбивка по складам. Остаток только показывают — меняют его приёмки,
+ * заказы и списания через FIFO-журнал.
  */
 test.use({ storageState: ADMIN_SESSION });
 
-test("остаток товара виден в таблице вместе со складом", async ({ page }) => {
+const productRow = (page: Page, text: string) => page.locator("tbody tr").filter({ hasText: text });
+
+async function search(page: Page, text: string) {
+  await page.getByPlaceholder("Название, код или артикул").fill(text);
+}
+
+test("остаток товара из фикстур виден одной строкой", async ({ page }) => {
   const product = requireProduct();
-  const store = requireStore();
 
   await page.goto("/warehouse/stock");
-  await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(product.article);
+  await search(page, product.article);
 
-  const row = page.locator("tbody tr").filter({ hasText: product.article });
+  const row = productRow(page, product.article);
   await expect(row).toHaveCount(1);
   await expect(row).toContainText(product.name);
-  await expect(row).toContainText(store.name);
-
-  const expectedStock = Number(product.stock_at_store ?? product.stock).toLocaleString("ru-RU");
-  await expect(row.locator("td").nth(2)).toHaveText(expectedStock);
-
-  await expect(page.getByText("Нет ни одного активного склада.")).toHaveCount(0);
+  await expect(row).toContainText(Number(product.stock).toLocaleString("ru-RU"));
 });
 
 test("товар в наличии виден с тем же остатком, что покупатель видит на витрине", async ({ page }) => {
   const product = requireInStockProduct();
-  const store = requireStore();
-
-  // Этот товар браузерные тесты не покупают — остаток ровно тот, что принял прогон.
   expect(product.stock, "прогон должен принять товар «в наличии» ровно на 7 шт").toBe(7);
 
   await page.goto("/warehouse/stock");
-  await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(product.article);
+  await search(page, product.article);
+  await expect(productRow(page, product.article)).toContainText("7");
+});
 
-  const row = page.locator("tbody tr").filter({ hasText: product.article });
+test("товар на двух складах — одна строка с итогом, склады раскрываются", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const first = await createStore(request, stamp, " А");
+  const second = await createStore(request, stamp, " Б");
+  await receive(request, first.id, product.id, 4);
+  await receive(request, second.id, product.id, 8);
+
+  await page.goto("/warehouse/stock");
+  await search(page, product.name);
+
+  const row = productRow(page, product.name);
   await expect(row).toHaveCount(1);
-  await expect(row).toContainText(store.name);
-  await expect(row.locator("td").nth(2)).toHaveText(Number(product.stock).toLocaleString("ru-RU"));
+  await expect(row).toContainText("12");
 
-  await test.info().attach("склад: товар в наличии", {
-    body: await page.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  });
+  await row.getByRole("button", { name: "Показать места хранения" }).click();
+  const breakdown = page.getByRole("list", { name: `Места хранения: ${product.name}` });
+  await expect(breakdown.getByText(first.name)).toBeVisible();
+  await expect(breakdown.getByText(second.name)).toBeVisible();
+});
+
+test("мало — в «Заканчивается», ноль — в «Нет в наличии»", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const low = await createProduct(request, stamp, { min_stock: 5 });
+  const never = await createProduct(request, stamp + 1);
+  const store = await createStore(request, stamp);
+  await receive(request, store.id, low.id, 2);
+
+  await page.goto("/warehouse/stock");
+  const chips = page.getByRole("radiogroup", { name: "Статус остатка" });
+
+  await search(page, low.name);
+  await chips.getByRole("radio", { name: /Заканчивается/ }).click();
+  await expect(page).toHaveURL(/status=low/);
+  await expect(productRow(page, low.name)).toHaveCount(1);
+
+  await chips.getByRole("radio", { name: /Нет в наличии/ }).click();
+  await expect(productRow(page, low.name)).toHaveCount(0);
+
+  await search(page, never.name);
+  await expect(productRow(page, never.name)).toHaveCount(1);
+
+  // Фильтр живёт в адресе: перезагрузка его не сбрасывает.
+  await page.reload();
+  await expect(chips.getByRole("radio", { name: /Нет в наличии/ })).toHaveAttribute("aria-checked", "true");
+});
+
+test("неизвестные параметры адреса не ломают экран", async ({ page }) => {
+  await page.goto("/warehouse/stock?status=foo&sort=zzz");
+
+  await expect(
+    page.getByRole("radiogroup", { name: "Статус остатка" }).getByRole("radio", { name: /Все/ }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator("tbody tr").first()).toBeVisible();
+});
+
+test("ссылка «Движения» из строки открывает журнал этого товара", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const store = await createStore(request, stamp);
+  await receive(request, store.id, product.id, 1);
+
+  await page.goto("/warehouse/stock");
+  await search(page, product.name);
+  await productRow(page, product.name).getByRole("link", { name: "Движения" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/warehouse/movements\\?product_id=${product.id}`));
+  await expect(page.locator("tbody tr").filter({ hasText: product.name })).toHaveCount(1);
 });
 
 test("без активного склада обзор показывает красную плашку", async ({ page }) => {

@@ -80,9 +80,9 @@ test("приёмка проводится, остаток растёт, движ
   await expect(page.getByText(/^Проведена /)).toBeVisible();
 
   await page.goto("/warehouse/stock");
-  await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(productName);
-  const stockRow = page.locator("tbody tr").filter({ hasText: storeName });
-  await expect(stockRow.locator("td").nth(2)).toHaveText("3");
+  await page.getByPlaceholder("Название, код или артикул").fill(productName);
+  const stockRow = page.locator("tbody tr").filter({ hasText: productName });
+  await expect(stockRow).toContainText("3");
 
   await stockRow.getByRole("link", { name: "Движения" }).click();
   await expect(page).toHaveURL(/\/warehouse\/movements\?/);

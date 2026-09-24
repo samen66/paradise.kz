@@ -204,6 +204,36 @@ export type StockSummary = {
   has_active_store: boolean;
 };
 
+export type StockStatus = 'ok' | 'low' | 'out';
+
+export type StockStoreRow = { id: number; name: string | null; stock: number; avg_cost: number | null; stock_value: number };
+
+export type StockProductRow = {
+  id: number;
+  product: { id: number; name: Translatable; code: string | null; article: string | null; uom: string | null; thumb_url: string | null };
+  stock: number;
+  min_stock: number;
+  avg_cost: number | null;
+  stock_value: number;
+  status: StockStatus;
+  stores: StockStoreRow[];
+};
+
+export type StockProductsMeta = { counts: { all: number; low: number; out: number }; total_value: number; low_stock_threshold: number };
+
+/** Статус из адреса: всё, кроме low/out, — «все». */
+export const parseStockStatus = (value: string | null): '' | 'low' | 'out' => (value === 'low' || value === 'out' ? value : '');
+
+export const STOCK_SORTS: Record<string, string> = {
+  name: 'По названию',
+  '-stock': 'Больше остаток',
+  stock: 'Меньше остаток',
+  '-stock_value': 'Дороже запас',
+};
+
+/** Сортировка из адреса: неизвестная — по названию. */
+export const parseStockSort = (value: string | null): string => (value && value in STOCK_SORTS ? value : 'name');
+
 export const documentHref = (document: NonNullable<StockMovement['document']>): string =>
   document.type === 'receipt'
     ? warehouseHref.receipt(document.id)

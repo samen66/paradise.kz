@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { adminApi } from "../adminApi";
 import { ADMIN_SESSION } from "../session";
+import { createProduct, createStore, receive, uniqueStamp } from "../warehouseApi";
 
 /**
  * Раздел «Склад» на телефоне: вкладки одной строкой, «Склад» внизу
@@ -55,4 +56,20 @@ test("модалка из шапки раздела — над нижней па
 
   await dialog.getByRole("button", { name: "Отмена" }).click();
   await expect(dialog).toBeHidden();
+});
+
+test("карточка остатка показывает разбивку по местам хранения", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const first = await createStore(request, stamp, " А");
+  const second = await createStore(request, stamp, " Б");
+  await receive(request, first.id, product.id, 1);
+  await receive(request, second.id, product.id, 2);
+
+  await page.goto("/warehouse/stock");
+  await page.getByPlaceholder("Название, код или артикул").fill(product.name);
+
+  const card = page.getByRole("listitem").filter({ hasText: product.name });
+  await expect(card).toContainText(`${first.name} 1`);
+  await expect(card).toContainText(`${second.name} 2`);
 });

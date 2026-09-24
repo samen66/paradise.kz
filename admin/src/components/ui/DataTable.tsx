@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type { PageMeta } from '@/lib/crud';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { CardList } from './DataTableCards';
@@ -22,6 +22,8 @@ export type Column<T> = {
   /** Классы ячейки таблицы. В карточке не применяются. */
   className?: string;
   mobile?: MobileRole;
+  /** Только в карточке телефона — в таблице колонки нет. */
+  hideOnDesktop?: boolean;
 };
 
 type DataTableProps<T> = {
@@ -34,6 +36,12 @@ type DataTableProps<T> = {
   meta?: PageMeta | null;
   onPageChange?: (page: number) => void;
   rowKey?: (row: T) => string | number;
+  /**
+   * Раскрытие строки на ПК: кнопка «▸» в первой ячейке, под строкой —
+   * `render(row)` во всю ширину. На телефоне то же содержимое карточка
+   * показывает сама (колонкой с `hideOnDesktop`).
+   */
+  expandable?: { canExpand: (row: T) => boolean; render: (row: T) => ReactNode; label: string };
 };
 
 /**
@@ -52,8 +60,10 @@ export default function DataTable<T extends { id?: number }>({
   meta,
   onPageChange,
   rowKey = (row) => row.id ?? JSON.stringify(row),
+  expandable,
 }: DataTableProps<T>) {
   const isDesktop = useIsDesktop();
+  const [expanded, setExpanded] = useState<Set<string | number>>(new Set());
   const emptyNode = empty ?? <EmptyState title={emptyText} bare={isDesktop} />;
   const pagination =
     meta && meta.last_page > 1 && onPageChange ? (
@@ -69,6 +79,19 @@ export default function DataTable<T extends { id?: number }>({
     );
   }
 
+  const tableColumns = columns.filter((c) => !c.hideOnDesktop);
+  const colSpan = tableColumns.length + (expandable ? 1 : 0);
+  const toggle = (key: string | number) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+
   return (
     <div className={`${cardClass} overflow-hidden`}>
       {/* Широкая таблица прокручивается внутри рамки, а не обрезается ею. */}
@@ -76,7 +99,12 @@ export default function DataTable<T extends { id?: number }>({
         <table className="w-full text-left text-sm text-zinc-700" aria-busy={loading}>
           <thead className="border-b border-zinc-100 bg-zinc-50/70">
             <tr>
-              {columns.map((c) => (
+              {expandable && (
+                <th className="w-10 px-2 py-3">
+                  <span className="sr-only">Раскрыть</span>
+                </th>
+              )}
+              {tableColumns.map((c) => (
                 <th key={c.key} className={`px-4 py-3 font-medium text-zinc-500 ${c.className ?? ''}`}>
                   {c.header}
                 </th>
@@ -87,7 +115,7 @@ export default function DataTable<T extends { id?: number }>({
             {loading ? (
               [0, 1, 2, 3, 4].map((i) => (
                 <tr key={i}>
-                  {columns.map((c, index) => (
+                  {tableColumns.map((c, index) => (
                     <td key={c.key} className="px-4 py-3">
                       {i === 0 && index === 0 && <span className="sr-only">Загрузка…</span>}
                       <Skeleton className={index === 0 ? 'h-4 w-40' : 'h-4 w-16'} />
@@ -97,18 +125,48 @@ export default function DataTable<T extends { id?: number }>({
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length}>{emptyNode}</td>
+                <td colSpan={colSpan}>{emptyNode}</td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-zinc-50/70">
-                  {columns.map((c) => (
-                    <td key={c.key} className={`px-4 py-3 ${c.className ?? ''}`}>
-                      {c.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              rows.map((row) => {
+                const key = rowKey(row);
+                const canExpand = expandable?.canExpand(row) ?? false;
+                const isOpen = canExpand && expanded.has(key);
+
+                return (
+                  <Fragment key={key}>
+                    <tr className="hover:bg-zinc-50/70">
+                      {expandable && (
+                        <td className="w-10 px-2 py-3 align-top">
+                          {canExpand && (
+                            <button
+                              type="button"
+                              aria-expanded={isOpen}
+                              aria-label={expandable.label}
+                              onClick={() => toggle(key)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100"
+                            >
+                              {isOpen ? '▾' : '▸'}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {tableColumns.map((c) => (
+                        <td key={c.key} className={`px-4 py-3 ${c.className ?? ''}`}>
+                          {c.render(row)}
+                        </td>
+                      ))}
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-zinc-50/60">
+                        <td colSpan={colSpan} className="px-4 py-3 pl-14">
+                          {expandable!.render(row)}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
