@@ -16,6 +16,7 @@ import { buttonSecondary } from '@/components/ui/styles';
 import api, { STOREFRONT_URL } from '@/lib/api';
 import { applyServerErrors } from '@/lib/errors';
 import { plural, ru } from '@/lib/text';
+import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import { toast } from '@/stores/toastStore';
 import AccountingCard from './AccountingCard';
 import BasicSection from './BasicSection';
@@ -116,6 +117,9 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
     defaultValues: initialProduct ? toFormValues(initialProduct) : emptyProductValues(),
   });
   const { isDirty, isSubmitting } = form.formState;
+
+  // Во время сохранения не спрашиваем: форма сама меняет адрес после создания.
+  useUnsavedGuard((isDirty || queue.length > 0) && !isSubmitting);
 
   const toggle = (id: string) => (next: boolean) =>
     setOpen((prev) => {

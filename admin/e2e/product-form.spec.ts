@@ -361,3 +361,54 @@ test("ошибка сервера 500 — изменения остаются", 
   await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
   await expect(saveButton(page)).toBeEnabled();
 });
+
+const QUESTION = "Уйти без сохранения? Изменения пропадут.";
+
+test("уход с несохранёнными изменениями спрашивает подтверждение", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  const back = page.getByRole("link", { name: "Назад" });
+  const asked: string[] = [];
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Розничная", { exact: true }).fill("777");
+
+  page.once("dialog", (d) => {
+    asked.push(d.message());
+    void d.dismiss();
+  });
+  await back.click();
+  await expect.poll(() => asked).toEqual([QUESTION]);
+  await expect(page).toHaveURL(`/products/${product.id}`);
+
+  page.once("dialog", (d) => void d.accept());
+  await back.click();
+  await expect(page).toHaveURL("/products");
+});
+
+test("после сохранения уход без вопроса", async ({ page, request }) => {
+  const product = await draftProduct(request);
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Розничная", { exact: true }).fill("888");
+  await saveButton(page).click();
+  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+
+  // Без обработчика Playwright отклонил бы диалог — и адрес бы не сменился.
+  await page.getByRole("link", { name: "Назад" }).click();
+  await expect(page).toHaveURL("/products");
+});
+
+test("новый товар с одними фото — тоже несохранённое", async ({ page }) => {
+  const asked: string[] = [];
+
+  await page.goto("/products/create");
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  page.once("dialog", (d) => {
+    asked.push(d.message());
+    void d.dismiss();
+  });
+  await page.getByRole("link", { name: "Назад" }).click();
+
+  await expect.poll(() => asked).toEqual([QUESTION]);
+  await expect(page).toHaveURL("/products/create");
+});
