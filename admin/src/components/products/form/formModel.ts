@@ -1,5 +1,6 @@
+import type { FieldErrors } from 'react-hook-form';
 import { z } from 'zod';
-import { LOCALES } from '@/components/ui/LocaleSwitch';
+import { LOCALES, type Locale } from '@/components/ui/LocaleSwitch';
 import type { SelectOption } from '@/components/ui/SearchSelect';
 import { TENGE_PATTERN, tiynToTenge } from '@/lib/money';
 import { ru, type Translatable } from '@/lib/text';
@@ -200,3 +201,46 @@ export function categoryOptions(categories: NamedOption[]): SelectOption[] {
 
 export const brandOptions = (brands: NamedOption[]): SelectOption[] =>
   brands.map((b) => ({ value: String(b.id), label: ru(b.name) || `#${b.id}` })).sort(byLabel);
+
+/**
+ * Пути полей с ошибкой: «name.kk», «purchase_price». Лист — объект с
+ * `type` (FieldError); у вложенного {ru, kk} его нет, туда спускаемся.
+ */
+export function errorPaths(errors: FieldErrors, prefix = ''): string[] {
+  return Object.entries(errors).flatMap(([key, value]) => {
+    if (!value || typeof value !== 'object') {
+      return [];
+    }
+
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    return typeof (value as { type?: unknown }).type === 'string' ? [path] : errorPaths(value as FieldErrors, path);
+  });
+}
+
+/** В каком свёрнутом блоке живёт поле (по первому сегменту пути). */
+const FOLD_OF: Record<string, string> = {
+  purchase_price: 'price-extra',
+  min_price: 'price-extra',
+  b2b_min_order_qty: 'price-extra',
+  slug: 'seo',
+  seo_title: 'seo',
+  seo_description: 'seo',
+};
+
+/**
+ * Что открыть, чтобы ошибки стали видны: свёрнутые блоки и язык карточек.
+ * Русский важнее: если ошибки на обоих языках, показываем RU.
+ */
+export function revealPlan(paths: string[]): { folds: string[]; basicLocale?: Locale; seoLocale?: Locale } {
+  const folds = [...new Set(paths.map((p) => FOLD_OF[p.split('.')[0]]).filter((f): f is string => Boolean(f)))];
+
+  const localeOf = (fields: string[]): Locale | undefined =>
+    LOCALES.find((locale) => paths.some((p) => fields.some((f) => p === `${f}.${locale}`)));
+
+  return {
+    folds,
+    basicLocale: localeOf(['name', 'description']),
+    seoLocale: localeOf(['seo_title', 'seo_description']),
+  };
+}

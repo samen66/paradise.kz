@@ -118,6 +118,7 @@ test("пустое название — ошибка под полем, запр
 
   await expect(page.getByText("Обязательное поле")).toBeVisible();
   expect(posts).toEqual([]);
+  await expect(page.getByLabel("Название *")).toBeFocused();
 });
 
 test("«Отменить» возвращает сохранённое", async ({ page, request }) => {
@@ -298,4 +299,65 @@ test("выбор с клавиатуры: стрелки, Enter, Escape", async 
   await brand.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(brand).toHaveValue("Без бренда");
+});
+
+test("ошибка сервера в казахском названии переключает на KZ", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  await page.route(`**/admin/products/${product.id}`, async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 422,
+        json: { message: "Проверьте поля", errors: { "name.kk": ["Название на казахском слишком длинное"] } },
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Розничная", { exact: true }).fill("1500");
+  await saveButton(page).click();
+
+  const kz = page.getByRole("button", { name: /^KZ/ }).first();
+  await expect(kz).toHaveAttribute("aria-pressed", "true");
+  await expect(kz).toHaveAccessibleName(/есть ошибка/);
+  await expect(page.getByText("Название на казахском слишком длинное")).toBeVisible();
+  await expect(page.getByLabel("Название на казахском")).toBeFocused();
+});
+
+test("ошибка в свёрнутом блоке раскрывает его", async ({ page, request }) => {
+  const product = await draftProduct(request);
+
+  await page.goto(`/products/${product.id}`);
+  const fold = page.getByRole("button", { name: /^Закупочная, минимальная цена/ });
+  await fold.click();
+  await page.getByLabel("Закупочная цена").fill("1.234");
+  await fold.click();
+  await expect(fold).toHaveAttribute("aria-expanded", "false");
+
+  await saveButton(page).click();
+
+  await expect(fold).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText("Сумма в ₸, до двух знаков после точки")).toBeVisible();
+  await expect(page.getByLabel("Закупочная цена")).toBeFocused();
+});
+
+test("ошибка сервера 500 — изменения остаются", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  await page.route(`**/admin/products/${product.id}`, async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({ status: 500, json: { message: "Server Error" } });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Розничная", { exact: true }).fill("1999");
+  await saveButton(page).click();
+
+  await expect(page.getByText("Ошибка сервера или сети — попробуйте ещё раз")).toBeVisible();
+  await expect(page.getByLabel("Розничная", { exact: true })).toHaveValue("1999");
+  await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
+  await expect(saveButton(page)).toBeEnabled();
 });

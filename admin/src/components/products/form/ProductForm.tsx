@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { isAxiosError } from 'axios';
 import AttributeValuesTab from '@/components/products/AttributeValuesTab';
 import ClientPricesTab from '@/components/products/ClientPricesTab';
 import PricesTab from '@/components/products/PricesTab';
@@ -27,7 +28,9 @@ import StatusCard from './StatusCard';
 import StockCard from './StockCard';
 import {
   emptyProductValues,
+  errorPaths,
   productSchema,
+  revealPlan,
   toFormData,
   toFormValues,
   type ApiProduct,
@@ -126,7 +129,32 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       return copy;
     });
 
-  const save = form.handleSubmit(async (values) => {
+  /** Открывает блоки и язык с ошибками, потом прокручивает и ставит фокус на первое видимое поле. */
+  const reveal = (paths: string[]) => {
+    const plan = revealPlan(paths);
+
+    if (plan.folds.length > 0) {
+      setOpen((prev) => new Set([...prev, ...plan.folds]));
+    }
+    if (plan.basicLocale) {
+      setBasicLocale(plan.basicLocale);
+    }
+    if (plan.seoLocale) {
+      setSeoLocale(plan.seoLocale);
+    }
+
+    // Два кадра: React успевает раскрыть блоки и сменить язык, браузер — разложить их.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const fields = rootRef.current?.querySelectorAll<HTMLElement>('[aria-invalid="true"]') ?? [];
+        const first = Array.from(fields).find((el) => el.offsetParent !== null);
+        first?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        first?.focus({ preventScroll: true });
+      }),
+    );
+  };
+
+  const onValid = async (values: ProductFormValues) => {
     const isCreate = productId === null;
 
     try {
@@ -160,8 +188,20 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       if (message) {
         toast.error(message);
       }
+
+      const serverPaths = isAxiosError<{ errors?: Record<string, string[]> }>(error)
+        ? Object.keys(error.response?.data?.errors ?? {})
+        : [];
+
+      if (serverPaths.length > 0) {
+        reveal(serverPaths);
+      }
     }
-  });
+  };
+
+  // handleSubmit собирается при нажатии, а не при рендере: иначе React
+  // Compiler видит обращение к ref (в reveal) во время рендера.
+  const save = () => form.handleSubmit(onValid, (errors) => reveal(errorPaths(errors)))();
 
   const title = product ? ru(product.name) || `Товар #${product.id}` : 'Новый товар';
 
