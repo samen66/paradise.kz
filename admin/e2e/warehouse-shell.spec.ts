@@ -11,12 +11,14 @@ import { ADMIN_SESSION } from "./session";
  */
 test.use({ storageState: ADMIN_SESSION });
 
-test("«Склад» открывается на остатках, вкладки ведут по разделу", async ({ page }) => {
+test("вкладки ведут по разделу", async ({ page }) => {
   await page.goto("/warehouse");
-  await expect(page).toHaveURL(/\/warehouse\/stock$/);
+  await expect(page).toHaveURL(/\/warehouse$/);
   await expect(page.getByRole("heading", { level: 1, name: "Склад" })).toBeVisible();
 
   const tabs = page.getByRole("navigation", { name: "Разделы склада" });
+  await tabs.getByRole("link", { name: "Остатки" }).click();
+  await expect(page).toHaveURL(/\/warehouse\/stock$/);
   await expect(tabs.getByRole("link", { name: "Остатки" })).toHaveAttribute("aria-current", "page");
 
   await tabs.getByRole("link", { name: "Движения" }).click();
@@ -61,7 +63,7 @@ test("фокус модалки «Новая приёмка» уходит в д
 test("«Склад» в меню ведёт в раздел", async ({ page }) => {
   await page.goto("/orders");
   await page.getByRole("link", { name: "Склад", exact: true }).first().click();
-  await expect(page).toHaveURL(/\/warehouse\/stock$/);
+  await expect(page).toHaveURL(/\/warehouse$/);
 });
 
 test("вкладка «Документы» переключает приёмки и списания", async ({ page }) => {
@@ -123,7 +125,7 @@ test("справочники открываются из шапки и пере�
   await expect(page).toHaveURL(/\/warehouse\/suppliers$/);
 
   await page.getByRole("link", { name: "Назад" }).click();
-  await expect(page).toHaveURL(/\/warehouse\/stock$/);
+  await expect(page).toHaveURL(/\/warehouse$/);
 });
 
 test("старые адреса справочников ведут в раздел", async ({ page }) => {

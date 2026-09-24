@@ -9,11 +9,11 @@ import { ADMIN_SESSION } from "./session";
  * FIFO-журнал. Прогон приёмки уже доказал, что журнал и проекция сходятся;
  * браузеру остаётся доказать, что менеджер видит на экране то же число.
  *
- * Плашка «Нет ни одного активного склада» — вторая половина этой страницы:
+ * Плашка «Нет ни одного активного склада» переехала на вкладку «Обзор» —
  * без активного склада каталог молча показывает нули, а оформление заказа
  * падает. Выключить склад из теста нечем (склады живут в Filament), поэтому
  * ответ API подменяется на лету — проверяется именно реакция экрана на флаг
- * `meta.has_active_store`, который отдаёт StockController.
+ * `has_active_store` из сводки склада.
  */
 test.use({ storageState: ADMIN_SESSION });
 
@@ -56,21 +56,17 @@ test("товар в наличии виден с тем же остатком, �
   });
 });
 
-test("без активного склада страница показывает красную плашку", async ({ page }) => {
-  // Реальные строки остаются реальными: подменяется только флаг в meta.
-  await page.route("**/api/admin/stock*", async (route) => {
+test("без активного склада обзор показывает красную плашку", async ({ page }) => {
+  // Реальные цифры остаются реальными: подменяется только флаг.
+  await page.route("**/api/admin/stock/summary*", async (route) => {
     const response = await route.fetch();
     const json = await response.json();
 
-    await route.fulfill({
-      response,
-      json: { ...json, meta: { ...json.meta, has_active_store: false } },
-    });
+    await route.fulfill({ response, json: { data: { ...json.data, has_active_store: false } } });
   });
 
-  await page.goto("/warehouse/stock");
+  await page.goto("/warehouse");
 
-  const banner = page.getByText("Нет ни одного активного склада.");
-  await expect(banner).toBeVisible();
+  await expect(page.getByText("Нет ни одного активного склада.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Настроить места хранения/ })).toBeVisible();
 });

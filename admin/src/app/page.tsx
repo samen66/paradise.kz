@@ -7,16 +7,16 @@ import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
 /**
  * Landing page of the admin panel.
  *
- * It reads `meta.has_active_store` off the stock endpoint — the only warehouse
- * endpoint the panel has — so a manager meets the "no active warehouse" state
- * here rather than through a customer's failed checkout.
+ * It reads `has_active_store` off the warehouse summary so a manager meets the
+ * "no active warehouse" state here rather than through a customer's failed
+ * checkout.
  */
 export default function Home() {
   const [hasActiveStore, setHasActiveStore] = useState<boolean | null>(null);
 
   useEffect(() => {
-    api.get('/admin/stock')
-      .then((res) => setHasActiveStore(res.data?.meta?.has_active_store ?? null))
+    api.get<{ data: { has_active_store: boolean } }>('/admin/stock/summary')
+      .then((res) => setHasActiveStore(res.data?.data?.has_active_store ?? null))
       .catch((err) => console.error('Failed to fetch stock', err));
   }, []);
 

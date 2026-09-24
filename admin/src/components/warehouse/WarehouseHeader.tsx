@@ -6,9 +6,11 @@ import { warehouseHref } from '@/lib/warehouse';
 import LinkTabs, { type LinkTab } from '@/components/ui/LinkTabs';
 import PageHeader from '@/components/ui/PageHeader';
 import { buttonGhost } from '@/components/ui/styles';
+import { useWarehouseSummary } from './WarehouseSummary';
 
-/** Вкладки раздела. «Обзор» добавит этап 2. */
+/** Вкладки раздела. */
 export const WAREHOUSE_TABS: LinkTab[] = [
+  { key: 'overview', href: warehouseHref.overview, label: 'Обзор' },
   { key: 'stock', href: warehouseHref.stock, label: 'Остатки' },
   { key: 'movements', href: warehouseHref.movements, label: 'Движения' },
   { key: 'documents', href: warehouseHref.documents(), label: 'Документы' },
@@ -25,6 +27,10 @@ export function warehouseTabFor(pathname: string): string | null {
  * под рукой.
  */
 export default function WarehouseHeader({ active, actions }: { active: string; actions?: ReactNode }) {
+  const { summary } = useWarehouseSummary();
+  const drafts = summary ? summary.drafts.receipts + summary.drafts.write_offs : null;
+  const tabs = WAREHOUSE_TABS.map((tab) => (tab.key === 'documents' ? { ...tab, count: drafts } : tab));
+
   return (
     <PageHeader
       title="Склад"
@@ -37,7 +43,7 @@ export default function WarehouseHeader({ active, actions }: { active: string; a
           </Link>
         </>
       }
-      below={<LinkTabs label="Разделы склада" tabs={WAREHOUSE_TABS} active={active} />}
+      below={<LinkTabs label="Разделы склада" tabs={tabs} active={active} />}
     />
   );
 }

@@ -195,6 +195,15 @@ export const warehouseHref = {
   suppliers: '/warehouse/suppliers',
 } as const;
 
+export type StockSummary = {
+  total_value: number;
+  low: number;
+  out: number;
+  drafts: { receipts: number; write_offs: number };
+  recent_movements: StockMovement[];
+  has_active_store: boolean;
+};
+
 export const documentHref = (document: NonNullable<StockMovement['document']>): string =>
   document.type === 'receipt'
     ? warehouseHref.receipt(document.id)

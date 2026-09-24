@@ -8,11 +8,9 @@ const nextConfig: NextConfig = {
   /**
    * Раздел «Склад» переехал под /warehouse. Старые адреса живут в закладках
    * и ссылках — ведём их на новые; строку запроса Next переносит сам.
-   * `/warehouse` пока открывает остатки — «Обзор» появится в этапе 2.
    */
   async redirects() {
     return [
-      { source: "/warehouse", destination: "/warehouse/stock", permanent: false },
       { source: "/stock", destination: "/warehouse/stock", permanent: false },
       { source: "/stock-movements", destination: "/warehouse/movements", permanent: false },
       { source: "/goods-receipts", destination: "/warehouse/documents?kind=receipts", permanent: false },

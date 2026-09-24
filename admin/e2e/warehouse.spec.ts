@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
+import { createProduct, createStore, receive, uniqueStamp } from "./warehouseApi";
 
 /**
  * Склад: приёмка → остаток → движение; списание с нехваткой; склад с историей.
@@ -11,8 +12,6 @@ import { ADMIN_SESSION } from "./session";
  * они остаются в базе с пометкой E2E; черновики убираются в afterEach.
  */
 test.use({ storageState: ADMIN_SESSION });
-
-type Created = { data: { id: number } };
 
 const drafts: string[] = [];
 
@@ -30,23 +29,9 @@ test.afterEach(async ({ request }) => {
 });
 
 async function setupProductAndStore(request: APIRequestContext, stamp: number) {
-  const api = adminApi(request);
-  const product = await api.create<Created>("/admin/products", {
-    name: { ru: `E2E товар ${stamp}` },
-    is_active: false,
-  });
-  const store = await api.create<Created>("/admin/stores", {
-    name: `E2E склад ${stamp}`,
-    is_active: false,
-  });
-  return { productId: product.data.id, storeId: store.data.id, productName: `E2E товар ${stamp}`, storeName: `E2E склад ${stamp}` };
-}
-
-async function receiveViaApi(request: APIRequestContext, storeId: number, productId: number, quantity: number) {
-  const api = adminApi(request);
-  const receipt = await api.create<Created>("/admin/goods-receipts", { store_id: storeId });
-  await api.create(`/admin/goods-receipts/${receipt.data.id}/items`, { product_id: productId, quantity, unit_cost: 1000 });
-  await api.send("post", `/admin/goods-receipts/${receipt.data.id}/post`);
+  const product = await createProduct(request, stamp);
+  const store = await createStore(request, stamp);
+  return { productId: product.id, storeId: store.id, productName: product.name, storeName: store.name };
 }
 
 async function addLine(page: Page, productName: string) {
@@ -60,7 +45,7 @@ function draftPath(page: Page, apiPrefix: "/admin/goods-receipts" | "/admin/writ
 }
 
 test("приёмка проводится, остаток растёт, движение видно в журнале", async ({ page, request }) => {
-  const stamp = Date.now() * 100 + test.info().parallelIndex;
+  const stamp = uniqueStamp();
   const { productName, storeName } = await setupProductAndStore(request, stamp);
   const supplierName = `E2E поставщик ${stamp}`;
   const dialog = page.getByRole("dialog");
@@ -107,9 +92,9 @@ test("приёмка проводится, остаток растёт, движ
 });
 
 test("списание больше остатка отклоняется, исправленное проводится", async ({ page, request }) => {
-  const stamp = Date.now() * 100 + test.info().parallelIndex;
+  const stamp = uniqueStamp();
   const { productId, storeId, productName, storeName } = await setupProductAndStore(request, stamp);
-  await receiveViaApi(request, storeId, productId, 2);
+  await receive(request, storeId, productId, 2);
   const dialog = page.getByRole("dialog");
 
   await page.goto("/warehouse/documents?kind=write_offs");
@@ -144,9 +129,9 @@ test("списание больше остатка отклоняется, ис�
 });
 
 test("склад с историей удалить нельзя", async ({ page, request }) => {
-  const stamp = Date.now() * 100 + test.info().parallelIndex;
+  const stamp = uniqueStamp();
   const { productId, storeId, storeName } = await setupProductAndStore(request, stamp);
-  await receiveViaApi(request, storeId, productId, 1);
+  await receive(request, storeId, productId, 1);
 
   await page.goto("/warehouse/stores");
   const row = page.locator("tbody tr").filter({ hasText: storeName });
