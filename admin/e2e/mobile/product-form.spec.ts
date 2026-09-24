@@ -38,3 +38,31 @@ test("разделы идут одной лентой: основное, фот�
   const order = [await top("basic"), await top("photos"), await top("price"), await top("status"), await top("catalog")];
   expect([...order].sort((a, b) => a - b)).toEqual(order);
 });
+
+test("порядок в DOM совпадает с порядком на экране — для Tab и скринридера", async ({ page }) => {
+  await page.goto(`/products/${requireInStockProduct().id}`);
+  await expect(page.locator("#seo")).toBeAttached();
+
+  const domOrder = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("section[id]"))
+      .map((el) => el.id)
+      .filter((id) => !id.endsWith("-extra")),
+  );
+  const visualOrder = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("section[id]"))
+      .filter((el) => !el.id.endsWith("-extra"))
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
+      .map((el) => el.id),
+  );
+  expect(domOrder).toEqual(visualOrder);
+});
+
+test("на планшете полоса разделов остаётся наверху при прокрутке", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.goto(`/products/${requireInStockProduct().id}`);
+  const nav = page.getByRole("navigation", { name: "Разделы" });
+  await expect(nav).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(nav).toBeInViewport();
+});

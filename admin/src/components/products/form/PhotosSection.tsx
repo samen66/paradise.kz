@@ -8,7 +8,7 @@ import { useResource } from '@/lib/crud';
 import { serverMessage } from '@/lib/errors';
 import { toast } from '@/stores/toastStore';
 import FormCard from './FormCard';
-import { PHOTO_ACCEPT, photoProblem, queuePhoto, uploadPhoto, type QueuedPhoto } from './photos';
+import { PHOTO_ACCEPT, photoProblem, queuePhoto, reportPhotoError, uploadPhoto, type QueuedPhoto } from './photos';
 
 type Image = { id: number; file_name: string; url: string; thumb_url: string; order: number | null };
 
@@ -64,7 +64,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
       try {
         await uploadPhoto(productId, file);
       } catch (error) {
-        toast.error(`${file.name}: ${(error as Error).message}`);
+        reportPhotoError(file, error);
       }
     }
     setUploading(false);
@@ -84,8 +84,8 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
       onQueueChange((q) => q.filter((p) => p.key !== photo.key));
       await images.reload();
     } catch (error) {
-      onQueueChange((q) => q.map((p) => (p.key === photo.key ? { ...p, status: 'failed', error: (error as Error).message } : p)));
-      toast.error(`${photo.file.name}: ${(error as Error).message}`);
+      const message = reportPhotoError(photo.file, error);
+      onQueueChange((q) => q.map((p) => (p.key === photo.key ? { ...p, status: 'failed', error: message } : p)));
     }
   };
 
@@ -150,17 +150,21 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
             {photo.status === 'uploading' && (
               <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-xs text-zinc-700">Загружаем…</span>
             )}
-            <div className="flex items-center justify-between gap-1 p-1 text-xs">
-              {productId !== null && photo.status === 'failed' ? (
+            {/* Пока идёт сохранение, очередь уже отдана в загрузку: убирать и
+                переставлять поздно — фото всё равно уйдёт. */}
+            <div className={`flex items-center justify-between gap-1 p-1 text-xs ${busy ? 'invisible' : ''}`}>
+              {busy ? null : productId !== null && photo.status === 'failed' ? (
                 <button type="button" className={buttonLink} onClick={() => void retry(photo)}>Повторить</button>
               ) : productId === null ? (
                 arrows(index, queue.length, moveQueued)
               ) : (
                 <span />
               )}
-              <button type="button" className={buttonDanger} disabled={photo.status === 'uploading'} onClick={() => removeQueued(photo)}>
-                Убрать
-              </button>
+              {!busy && (
+                <button type="button" className={buttonDanger} disabled={photo.status === 'uploading'} onClick={() => removeQueued(photo)}>
+                  Убрать
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -179,7 +183,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
                 void addFiles(e.dataTransfer.files);
               }
             }}
-            className={`flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-2 text-center text-xs ${
+            className={`flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-2 text-center text-xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/40 ${
               dragging ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-zinc-300 text-zinc-500 hover:bg-zinc-50'
             } ${disabled ? 'cursor-wait opacity-60' : ''}`}
           >

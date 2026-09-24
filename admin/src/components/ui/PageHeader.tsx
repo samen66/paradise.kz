@@ -14,11 +14,19 @@ type Props = { title: string; back?: string; actions?: ReactNode; below?: ReactN
  * внутри неё.
  *
  * `below` — строка под заголовком во всю ширину (полоса быстрых переходов);
- * прилипает вместе с шапкой.
+ * прилипает вместе с шапкой. С ней шапка липкая до `lg`, а не до `md`: на
+ * планшете полоса видна до `lg`, и уезжать вместе со страницей ей нельзя.
+ * `md:-mx-6` — поля каркаса на планшете шире (`md:px-6` у `<main>`).
  */
 export default function PageHeader({ title, back, actions, below }: Props) {
   return (
-    <div className="sticky top-0 z-30 -mx-4 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-zinc-50 px-4 py-3 md:static md:mx-0 md:mb-6 md:bg-transparent md:p-0">
+    <div
+      className={`sticky top-0 z-30 -mx-4 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-zinc-50 px-4 py-3 ${
+        below
+          ? 'md:-mx-6 md:px-6 lg:static lg:mx-0 lg:mb-6 lg:bg-transparent lg:p-0'
+          : 'md:static md:mx-0 md:mb-6 md:bg-transparent md:p-0'
+      }`}
+    >
       <div className="flex min-w-0 items-center gap-1 md:gap-3">
         {back && (
           <Link

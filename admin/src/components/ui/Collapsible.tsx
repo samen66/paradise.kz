@@ -35,7 +35,7 @@ export default function Collapsible({ id, title, summary, note, open, onToggle, 
       <button
         type="button"
         aria-expanded={expanded}
-        aria-controls={panelId}
+        aria-controls={locked ? undefined : panelId}
         disabled={locked}
         onClick={() => onToggle(!open)}
         className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left disabled:cursor-not-allowed md:px-5"

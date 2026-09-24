@@ -192,6 +192,7 @@ test("новый товар: одно нажатие — один товар, п
   const attributes = page.getByRole("button", { name: /^Характеристики/ });
   await expect(attributes).toBeDisabled();
   await expect(attributes).toContainText("Доступно после сохранения товара");
+  await expect(attributes).not.toHaveAttribute("aria-controls");
   await saveButton(page).dblclick();
 
   await expect(page).toHaveURL(/\/products\/\d+$/);
@@ -299,6 +300,12 @@ test("выбор с клавиатуры: стрелки, Enter, Escape", async 
   await brand.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(brand).toHaveValue("Без бренда");
+  await expect(brand).not.toHaveAttribute("aria-controls");
+
+  // Стрелка вниз из закрытого списка открывает его на первом пункте, а не на втором.
+  await brand.press("ArrowDown");
+  const first = page.getByRole("listbox").getByRole("option").first();
+  await expect(brand).toHaveAttribute("aria-activedescendant", (await first.getAttribute("id"))!);
 });
 
 test("ошибка сервера в казахском названии переключает на KZ", async ({ page, request }) => {
@@ -434,8 +441,14 @@ test("второе нажатие «Сохранить» во время заг�
 
   const bar = page.getByRole("region", { name: "Сохранение" });
   await expect(bar).toContainText("Загружаем фото 1 из 1");
-  await expect(bar.getByRole("button").last()).toBeDisabled();
-  await expect(page.getByLabel("Загрузить фото")).toBeDisabled();
+  // Мгновенные проверки, пока загрузка идёт (маршрут держит её 2 с):
+  // toHaveCount(0) дождался бы конца загрузки и прошёл бы всегда.
+  const queued = page.getByTestId("queued-photo");
+  expect(await queued.count()).toBe(1);
+  expect(await queued.getByRole("button", { name: "Убрать" }).count()).toBe(0);
+  expect(await queued.getByRole("button", { name: "Позже" }).count()).toBe(0);
+  expect(await bar.getByRole("button").last().isDisabled()).toBe(true);
+  expect(await page.getByLabel("Загрузить фото").isDisabled()).toBe(true);
 
   await expect(page.getByTestId("product-image")).toHaveCount(1);
   rememberCreated(page);
@@ -478,4 +491,90 @@ test("«Назад» в браузере после создания откры�
 
   await expect(page).toHaveURL(/\/products\/\d+$/);
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+});
+
+test("«Отменить» на новом товаре убирает и выбранные фото", async ({ page }) => {
+  await page.goto("/products/create");
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  await expect(page.getByTestId("queued-photo")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Отменить" }).click();
+
+  await expect(page.getByTestId("queued-photo")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Отменить" })).toBeDisabled();
+});
+
+test("зона загрузки фото видна в фокусе с клавиатуры", async ({ page }) => {
+  await page.goto("/products/create");
+  const input = page.getByLabel("Загрузить фото");
+  await input.focus();
+
+  const shadow = await input.evaluate((el) => getComputedStyle(el.closest("label")!).boxShadow);
+  expect(shadow).not.toBe("none");
+});
+
+test("сбой сервера при загрузке фото — одно уведомление, а не два", async ({ page }) => {
+  await page.route("**/admin/products/*/media", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({ status: 500, json: { message: "Server Error" } });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto("/products/create");
+  await page.getByLabel("Название *").fill(`E2E сбой фото ${Date.now()}`);
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  await saveButton(page).click();
+
+  await expect(page).toHaveURL(/\/products\/\d+$/);
+  rememberCreated(page);
+  await expect(page.getByTestId("queued-photo")).toContainText("Не загрузилось");
+  await expect(page.getByText("Ошибка сервера или сети — попробуйте ещё раз")).toHaveCount(1);
+  // Мгновенно, пока тосты на экране (живут 5 с): toHaveCount(0) дождался бы их исчезновения.
+  expect(await page.getByText(/^pixel\.png:/).count()).toBe(0);
+});
+
+test("вес с запятой сохраняется, а не пропадает", async ({ page, request }) => {
+  const product = await draftProduct(request);
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Вес, кг").fill("54,5");
+  await saveButton(page).click();
+  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("Вес, кг")).toHaveValue("54.5");
+});
+
+test("вес с ошибкой — сообщение, а не тихий null", async ({ page, request }) => {
+  const product = await draftProduct(request);
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByLabel("Вес, кг").fill("пять");
+  await saveButton(page).click();
+
+  await expect(page.getByText("Число, до трёх знаков после точки")).toBeVisible();
+});
+
+test("адрес товара в ссылке на витрину экранируется", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  await page.route(`**/admin/products/${product.id}`, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.json();
+    body.data.slug = "старый адрес?x=1";
+    await route.fulfill({ response, json: body });
+  });
+
+  await page.goto(`/products/${product.id}`);
+
+  await expect(page.getByRole("link", { name: "Открыть на сайте ↗" })).toHaveAttribute(
+    "href",
+    /\/product\/%D1%81%D1%82%D0%B0%D1%80%D1%8B%D0%B9%20%D0%B0%D0%B4%D1%80%D0%B5%D1%81%3Fx%3D1$/,
+  );
 });

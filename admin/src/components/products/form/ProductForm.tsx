@@ -39,18 +39,18 @@ import {
   type NamedOption,
   type ProductFormValues,
 } from './formModel';
-import { uploadPhoto, type QueuedPhoto } from './photos';
+import { reportPhotoError, uploadPhoto, type QueuedPhoto } from './photos';
 
 type Props = { initialProduct: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[] };
 
 type RelationTab = ComponentType<{ productId: number; onCount?: (count: number) => void }>;
 
-/** Блоки со списками: сохраняются сразу, каждый в своём окне. `order` — место в ленте на телефоне. */
-const RELATIONS: { id: string; title: string; forms: [string, string, string]; Tab: RelationTab; order: string }[] = [
-  { id: 'prices', title: 'Цены по типам цен', forms: ['цена', 'цены', 'цен'], Tab: PricesTab, order: 'order-9 lg:order-none' },
-  { id: 'client-prices', title: 'Цены для клиентов B2B', forms: ['цена', 'цены', 'цен'], Tab: ClientPricesTab, order: 'order-10 lg:order-none' },
-  { id: 'attributes', title: 'Характеристики', forms: ['значение', 'значения', 'значений'], Tab: AttributeValuesTab, order: 'order-11 lg:order-none' },
-  { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab, order: 'order-12 lg:order-none' },
+/** Блоки со списками: сохраняются сразу, каждый в своём окне. */
+const RELATIONS: { id: string; title: string; forms: [string, string, string]; Tab: RelationTab }[] = [
+  { id: 'prices', title: 'Цены по типам цен', forms: ['цена', 'цены', 'цен'], Tab: PricesTab },
+  { id: 'client-prices', title: 'Цены для клиентов B2B', forms: ['цена', 'цены', 'цен'], Tab: ClientPricesTab },
+  { id: 'attributes', title: 'Характеристики', forms: ['значение', 'значения', 'значений'], Tab: AttributeValuesTab },
+  { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab },
 ];
 
 /** Полоса переходов на телефоне. Свёрнутые блоки (FOLDABLE) при переходе раскрываются. */
@@ -67,6 +67,9 @@ const SECTIONS = [
 
 const FOLDABLE = new Set(['prices', 'client-prices', 'attributes', 'variants', 'seo']);
 
+/** Карточка левой колонки на широком экране. */
+const LEFT = 'lg:col-span-2 lg:col-start-1';
+
 /**
  * Карточка товара: создание и правка на одной странице.
  *
@@ -75,8 +78,11 @@ const FOLDABLE = new Set(['prices', 'client-prices', 'attributes', 'variants', '
  * CrudModal со своим `<form>`, а Modal рисуется на месте, не в портале, —
  * вложенная форма в HTML недопустима.
  *
- * Раскладка: с `lg` две колонки; до `lg` колонки становятся `contents`, и
- * карточки выстраиваются одной лентой по своим `order-*`.
+ * Раскладка. Порядок в DOM — порядок ленты на телефоне (он же порядок Tab и
+ * скринридера): основное, фото, цены, правая колонка, блоки, SEO. С `lg`
+ * сетка ставит карточки в две колонки: левые — в свои строки, правая колонка
+ * одним блоком на восемь строк рядом с ними. Лишняя высота уходит в
+ * последнюю строку (`1fr`), а не в промежутки между левыми карточками.
  */
 export default function ProductForm({ initialProduct, categories, brands }: Props) {
   const [product, setProduct] = useState<ApiProduct | null>(initialProduct);
@@ -117,9 +123,8 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
         URL.revokeObjectURL(photo.preview);
         setQueue((q) => q.filter((p) => p.key !== photo.key));
       } catch (error) {
-        const message = (error as Error).message;
+        const message = reportPhotoError(photo.file, error);
         setQueue((q) => q.map((p) => (p.key === photo.key ? { ...p, status: 'failed', error: message } : p)));
-        toast.error(`${photo.file.name}: ${message}`);
       }
     }
 
@@ -153,6 +158,16 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
 
       return copy;
     });
+
+  /** «Отменить»: поля — к сохранённому; у нового товара и выбранные фото уходят. */
+  const resetForm = () => {
+    form.reset();
+
+    if (productId === null) {
+      queue.forEach((p) => URL.revokeObjectURL(p.preview));
+      setQueue([]);
+    }
+  };
 
   const jump = (id: string) => {
     if (FOLDABLE.has(id)) {
@@ -278,7 +293,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
                 {product.is_active ? 'На витрине' : 'Скрыт'}
               </span>
               {product.slug && (
-                <a href={`${STOREFRONT_URL}/product/${product.slug}`} target="_blank" rel="noopener noreferrer" className={buttonSecondary}>
+                <a href={`${STOREFRONT_URL}/product/${encodeURIComponent(product.slug)}`} target="_blank" rel="noopener noreferrer" className={buttonSecondary}>
                   Открыть на сайте ↗
                 </a>
               )}
@@ -287,53 +302,47 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
         }
       />
 
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-6">
-        <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4">
-          <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className="order-1 lg:order-none" />
-          <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={saving} className="order-2 lg:order-none" />
-          <PriceSection
-            form={form}
-            extrasOpen={open.has('price-extra')}
-            onExtrasToggle={toggle('price-extra')}
-            className="order-3 lg:order-none"
-          />
-          {RELATIONS.map(({ id, title, forms, Tab, order }) => {
-            const count = counts[id];
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:grid-rows-[repeat(7,auto)_1fr] lg:items-start lg:gap-x-6 lg:gap-y-4">
+        <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className={LEFT} />
+        <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
+        <PriceSection form={form} extrasOpen={open.has('price-extra')} onExtrasToggle={toggle('price-extra')} className={LEFT} />
 
-            return (
-              <div key={id} className={order}>
-                <Collapsible
-                  id={id}
-                  title={title}
-                  note="Сохраняется сразу"
-                  summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
-                  open={open.has(id)}
-                  onToggle={toggle(id)}
-                  disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
-                >
-                  {productId !== null && <Tab productId={productId} onCount={countSetters[id]} />}
-                </Collapsible>
-              </div>
-            );
-          })}
-          <div className="order-13 lg:order-none">
-            <SeoSection
-              form={form}
-              locale={seoLocale}
-              onLocaleChange={setSeoLocale}
-              savedSlug={product?.slug ?? null}
-              open={open.has('seo')}
-              onToggle={toggle('seo')}
-            />
-          </div>
+        <div className="flex flex-col gap-4 lg:col-start-3 lg:row-span-8 lg:row-start-1">
+          <StatusCard form={form} />
+          <CatalogCard form={form} categories={categories} brands={brands} />
+          <AccountingCard form={form} />
+          {product && <StockCard product={product} />}
+          <DimensionsCard form={form} />
         </div>
 
-        <div className="contents lg:flex lg:flex-col lg:gap-4">
-          <StatusCard form={form} className="order-4 lg:order-none" />
-          <CatalogCard form={form} categories={categories} brands={brands} className="order-5 lg:order-none" />
-          <AccountingCard form={form} className="order-6 lg:order-none" />
-          {product && <StockCard product={product} className="order-7 lg:order-none" />}
-          <DimensionsCard form={form} className="order-8 lg:order-none" />
+        {RELATIONS.map(({ id, title, forms, Tab }) => {
+          const count = counts[id];
+
+          return (
+            <div key={id} className={LEFT}>
+              <Collapsible
+                id={id}
+                title={title}
+                note="Сохраняется сразу"
+                summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
+                open={open.has(id)}
+                onToggle={toggle(id)}
+                disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
+              >
+                {productId !== null && <Tab productId={productId} onCount={countSetters[id]} />}
+              </Collapsible>
+            </div>
+          );
+        })}
+        <div className={LEFT}>
+          <SeoSection
+            form={form}
+            locale={seoLocale}
+            onLocaleChange={setSeoLocale}
+            savedSlug={product?.slug ?? null}
+            open={open.has('seo')}
+            onToggle={toggle('seo')}
+          />
         </div>
       </div>
 
@@ -343,7 +352,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
         saving={saving}
         status={status}
         onSave={() => void save()}
-        onReset={() => form.reset()}
+        onReset={resetForm}
       />
     </div>
   );

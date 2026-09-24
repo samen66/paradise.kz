@@ -8,7 +8,9 @@ import type { ProductFormValues } from './formModel';
 
 export default function DimensionsCard({ form, className }: { form: UseFormReturn<ProductFormValues>; className?: string }) {
   const { register, formState: { errors } } = form;
-  const decimal = { type: 'number', step: '0.001', min: '0', inputMode: 'decimal' } as const;
+  // Текст, а не type="number": непонятное браузеру «54,5» в number-поле
+  // читается как пусто и молча сохранилось бы как null. Здесь его разберёт схема.
+  const decimal = { type: 'text', inputMode: 'decimal' } as const;
 
   return (
     <FormCard id="dimensions" title="Габариты и происхождение" className={className}>

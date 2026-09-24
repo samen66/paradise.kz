@@ -74,9 +74,6 @@ export default function PriceSection({ form, extrasOpen, onExtrasToggle, classNa
           >
             <input
               id="b2b_min_order_qty"
-              type="number"
-              step="1"
-              min="1"
               inputMode="numeric"
               className={inputClass}
               aria-invalid={errors.b2b_min_order_qty ? true : undefined}

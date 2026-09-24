@@ -44,7 +44,8 @@ export type ApiProduct = {
 export type NamedOption = { id: number; name?: Translatable; parent_id?: number | null };
 
 const MONEY = 'Сумма в ₸, до двух знаков после точки';
-const DECIMAL_3 = /^\d+(\.\d{1,3})?$/;
+/** Вес и объём: точка или запятая, до трёх знаков. */
+const DECIMAL_3 = /^\d+([.,]\d{1,3})?$/;
 
 const upTo = (n: number) => z.string().max(n, `Не длиннее ${n} символов`);
 const money = z.string().refine((v) => v === '' || TENGE_PATTERN.test(v), MONEY);
@@ -149,7 +150,8 @@ export function toFormData(values: ProductFormValues, isUpdate: boolean): FormDa
   }
 
   for (const field of SCALARS) {
-    data.append(field, values[field]);
+    // Запятая в весе и объёме — привычная десятичная; сервер ждёт точку.
+    data.append(field, field === 'weight' || field === 'volume' ? values[field].replace(',', '.') : values[field]);
   }
 
   data.append('is_active', values.is_active ? '1' : '0');

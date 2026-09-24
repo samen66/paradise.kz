@@ -47,8 +47,14 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setOpen(true);
-      setActive((i) => Math.min(i + 1, visible.length - 1));
+
+      if (!open) {
+        // Список был закрыт — открываем на первом пункте, а не сразу на втором.
+        setOpen(true);
+        setActive(0);
+      } else {
+        setActive((i) => Math.min(i + 1, visible.length - 1));
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
@@ -67,7 +73,7 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
         id={id}
         role="combobox"
         aria-expanded={open}
-        aria-controls={listId}
+        aria-controls={open ? listId : undefined}
         aria-autocomplete="list"
         aria-activedescendant={open && visible[active] ? `${listId}-${active}` : undefined}
         aria-invalid={invalid || undefined}

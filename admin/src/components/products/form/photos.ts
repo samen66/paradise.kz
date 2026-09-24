@@ -1,5 +1,7 @@
+import { isAxiosError } from 'axios';
 import api from '@/lib/api';
 import { serverMessage } from '@/lib/errors';
+import { toast } from '@/stores/toastStore';
 
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -38,7 +40,20 @@ export const queuePhoto = (file: File): QueuedPhoto => ({
   status: 'waiting',
 });
 
-/** Загружает одно фото в товар. Ошибка — Error с текстом для человека. */
+/**
+ * Ошибка загрузки фото. `reported` — об ошибке уже сказал перехватчик axios
+ * (сеть, 5xx, 403, см. lib/api.ts): второй тост про то же не нужен.
+ */
+export class PhotoUploadError extends Error {
+  readonly reported: boolean;
+
+  constructor(message: string, reported: boolean) {
+    super(message);
+    this.reported = reported;
+  }
+}
+
+/** Загружает одно фото в товар. Ошибка — PhotoUploadError с текстом для человека. */
 export async function uploadPhoto(productId: number, file: File): Promise<void> {
   const body = new FormData();
   body.append('file', file);
@@ -46,6 +61,20 @@ export async function uploadPhoto(productId: number, file: File): Promise<void> 
   try {
     await api.post(`/admin/products/${productId}/media`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
   } catch (error) {
-    throw new Error(serverMessage(error) ?? 'не загрузилось');
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+    const reported = isAxiosError(error) && (status === undefined || status >= 500 || status === 403);
+
+    throw new PhotoUploadError(serverMessage(error) ?? 'не загрузилось', reported);
   }
+}
+
+/** Тост «файл: причина», если о причине ещё не сказали. Возвращает текст для пометки у фото. */
+export function reportPhotoError(file: File, error: unknown): string {
+  const message = error instanceof Error ? error.message : 'не загрузилось';
+
+  if (!(error instanceof PhotoUploadError && error.reported)) {
+    toast.error(`${file.name}: ${message}`);
+  }
+
+  return message;
 }
