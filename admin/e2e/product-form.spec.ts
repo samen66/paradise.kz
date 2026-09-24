@@ -254,3 +254,48 @@ test("файл не того типа в очередь не попадает", 
   await expect(page.getByText("doc.pdf: только JPEG, PNG или WebP")).toBeVisible();
   await expect(page.getByTestId("queued-photo")).toHaveCount(0);
 });
+
+test("категория выбирается поиском и показывается путём", async ({ page, request }) => {
+  const api = adminApi(request);
+  const stamp = Date.now();
+  const parent = await api.create<{ id: number }>("/admin/categories", { name: { ru: `E2E Родитель ${stamp}` }, slug: `e2e-parent-${stamp}` });
+  const child = await api.create<{ id: number }>("/admin/categories", {
+    name: { ru: `E2E Ребёнок ${stamp}` },
+    slug: `e2e-child-${stamp}`,
+    parent_id: parent.id,
+  });
+  const product = await draftProduct(request);
+
+  try {
+    await page.goto(`/products/${product.id}`);
+    const category = page.getByRole("combobox", { name: "Категория" });
+    await expect(category).toHaveValue("Без категории");
+
+    await category.click();
+    await category.fill(`Ребёнок ${stamp}`);
+    await page.getByRole("option", { name: `E2E Родитель ${stamp} › E2E Ребёнок ${stamp}` }).click();
+    await expect(category).toHaveValue(`E2E Родитель ${stamp} › E2E Ребёнок ${stamp}`);
+
+    await saveButton(page).click();
+    await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Категория" })).toHaveValue(`E2E Родитель ${stamp} › E2E Ребёнок ${stamp}`);
+  } finally {
+    // Товар держит category_id — сначала он (afterEach удалит ещё раз, это безопасно).
+    await api.delete(`/admin/products/${product.id}`);
+    await api.delete(`/admin/categories/${child.id}`);
+    await api.delete(`/admin/categories/${parent.id}`);
+  }
+});
+
+test("выбор с клавиатуры: стрелки, Enter, Escape", async ({ page, request }) => {
+  const product = await draftProduct(request);
+
+  await page.goto(`/products/${product.id}`);
+  const brand = page.getByRole("combobox", { name: "Бренд" });
+  await brand.focus();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await brand.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(brand).toHaveValue("Без бренда");
+});
