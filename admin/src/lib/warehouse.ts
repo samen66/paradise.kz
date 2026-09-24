@@ -183,6 +183,10 @@ export type DocumentKind = 'receipts' | 'write_offs';
 export const parseDocumentKind = (value: string | null): DocumentKind =>
   value === 'write_offs' ? 'write_offs' : 'receipts';
 
+/** Начальный статус списков документов из адреса (плитка «Черновики»): иное — «все». */
+export const parseDocumentStatus = (value: string | null): '' | DocumentStatus =>
+  value === 'draft' || value === 'posted' ? value : '';
+
 /** Адреса раздела «Склад». Все ссылки на склад в админке строятся отсюда. */
 export const warehouseHref = {
   overview: '/warehouse',
@@ -232,7 +236,8 @@ export const STOCK_SORTS: Record<string, string> = {
 };
 
 /** Сортировка из адреса: неизвестная — по названию. */
-export const parseStockSort = (value: string | null): string => (value && value in STOCK_SORTS ? value : 'name');
+export const parseStockSort = (value: string | null): string =>
+  value && Object.hasOwn(STOCK_SORTS, value) ? value : 'name';
 
 export const documentHref = (document: NonNullable<StockMovement['document']>): string =>
   document.type === 'receipt'

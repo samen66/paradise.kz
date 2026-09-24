@@ -14,8 +14,8 @@ export function uniqueStamp(): number {
   return Date.now() * 100 + test.info().parallelIndex;
 }
 
-export async function createProduct(request: APIRequestContext, stamp: number, extra: Record<string, unknown> = {}) {
-  const name = `E2E товар ${stamp}`;
+export async function createProduct(request: APIRequestContext, stamp: number, extra: Record<string, unknown> = {}, suffix = "") {
+  const name = `E2E товар ${stamp}${suffix}`;
   const product = await adminApi(request).create<Created>("/admin/products", { name: { ru: name }, is_active: false, ...extra });
   return { id: product.data.id, name };
 }

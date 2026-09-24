@@ -79,4 +79,33 @@ class ProductMinStockTest extends TestCase
             ->assertJsonPath('data.min_stock', '7.000')
             ->assertJsonPath('data.min_stock_default', 3);
     }
+
+    /**
+     * StockCard and the "Мин. остаток" placeholder read `min_stock_default`
+     * off whatever product the form holds — including the one `store`/`update`
+     * hand back, before any reload. Without it the card would say "заканчивается
+     * при 0" for a product that has no minimum set right after saving.
+     */
+    #[Test]
+    public function create_and_update_responses_also_carry_the_default_threshold(): void
+    {
+        config(['inventory.low_stock_threshold' => 5]);
+
+        $created = $this->postJson('/api/admin/products', [
+            'name' => ['ru' => 'Стул Вена'],
+        ])->assertCreated();
+
+        $created->assertJsonPath('data.min_stock', null);
+        $created->assertJsonPath('data.min_stock_default', 5);
+
+        $id = $created->json('data.id');
+
+        $updated = $this->putJson("/api/admin/products/{$id}", [
+            'name' => ['ru' => 'Стул Вена'],
+            'min_stock' => '3',
+        ])->assertOk();
+
+        $updated->assertJsonPath('data.min_stock', '3.000');
+        $updated->assertJsonPath('data.min_stock_default', 5);
+    }
 }

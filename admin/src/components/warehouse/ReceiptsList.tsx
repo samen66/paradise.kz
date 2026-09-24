@@ -4,15 +4,20 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useResource } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
-import { formatDateTime, warehouseHref, type GoodsReceiptListItem } from '@/lib/warehouse';
+import { formatDateTime, parseDocumentStatus, warehouseHref, type DocumentStatus, type GoodsReceiptListItem } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import { inputClass } from '@/components/ui/styles';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import StoreSelect from './StoreSelect';
 
-/** Список приёмок с фильтрами по статусу и складу. Создание — кнопкой в шапке раздела. */
-export default function ReceiptsList() {
-  const [status, setStatus] = useState('');
+type Props = { initialStatus?: '' | DocumentStatus };
+
+/**
+ * Список приёмок с фильтрами по статусу и складу. Создание — кнопкой в шапке
+ * раздела. `initialStatus` — из адреса (плитка «Черновики» на обзоре).
+ */
+export default function ReceiptsList({ initialStatus = '' }: Props) {
+  const [status, setStatus] = useState(initialStatus);
   const [storeId, setStoreId] = useState('');
   const params: Record<string, string> = {};
   if (status) params['filter[status]'] = status;
@@ -46,7 +51,7 @@ export default function ReceiptsList() {
           className={`${inputClass} max-w-48`}
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value);
+            setStatus(parseDocumentStatus(e.target.value));
             receipts.setPage(1);
           }}
         >

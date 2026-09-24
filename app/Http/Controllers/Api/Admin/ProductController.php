@@ -127,9 +127,8 @@ class ProductController extends Controller
         $product->load(['category', 'brand', 'externalMapping']);
 
         return response()->json(['data' => [
-            ...$product->toArray(),
+            ...$this->present($product),
             'images' => ProductMediaController::presentAll($product),
-            'min_stock_default' => (float) config('inventory.low_stock_threshold'),
         ]]);
     }
 
@@ -137,14 +136,31 @@ class ProductController extends Controller
     {
         $product = Product::create($request->validated());
 
-        return response()->json(['data' => $product->load(['category', 'brand'])], 201);
+        return response()->json(['data' => $this->present($product->load(['category', 'brand']))], 201);
     }
 
     public function update(ProductSaveRequest $request, Product $product): JsonResponse
     {
         $product->update($request->validated());
 
-        return response()->json(['data' => $product->load(['category', 'brand'])]);
+        return response()->json(['data' => $this->present($product->load(['category', 'brand']))]);
+    }
+
+    /**
+     * The `data` payload shared by show/store/update: the product's own
+     * fields plus `min_stock_default`. ProductForm replaces its product with
+     * whatever store/update hand back, so StockCard and the "Мин. остаток"
+     * placeholder need the default threshold there too — not only on show —
+     * or they show a stale "заканчивается при 0" until the next reload.
+     *
+     * @return array<string, mixed>
+     */
+    private function present(Product $product): array
+    {
+        return [
+            ...$product->toArray(),
+            'min_stock_default' => (float) config('inventory.low_stock_threshold'),
+        ];
     }
 
     /**

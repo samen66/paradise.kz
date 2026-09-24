@@ -3,15 +3,20 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useResource } from '@/lib/crud';
-import { formatDateTime, warehouseHref, WRITE_OFF_REASONS, type WriteOffListItem } from '@/lib/warehouse';
+import { formatDateTime, parseDocumentStatus, warehouseHref, WRITE_OFF_REASONS, type DocumentStatus, type WriteOffListItem } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import { inputClass } from '@/components/ui/styles';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import StoreSelect from './StoreSelect';
 
-/** Список списаний с фильтрами по статусу, складу и причине. Создание — кнопкой в шапке раздела. */
-export default function WriteOffsList() {
-  const [status, setStatus] = useState('');
+type Props = { initialStatus?: '' | DocumentStatus };
+
+/**
+ * Список списаний с фильтрами по статусу, складу и причине. Создание —
+ * кнопкой в шапке раздела. `initialStatus` — из адреса (плитка «Черновики» на обзоре).
+ */
+export default function WriteOffsList({ initialStatus = '' }: Props) {
+  const [status, setStatus] = useState(initialStatus);
   const [storeId, setStoreId] = useState('');
   const [reason, setReason] = useState('');
   const params: Record<string, string> = {};
@@ -42,7 +47,7 @@ export default function WriteOffsList() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-3">
-        <select aria-label="Статус" className={`${inputClass} max-w-48`} value={status} onChange={(e) => { setStatus(e.target.value); resetPage(); }}>
+        <select aria-label="Статус" className={`${inputClass} max-w-48`} value={status} onChange={(e) => { setStatus(parseDocumentStatus(e.target.value)); resetPage(); }}>
           <option value="">Все статусы</option>
           <option value="draft">Черновики</option>
           <option value="posted">Проведённые</option>

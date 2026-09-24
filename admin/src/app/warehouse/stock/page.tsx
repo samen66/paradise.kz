@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from 'react';
 import api from '@/lib/api';
 import type { PageMeta } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
-import { ru } from '@/lib/text';
+import { plural, ru } from '@/lib/text';
 import {
   formatQty,
   parseStockSort,
@@ -16,12 +16,14 @@ import {
   type StockProductRow,
   type StockProductsMeta,
 } from '@/lib/warehouse';
+import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import FilterChips from '@/components/ui/FilterChips';
 import { buttonLink, buttonSecondary, inputClass } from '@/components/ui/styles';
 import StoreSelect from '@/components/warehouse/StoreSelect';
 import { StockStoresLine, StockStoresTable } from '@/components/warehouse/StockStores';
+import { useWarehouseSummary } from '@/components/warehouse/WarehouseSummary';
 
 type StockBody = { data: StockProductRow[]; current_page: number; last_page: number; meta: StockProductsMeta };
 
@@ -37,6 +39,7 @@ function StockView() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { summary } = useWarehouseSummary();
 
   const search = params.get('search') ?? '';
   const storeId = params.get('store_id') ?? '';
@@ -68,6 +71,18 @@ function StockView() {
       next.delete('page');
     }
     router.replace(`${pathname}${next.toString() ? `?${next}` : ''}`);
+  };
+
+  // Отдельно от setParam: смена страницы кладёт запись в историю (router.push),
+  // так «Назад» листает страницы списка назад, а не сразу уходит из раздела.
+  const setPage = (nextPage: number) => {
+    const next = new URLSearchParams(window.location.search);
+    if (nextPage > 1) {
+      next.set('page', String(nextPage));
+    } else {
+      next.delete('page');
+    }
+    router.push(`${pathname}${next.toString() ? `?${next}` : ''}`);
   };
 
   // Поиск уходит в адрес с задержкой, чтобы не делать запрос на каждую букву.
@@ -178,9 +193,12 @@ function StockView() {
   ];
 
   const productName = productId ? (rows[0] ? ru(rows[0].product.name) : `Товар #${productId}`) : '';
+  const totalCount = status ? (counts?.[status] ?? 0) : (counts?.all ?? 0);
 
   return (
     <div className="space-y-4">
+      <NoActiveStoreWarning hasActiveStore={summary?.has_active_store ?? null} />
+
       <div className="flex flex-col gap-3 md:flex-row">
         <input
           type="search"
@@ -227,7 +245,7 @@ function StockView() {
           rows={rows}
           loading={loading}
           meta={meta}
-          onPageChange={(next) => setParam({ page: next > 1 ? String(next) : '' })}
+          onPageChange={setPage}
           expandable={{
             label: 'Показать места хранения',
             canExpand: (row) => row.stores.length > 0,
@@ -259,7 +277,7 @@ function StockView() {
 
       {body && (
         <p className="text-right text-sm text-zinc-500">
-          Итого по фильтру: {status ? counts?.[status] : counts?.all} позиций
+          Итого по фильтру: {totalCount} {plural(totalCount, ['позиция', 'позиции', 'позиций'])}
           {!status && <> · {formatTenge(body.meta.total_value)}</>}
         </p>
       )}

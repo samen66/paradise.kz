@@ -60,8 +60,10 @@ test("товар на двух складах — одна строка с ит�
 
 test("мало — в «Заканчивается», ноль — в «Нет в наличии»", async ({ page, request }) => {
   const stamp = uniqueStamp();
-  const low = await createProduct(request, stamp, { min_stock: 5 });
-  const never = await createProduct(request, stamp + 1);
+  // Тот же stamp для обоих — параллельный воркер может успеть выставить свой
+  // uniqueStamp() ровно на stamp + 1 (см. finding #5); различает суффикс.
+  const low = await createProduct(request, stamp, { min_stock: 5 }, " А");
+  const never = await createProduct(request, stamp, {}, " Б");
   const store = await createStore(request, stamp);
   await receive(request, store.id, low.id, 2);
 
@@ -108,6 +110,10 @@ test("неизвестные параметры адреса не ломают �
   await expect(
     page.getByRole("radiogroup", { name: "Статус остатка" }).getByRole("radio", { name: /Все/ }),
   ).toHaveAttribute("aria-checked", "true");
+  // Строки скелета тоже видны в tbody — дождаться конца загрузки, иначе
+  // проверка прошла бы и на сломанном экране.
+  await expect(page.locator("table[aria-busy='false']")).toBeVisible();
+  await expect(page.getByText("Не удалось загрузить")).toHaveCount(0);
   await expect(page.locator("tbody tr").first()).toBeVisible();
 });
 

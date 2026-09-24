@@ -2,13 +2,15 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { parseDocumentKind, warehouseHref } from '@/lib/warehouse';
+import { parseDocumentKind, parseDocumentStatus, warehouseHref } from '@/lib/warehouse';
 import LinkTabs from '@/components/ui/LinkTabs';
 import ReceiptsList from '@/components/warehouse/ReceiptsList';
 import WriteOffsList from '@/components/warehouse/WriteOffsList';
 
 function DocumentsView() {
-  const kind = parseDocumentKind(useSearchParams().get('kind'));
+  const params = useSearchParams();
+  const kind = parseDocumentKind(params.get('kind'));
+  const initialStatus = parseDocumentStatus(params.get('status'));
 
   return (
     <div className="space-y-4">
@@ -20,7 +22,7 @@ function DocumentsView() {
           { key: 'write_offs', href: warehouseHref.documents('write_offs'), label: 'Списания' },
         ]}
       />
-      {kind === 'receipts' ? <ReceiptsList /> : <WriteOffsList />}
+      {kind === 'receipts' ? <ReceiptsList initialStatus={initialStatus} /> : <WriteOffsList initialStatus={initialStatus} />}
     </div>
   );
 }

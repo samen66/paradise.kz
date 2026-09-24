@@ -9,6 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Skeleton from '@/components/ui/Skeleton';
 import StatTile from '@/components/ui/StatTile';
 import { buttonLink, buttonSecondary, cardClass } from '@/components/ui/styles';
+import NewReceiptButton from '@/components/warehouse/NewReceiptButton';
 import { useWarehouseSummary } from '@/components/warehouse/WarehouseSummary';
 
 /** Куда ведёт плитка «Черновики»: туда, где черновики есть; приёмки — по умолчанию. */
@@ -60,7 +61,12 @@ export default function WarehouseOverviewPage() {
           <Link href={warehouseHref.movements} className={buttonLink}>Все движения →</Link>
         </div>
         {summary.recent_movements.length === 0 ? (
-          <EmptyState bare title="Движений ещё нет" hint="Остаток появится после первой проведённой приёмки." />
+          <EmptyState
+            bare
+            title="Движений ещё нет"
+            hint="Остаток появится после первой проведённой приёмки."
+            action={<NewReceiptButton />}
+          />
         ) : (
           <ul className="divide-y divide-zinc-100">
             {summary.recent_movements.map((m) => (

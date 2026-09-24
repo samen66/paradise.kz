@@ -572,6 +572,25 @@ test("«Мин. остаток» сохраняется и виден после
   await expect(page.getByLabel("Мин. остаток")).toHaveValue("3");
 });
 
+test("«Мин. остаток» пустой — после сохранения плейсхолдер и остаток верны без перезагрузки", async ({ page, request }) => {
+  const product = await createProduct(request, uniqueStamp());
+
+  await page.goto(`/products/${product.id}`);
+  const field = page.getByLabel("Мин. остаток");
+  await expect(field).toHaveValue("");
+  // Дёргаем другое поле — «Мин. остаток» остаётся пустым, но форма грязная,
+  // и кнопка «Сохранить» разблокируется.
+  await page.getByLabel("Артикул").fill("ART-STAGE2");
+  await page.getByRole("button", { name: "Сохранить" }).click();
+  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+
+  // Без перезагрузки: ответ store/update должен нести тот же min_stock_default,
+  // что и show, иначе плейсхолдер откатывается на общую подсказку, а карточка
+  // «Остаток» показывает несуществующий порог «0».
+  await expect(field).toHaveAttribute("placeholder", /^по умолчанию: \d/);
+  await expect(page.getByText(/Заканчивается при/)).not.toContainText("при 0 шт");
+});
+
 test("адрес товара в ссылке на витрину экранируется", async ({ page, request }) => {
   const product = await draftProduct(request);
   await page.route(`**/admin/products/${product.id}`, async (route) => {

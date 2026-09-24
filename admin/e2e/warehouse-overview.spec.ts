@@ -37,8 +37,12 @@ test("новое движение видно в «Последних движе�
 
 test("черновик приёмки виден в плитке и на вкладке «Документы»", async ({ page, request }) => {
   const api = adminApi(request);
-  const store = await createStore(request, uniqueStamp());
+  const stamp = uniqueStamp();
+  const store = await createStore(request, stamp);
+  const product = await createProduct(request, stamp);
   const draft = await api.create<{ data: { id: number } }>("/admin/goods-receipts", { store_id: store.id });
+  // Проведённая приёмка того же склада — должна остаться скрытой за фильтром «Черновики».
+  await receive(request, store.id, product.id, 1);
 
   try {
     await page.goto("/warehouse");
@@ -50,6 +54,11 @@ test("черновик приёмки виден в плитке и на вкл�
 
     await tile.click();
     await expect(page).toHaveURL(/\/warehouse\/documents\?/);
+    await expect(page.getByLabel("Статус")).toHaveValue("draft");
+
+    const storeRows = page.locator("tbody tr").filter({ hasText: store.name });
+    await expect(storeRows).toHaveCount(1);
+    await expect(storeRows).toContainText("Черновик");
   } finally {
     await api.delete(`/admin/goods-receipts/${draft.data.id}`);
     await api.delete(`/admin/stores/${store.id}`);
