@@ -126,6 +126,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.paradise.kz/api
+            NEXT_PUBLIC_STOREFRONT_URL=https://shop.paradise.kz
           tags: |
             ${{ env.ADMIN_IMAGE }}:${{ github.sha }}
             ${{ env.ADMIN_IMAGE }}:latest

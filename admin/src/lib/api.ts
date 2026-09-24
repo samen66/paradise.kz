@@ -6,6 +6,9 @@ import { toast } from '@/stores/toastStore';
 export const ERP_ADMIN_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api')
   .replace(/\/api\/?$/, '');
 
+/** Витрина (`shop.paradise.kz`) — ссылка «Открыть на сайте» и превью адреса товара. */
+export const STOREFRONT_URL = (process.env.NEXT_PUBLIC_STOREFRONT_URL || 'http://localhost:3000').replace(/\/$/, '');
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   headers: {
