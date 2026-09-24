@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import type { PageMeta } from '@/lib/crud';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { CardList } from './DataTableCards';
-import { buttonGhost } from './styles';
+import EmptyState from './EmptyState';
+import Skeleton from './Skeleton';
+import { buttonGhost, cardClass } from './styles';
 
 /**
  * Роль колонки в карточке на телефоне (раскладка — в DataTableCards).
@@ -27,6 +29,8 @@ type DataTableProps<T> = {
   rows: T[];
   loading?: boolean;
   emptyText?: string;
+  /** Пустое состояние целиком (EmptyState с подсказкой и действием); перекрывает `emptyText`. */
+  empty?: ReactNode;
   meta?: PageMeta | null;
   onPageChange?: (page: number) => void;
   rowKey?: (row: T) => string | number;
@@ -44,12 +48,13 @@ export default function DataTable<T extends { id?: number }>({
   rows,
   loading = false,
   emptyText = 'Ничего не найдено',
+  empty,
   meta,
   onPageChange,
   rowKey = (row) => row.id ?? JSON.stringify(row),
 }: DataTableProps<T>) {
   const isDesktop = useIsDesktop();
-  const message = loading ? 'Загрузка…' : rows.length === 0 ? emptyText : null;
+  const emptyNode = empty ?? <EmptyState title={emptyText} bare={isDesktop} />;
   const pagination =
     meta && meta.last_page > 1 && onPageChange ? (
       <Pagination meta={meta} onPageChange={onPageChange} compact={!isDesktop} />
@@ -58,36 +63,45 @@ export default function DataTable<T extends { id?: number }>({
   if (!isDesktop) {
     return (
       <div>
-        <CardList columns={columns} rows={rows} message={message} rowKey={rowKey} />
+        <CardList columns={columns} rows={rows} loading={loading} empty={emptyNode} rowKey={rowKey} />
         {pagination}
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+    <div className={`${cardClass} overflow-hidden`}>
       {/* Широкая таблица прокручивается внутри рамки, а не обрезается ею. */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-zinc-700">
-          <thead className="border-b border-zinc-200 bg-zinc-50">
+        <table className="w-full text-left text-sm text-zinc-700" aria-busy={loading}>
+          <thead className="border-b border-zinc-100 bg-zinc-50/70">
             <tr>
               {columns.map((c) => (
-                <th key={c.key} className={`px-4 py-3 font-medium ${c.className ?? ''}`}>
+                <th key={c.key} className={`px-4 py-3 font-medium text-zinc-500 ${c.className ?? ''}`}>
                   {c.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200">
-            {message ? (
+          <tbody className="divide-y divide-zinc-100">
+            {loading ? (
+              [0, 1, 2, 3, 4].map((i) => (
+                <tr key={i}>
+                  {columns.map((c, index) => (
+                    <td key={c.key} className="px-4 py-3">
+                      {i === 0 && index === 0 && <span className="sr-only">Загрузка…</span>}
+                      <Skeleton className={index === 0 ? 'h-4 w-40' : 'h-4 w-16'} />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-500">
-                  {message}
-                </td>
+                <td colSpan={columns.length}>{emptyNode}</td>
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-zinc-50">
+                <tr key={rowKey(row)} className="hover:bg-zinc-50/70">
                   {columns.map((c) => (
                     <td key={c.key} className={`px-4 py-3 ${c.className ?? ''}`}>
                       {c.render(row)}
@@ -141,7 +155,7 @@ function Pagination({ meta, onPageChange, compact }: PaginationProps) {
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3 text-sm">
+    <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-3 text-sm">
       <span className="text-zinc-500">
         Стр. {meta.current_page} из {meta.last_page}
       </span>

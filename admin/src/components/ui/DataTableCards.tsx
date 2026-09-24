@@ -1,10 +1,14 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import type { Column, MobileRole } from './DataTable';
+import Skeleton from './Skeleton';
+import { cardClass } from './styles';
 
 type CardListProps<T> = {
   columns: Column<T>[];
   rows: T[];
-  message: string | null;
+  loading: boolean;
+  /** Что показать, когда записей нет (EmptyState). */
+  empty: ReactNode;
   rowKey: (row: T) => string | number;
 };
 
@@ -18,17 +22,30 @@ type CardListProps<T> = {
  *   actions — внизу, под чертой; hidden — не показываются.
  * `className` колонок здесь не применяется: он для ячеек таблицы.
  */
-export function CardList<T>({ columns, rows, message, rowKey }: CardListProps<T>) {
-  if (message) {
+export function CardList<T>({ columns, rows, loading, empty, rowKey }: CardListProps<T>) {
+  if (loading) {
     return (
-      <p className="rounded-xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500">{message}</p>
+      <ul className="space-y-3" aria-busy="true">
+        <span className="sr-only">Загрузка…</span>
+        {[0, 1, 2].map((i) => (
+          <li key={i} className={`${cardClass} space-y-3 p-4`}>
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </li>
+        ))}
+      </ul>
     );
+  }
+
+  if (rows.length === 0) {
+    return <>{empty}</>;
   }
 
   return (
     <ul className="space-y-3">
       {rows.map((row) => (
-        <li key={rowKey(row)} className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700 shadow-sm">
+        <li key={rowKey(row)} className={`${cardClass} p-4 text-sm text-zinc-700`}>
           <RowCard columns={columns} row={row} />
         </li>
       ))}
