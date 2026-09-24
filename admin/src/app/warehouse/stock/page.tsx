@@ -51,8 +51,12 @@ function StockView() {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
+  // Строится из window.location.search, а не из params (снимка на момент
+  // рендера): иначе отложенный вызов из дебаунса поиска ниже мог бы взять
+  // устаревший адрес и откатить фильтр, выставленный кликом по чипу или
+  // складу, пока таймер ещё ждёт.
   const setParam = (updates: Record<string, string>) => {
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(updates)) {
       if (value) {
         next.set(key, value);

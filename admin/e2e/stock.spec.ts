@@ -84,6 +84,24 @@ test("мало — в «Заканчивается», ноль — в «Нет �
   await expect(chips.getByRole("radio", { name: /Нет в наличии/ })).toHaveAttribute("aria-checked", "true");
 });
 
+test("клик по чипу статуса во время дебаунса поиска не откатывает фильтр", async ({ page }) => {
+  const stamp = uniqueStamp();
+
+  await page.goto("/warehouse/stock");
+  const chips = page.getByRole("radiogroup", { name: "Статус остатка" });
+
+  await search(page, `E2E ${stamp}`);
+  // Клик — пока 300-мс таймер дебаунса поиска ещё не выстрелил: адрес не
+  // должен откатиться к состоянию до клика, когда дебаунс всё же сработает.
+  await chips.getByRole("radio", { name: /Нет в наличии/ }).click();
+  await expect(page).toHaveURL(/status=out/);
+
+  // Дождаться, пока дебаунс допишет search= в адрес, и проверить, что
+  // status=out при этом никуда не делся.
+  await expect(page).toHaveURL(/search=/);
+  await expect(page).toHaveURL(/status=out/);
+});
+
 test("неизвестные параметры адреса не ломают экран", async ({ page }) => {
   await page.goto("/warehouse/stock?status=foo&sort=zzz");
 

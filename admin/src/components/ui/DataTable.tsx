@@ -115,6 +115,7 @@ export default function DataTable<T extends { id?: number }>({
             {loading ? (
               [0, 1, 2, 3, 4].map((i) => (
                 <tr key={i}>
+                  {expandable && <td className="w-10 px-2 py-3" />}
                   {tableColumns.map((c, index) => (
                     <td key={c.key} className="px-4 py-3">
                       {i === 0 && index === 0 && <span className="sr-only">Загрузка…</span>}
