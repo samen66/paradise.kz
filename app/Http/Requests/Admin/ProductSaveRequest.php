@@ -55,6 +55,7 @@ class ProductSaveRequest extends FormRequest
         'supplier',
         'weight',
         'volume',
+        'min_stock',
         'b2b_min_order_qty',
         'category_id',
         'brand_id',
@@ -134,6 +135,7 @@ class ProductSaveRequest extends FormRequest
             'supplier' => 'nullable|string|max:255',
             'weight' => 'nullable|numeric|decimal:0,3|min:0|max:999999999.999',
             'volume' => 'nullable|numeric|decimal:0,3|min:0|max:999999999.999',
+            'min_stock' => 'nullable|numeric|decimal:0,3|min:0|max:9999999.999',
 
             // Storefront flags
             'is_active' => 'boolean',

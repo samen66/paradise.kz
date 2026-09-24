@@ -129,6 +129,7 @@ class ProductController extends Controller
         return response()->json(['data' => [
             ...$product->toArray(),
             'images' => ProductMediaController::presentAll($product),
+            'min_stock_default' => (float) config('inventory.low_stock_threshold'),
         ]]);
     }
 
