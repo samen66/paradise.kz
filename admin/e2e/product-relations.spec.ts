@@ -75,7 +75,6 @@ test("фото загружается в товар и удаляется", asyn
   }
 
   await page.goto(`/products/${product.id}`);
-  await page.getByRole("tab", { name: "Фото" }).click();
 
   const images = page.getByTestId("product-image");
   const beforeCount = await images.count();

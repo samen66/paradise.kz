@@ -1,3 +1,4 @@
+import path from "node:path";
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
@@ -194,4 +195,57 @@ test("новый товар: одно нажатие — один товар, п
   await expect(page.getByText("Товар создан")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   expect(creates).toHaveLength(1);
+});
+
+const PIXEL = path.join(__dirname, "assets/pixel.png");
+
+test("новый товар: фото до сохранения загружаются после него", async ({ page }) => {
+  await page.goto("/products/create");
+  await page.getByLabel("Название *").fill(`E2E с фото ${Date.now()}`);
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  await expect(page.getByTestId("queued-photo")).toHaveCount(1);
+  await expect(page.getByText("Загрузятся после сохранения.")).toBeVisible();
+
+  await saveButton(page).click();
+
+  await expect(page).toHaveURL(/\/products\/\d+$/);
+  rememberCreated(page);
+  await expect(page.getByText("Товар создан")).toBeVisible();
+  await expect(page.getByTestId("product-image")).toHaveCount(1);
+  await expect(page.getByTestId("queued-photo")).toHaveCount(0);
+});
+
+test("фото, которое не загрузилось при создании, загружается повторно", async ({ page }) => {
+  let failOnce = true;
+  await page.route("**/admin/products/*/media", async (route) => {
+    if (route.request().method() === "POST" && failOnce) {
+      failOnce = false;
+      await route.fulfill({ status: 422, json: { message: "Файл повреждён" } });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto("/products/create");
+  await page.getByLabel("Название *").fill(`E2E повтор ${Date.now()}`);
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  await saveButton(page).click();
+
+  await expect(page).toHaveURL(/\/products\/\d+$/);
+  rememberCreated(page);
+  const failed = page.getByTestId("queued-photo");
+  await expect(failed).toContainText("Не загрузилось");
+  await expect(page.getByText("pixel.png: Файл повреждён")).toBeVisible();
+
+  await failed.getByRole("button", { name: "Повторить" }).click();
+  await expect(page.getByTestId("product-image")).toHaveCount(1);
+  await expect(failed).toHaveCount(0);
+});
+
+test("файл не того типа в очередь не попадает", async ({ page }) => {
+  await page.goto("/products/create");
+  await page.getByLabel("Загрузить фото").setInputFiles({ name: "doc.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4") });
+
+  await expect(page.getByText("doc.pdf: только JPEG, PNG или WebP")).toBeVisible();
+  await expect(page.getByTestId("queued-photo")).toHaveCount(0);
 });
