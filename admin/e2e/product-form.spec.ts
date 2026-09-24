@@ -2,6 +2,7 @@ import path from "node:path";
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
+import { createProduct, uniqueStamp } from "./warehouseApi";
 
 /**
  * Карточка товара: создание и правка на одной странице.
@@ -555,6 +556,20 @@ test("вес с ошибкой — сообщение, а не тихий null",
   await saveButton(page).click();
 
   await expect(page.getByText("Число, до трёх знаков после точки")).toBeVisible();
+});
+
+test("«Мин. остаток» сохраняется и виден после перезагрузки", async ({ page, request }) => {
+  const product = await createProduct(request, uniqueStamp());
+
+  await page.goto(`/products/${product.id}`);
+  const field = page.getByLabel("Мин. остаток");
+  await expect(field).toHaveAttribute("placeholder", /по умолчанию/);
+  await field.fill("3");
+  await page.getByRole("button", { name: "Сохранить" }).click();
+  await expect(page.getByText("Сохранено")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("Мин. остаток")).toHaveValue("3");
 });
 
 test("адрес товара в ссылке на витрину экранируется", async ({ page, request }) => {

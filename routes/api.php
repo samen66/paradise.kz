@@ -198,7 +198,6 @@ Route::prefix('admin')
         Route::apiResource('orders', App\Http\Controllers\Api\Admin\OrderController::class)->only(['index', 'show', 'update']);
         // Read-only: stock moves through goods receipts / adjustments so that
         // every change is recorded in the ledger.
-        Route::get('stock', [StockController::class, 'index']);
         Route::get('stock/products', [StockController::class, 'products']);
         Route::get('stock/summary', [StockController::class, 'summary']);
         Route::get('stock-movements', [StockMovementController::class, 'index']);

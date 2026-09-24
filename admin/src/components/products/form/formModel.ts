@@ -38,6 +38,10 @@ export type ApiProduct = {
   is_new_arrival: boolean;
   /** Проекция складского журнала, decimal:3. Сразу после создания в ответе её нет. */
   stock?: string | number | null;
+  /** Порог «заканчивается», decimal:3; null — действует общий порог. */
+  min_stock?: string | number | null;
+  /** Общий порог из config/inventory.php. */
+  min_stock_default?: number;
 };
 
 /** Категория или бренд из `/admin/categories`, `/admin/brands`. */
@@ -72,6 +76,7 @@ export const productSchema = z.object({
   uom: upTo(50),
   weight: decimal3,
   volume: decimal3,
+  min_stock: decimal3,
   country: upTo(255),
   supplier: upTo(255),
   is_active: z.boolean(),
@@ -87,7 +92,7 @@ const TRANSLATABLE = ['name', 'description', 'seo_title', 'seo_description'] as 
 const SCALARS = [
   'slug', 'code', 'article', 'category_id', 'brand_id',
   'retail_price', 'b2b_price', 'compare_at_price', 'min_price', 'purchase_price',
-  'b2b_min_order_qty', 'uom', 'weight', 'volume', 'country', 'supplier',
+  'b2b_min_order_qty', 'uom', 'weight', 'volume', 'min_stock', 'country', 'supplier',
 ] as const;
 
 const pair = (value: Translatable): { ru: string; kk: string } =>
@@ -105,7 +110,7 @@ export const emptyProductValues = (): ProductFormValues => ({
   seo_description: { ru: '', kk: '' },
   slug: '', code: '', article: '', category_id: '', brand_id: '',
   retail_price: '', b2b_price: '', compare_at_price: '', min_price: '', purchase_price: '',
-  b2b_min_order_qty: '', uom: '', weight: '', volume: '', country: '', supplier: '',
+  b2b_min_order_qty: '', uom: '', weight: '', volume: '', min_stock: '', country: '', supplier: '',
   is_active: true,
   is_new_arrival: false,
 });
@@ -129,6 +134,7 @@ export const toFormValues = (p: ApiProduct): ProductFormValues => ({
   uom: text(p.uom),
   weight: decimalText(p.weight),
   volume: decimalText(p.volume),
+  min_stock: decimalText(p.min_stock),
   country: text(p.country),
   supplier: text(p.supplier),
   is_active: p.is_active ?? true,
@@ -151,7 +157,7 @@ export function toFormData(values: ProductFormValues, isUpdate: boolean): FormDa
 
   for (const field of SCALARS) {
     // Запятая в весе и объёме — привычная десятичная; сервер ждёт точку.
-    data.append(field, field === 'weight' || field === 'volume' ? values[field].replace(',', '.') : values[field]);
+    data.append(field, field === 'weight' || field === 'volume' || field === 'min_stock' ? values[field].replace(',', '.') : values[field]);
   }
 
   data.append('is_active', values.is_active ? '1' : '0');

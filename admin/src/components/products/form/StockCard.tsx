@@ -13,8 +13,11 @@ export default function StockCard({ product, className }: { product: ApiProduct;
         {formatQuantity(product.stock ?? 0)} {product.uom || 'шт'}
       </p>
       <p className="text-xs text-zinc-500">Меняется приёмками, заказами и списаниями</p>
+      <p className="text-xs text-zinc-500">
+        Заканчивается при {formatQuantity(product.min_stock ?? product.min_stock_default ?? 0)} {product.uom || 'шт'} и меньше
+      </p>
       <div className="flex flex-wrap gap-x-4">
-        <Link href={warehouseHref.stock} className={buttonLink}>По складам →</Link>
+        <Link href={`${warehouseHref.stock}?product_id=${product.id}`} className={buttonLink}>По складам →</Link>
         <Link href={`${warehouseHref.movements}?product_id=${product.id}`} className={buttonLink}>Движения →</Link>
       </div>
     </FormCard>

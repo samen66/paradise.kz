@@ -311,7 +311,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
         <div className="flex flex-col gap-4 lg:col-start-3 lg:row-span-8 lg:row-start-1">
           <StatusCard form={form} />
           <CatalogCard form={form} categories={categories} brands={brands} />
-          <AccountingCard form={form} />
+          <AccountingCard form={form} defaultMinStock={product?.min_stock_default} />
           {product && <StockCard product={product} />}
           <DimensionsCard form={form} />
         </div>

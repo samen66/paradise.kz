@@ -6,7 +6,15 @@ import { inputClass } from '@/components/ui/styles';
 import FormCard from './FormCard';
 import type { ProductFormValues } from './formModel';
 
-export default function AccountingCard({ form, className }: { form: UseFormReturn<ProductFormValues>; className?: string }) {
+export default function AccountingCard({
+  form,
+  defaultMinStock,
+  className,
+}: {
+  form: UseFormReturn<ProductFormValues>;
+  defaultMinStock?: number;
+  className?: string;
+}) {
   const { register, formState: { errors } } = form;
 
   return (
@@ -21,6 +29,21 @@ export default function AccountingCard({ form, className }: { form: UseFormRetur
       </div>
       <Field label="Единица измерения" htmlFor="uom" error={errors.uom?.message}>
         <input id="uom" className={inputClass} placeholder="шт" aria-invalid={errors.uom ? true : undefined} {...register('uom')} />
+      </Field>
+      <Field
+        label="Мин. остаток"
+        htmlFor="min_stock"
+        hint="Меньше или столько же — товар попадёт в «Заканчивается»"
+        error={errors.min_stock?.message}
+      >
+        <input
+          id="min_stock"
+          inputMode="decimal"
+          className={inputClass}
+          placeholder={defaultMinStock === undefined ? 'по умолчанию — общий порог' : `по умолчанию: ${defaultMinStock}`}
+          aria-invalid={errors.min_stock ? true : undefined}
+          {...register('min_stock')}
+        />
       </Field>
     </FormCard>
   );
