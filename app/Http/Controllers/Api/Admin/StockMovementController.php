@@ -9,6 +9,7 @@ use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\StockMovement;
 use App\Models\WriteOff;
+use App\Services\Inventory\StockMovementPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,7 +32,7 @@ class StockMovementController extends Controller
         'order' => Order::class,
     ];
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, StockMovementPresenter $presenter): JsonResponse
     {
         $movements = QueryBuilder::for(StockMovement::class)
             ->allowedFilters(
@@ -73,12 +74,12 @@ class StockMovementController extends Controller
                     $query->where('documentable_type', $class)->where('documentable_id', (int) $id);
                 }),
             )
-            ->with(['store:id,name', 'product:id,name,code', 'user:id,name', 'documentable'])
+            ->with(StockMovementPresenter::RELATIONS)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(50)
             ->appends($request->query())
-            ->through(fn (StockMovement $movement): array => $this->present($movement));
+            ->through(fn (StockMovement $movement): array => $presenter->present($movement));
 
         return response()->json($movements);
     }
@@ -109,44 +110,5 @@ class StockMovementController extends Controller
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function present(StockMovement $movement): array
-    {
-        return [
-            'id' => $movement->id,
-            'created_at' => $movement->created_at,
-            'type' => $movement->type,
-            'qty_delta' => (float) $movement->qty_delta,
-            'unit_cost' => $movement->unit_cost === null ? null : (int) $movement->unit_cost,
-            'balance_after' => $movement->balance_after === null ? null : (float) $movement->balance_after,
-            'note' => $movement->note,
-            'store' => $movement->store?->only(['id', 'name']),
-            'product' => $movement->product === null ? null : [
-                'id' => $movement->product->id,
-                'name' => $movement->product->getTranslations('name'),
-                'code' => $movement->product->code,
-            ],
-            'user' => $movement->user?->only(['id', 'name']),
-            'document' => $this->document($movement),
-        ];
-    }
-
-    /**
-     * @return array{type: string, id: int, label: string}|null
-     */
-    private function document(StockMovement $movement): ?array
-    {
-        $document = $movement->documentable;
-
-        return match (true) {
-            $document instanceof GoodsReceipt => ['type' => 'receipt', 'id' => $document->id, 'label' => 'Приёмка '.($document->number ?: '№'.$document->id)],
-            $document instanceof WriteOff => ['type' => 'write_off', 'id' => $document->id, 'label' => $document->label()],
-            $document instanceof Order => ['type' => 'order', 'id' => $document->id, 'label' => 'Заказ '.$document->number],
-            default => null,
-        };
     }
 }

@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GoodsReceipt;
 use App\Models\ProductStoreStock;
+use App\Models\StockMovement;
 use App\Models\Store;
+use App\Models\WriteOff;
 use App\Services\Inventory\StockByProduct;
+use App\Services\Inventory\StockMovementPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -107,5 +111,36 @@ class StockController extends Controller
         ];
 
         return response()->json($payload);
+    }
+
+    /**
+     * Сводка для вкладки «Обзор»: стоимость запаса, заканчивается / нет в
+     * наличии (по всем местам хранения), черновики документов, пять последних
+     * движений, есть ли активный склад.
+     */
+    public function summary(StockByProduct $stock, StockMovementPresenter $presenter): JsonResponse
+    {
+        $totals = $stock->totals([]);
+
+        $recent = StockMovement::query()
+            ->with(StockMovementPresenter::RELATIONS)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (StockMovement $movement): array => $presenter->present($movement))
+            ->all();
+
+        return response()->json(['data' => [
+            'total_value' => $totals['total_value'],
+            'low' => $totals['counts']['low'],
+            'out' => $totals['counts']['out'],
+            'drafts' => [
+                'receipts' => GoodsReceipt::query()->where('status', GoodsReceipt::STATUS_DRAFT)->count(),
+                'write_offs' => WriteOff::query()->where('status', WriteOff::STATUS_DRAFT)->count(),
+            ],
+            'recent_movements' => $recent,
+            'has_active_store' => Store::query()->where('is_active', true)->exists(),
+        ]]);
     }
 }
