@@ -36,7 +36,12 @@ async function horizontalOverflow(page: Page): Promise<string[]> {
 }
 
 const ROUTES = [...new Set(NAV_GROUPS.flatMap((group) => group.links.map((link) => link.href)))];
-const WAREHOUSE_ROUTES = ["/warehouse/stock", "/warehouse/movements"];
+const WAREHOUSE_ROUTES = [
+  "/warehouse/stock",
+  "/warehouse/movements",
+  "/warehouse/documents?kind=receipts",
+  "/warehouse/documents?kind=write_offs",
+];
 
 for (const route of [...ROUTES, ...WAREHOUSE_ROUTES]) {
   test(`${route} не прокручивается вбок`, async ({ page }) => {
@@ -55,8 +60,8 @@ test("документы не прокручиваются вбок", async ({ p
 
   // Этих документов может не быть на свежей базе — тогда их просто пропускаем.
   const lists = [
-    ["/admin/goods-receipts", "/goods-receipts"],
-    ["/admin/write-offs", "/write-offs"],
+    ["/admin/goods-receipts", "/warehouse/receipts"],
+    ["/admin/write-offs", "/warehouse/write-offs"],
     ["/admin/catalog-groups", "/catalog-groups"],
     ["/admin/product-collections", "/product-collections"],
   ] as const;

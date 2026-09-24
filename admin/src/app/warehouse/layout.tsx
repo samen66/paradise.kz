@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import NewReceiptButton from '@/components/warehouse/NewReceiptButton';
+import NewWriteOffButton from '@/components/warehouse/NewWriteOffButton';
 import WarehouseHeader, { warehouseTabFor } from '@/components/warehouse/WarehouseHeader';
 
 /**
@@ -13,7 +15,17 @@ export default function WarehouseLayout({ children }: { children: ReactNode }) {
 
   return (
     <div>
-      {tab && <WarehouseHeader active={tab} />}
+      {tab && (
+        <WarehouseHeader
+          active={tab}
+          actions={
+            <>
+              <NewReceiptButton />
+              <NewWriteOffButton />
+            </>
+          }
+        />
+      )}
       {children}
     </div>
   );

@@ -1,20 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useResource } from '@/lib/crud';
-import { formatDateTime, WRITE_OFF_REASONS, type WriteOff, type WriteOffListItem } from '@/lib/warehouse';
-import CrudModal from '@/components/ui/CrudModal';
+import { formatDateTime, warehouseHref, WRITE_OFF_REASONS, type WriteOffListItem } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
-import PageHeader from '@/components/ui/PageHeader';
-import { buttonPrimary, inputClass } from '@/components/ui/styles';
-import DocumentStatusBadge from '@/components/warehouse/DocumentStatusBadge';
-import StoreSelect from '@/components/warehouse/StoreSelect';
-import { toWriteOffForm, WriteOffFields, writeOffSchema } from '@/components/warehouse/WriteOffForm';
+import { inputClass } from '@/components/ui/styles';
+import DocumentStatusBadge from './DocumentStatusBadge';
+import StoreSelect from './StoreSelect';
 
-export default function WriteOffsPage() {
-  const router = useRouter();
+/** Список списаний с фильтрами по статусу, складу и причине. Создание — кнопкой в шапке раздела. */
+export default function WriteOffsList() {
   const [status, setStatus] = useState('');
   const [storeId, setStoreId] = useState('');
   const [reason, setReason] = useState('');
@@ -24,14 +20,14 @@ export default function WriteOffsPage() {
   if (reason) params['filter[reason]'] = reason;
 
   const writeOffs = useResource<WriteOffListItem>('/admin/write-offs', params);
-  const [creating, setCreating] = useState(false);
+  const resetPage = () => writeOffs.setPage(1);
 
   const columns: Column<WriteOffListItem>[] = [
     {
       key: 'label',
       header: 'Списание',
       render: (w) => (
-        <Link href={`/write-offs/${w.id}`} className="font-medium text-zinc-900 hover:text-blue-700">
+        <Link href={warehouseHref.writeOff(w.id)} className="font-medium text-zinc-900 hover:text-blue-700">
           №{w.id}
         </Link>
       ),
@@ -43,14 +39,8 @@ export default function WriteOffsPage() {
     { key: 'status', header: 'Статус', render: (w) => <DocumentStatusBadge status={w.status} postedLabel="Проведено" /> },
   ];
 
-  const resetPage = () => writeOffs.setPage(1);
-
   return (
     <div>
-      <PageHeader
-        title="Списания"
-        actions={<button type="button" className={buttonPrimary} onClick={() => setCreating(true)}>Новое списание</button>}
-      />
       <div className="mb-4 flex flex-wrap gap-3">
         <select aria-label="Статус" className={`${inputClass} max-w-48`} value={status} onChange={(e) => { setStatus(e.target.value); resetPage(); }}>
           <option value="">Все статусы</option>
@@ -73,21 +63,6 @@ export default function WriteOffsPage() {
         onPageChange={writeOffs.setPage}
         emptyText="Списаний нет"
       />
-
-      {creating && (
-        <CrudModal
-          title="Новое списание"
-          schema={writeOffSchema}
-          defaultValues={toWriteOffForm(null)}
-          onSubmit={async (values) => {
-            const writeOff = (await writeOffs.create(values)) as unknown as WriteOff;
-            router.push(`/write-offs/${writeOff.id}`);
-          }}
-          onClose={() => setCreating(false)}
-        >
-          {(form) => <WriteOffFields form={form} />}
-        </CrudModal>
-      )}
     </div>
   );
 }

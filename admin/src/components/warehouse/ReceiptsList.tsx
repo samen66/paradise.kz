@@ -1,21 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useResource } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
-import { formatDateTime, type GoodsReceipt, type GoodsReceiptListItem, type Supplier } from '@/lib/warehouse';
-import CrudModal from '@/components/ui/CrudModal';
+import { formatDateTime, warehouseHref, type GoodsReceiptListItem } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
-import PageHeader from '@/components/ui/PageHeader';
-import { buttonPrimary, inputClass } from '@/components/ui/styles';
-import DocumentStatusBadge from '@/components/warehouse/DocumentStatusBadge';
-import StoreSelect from '@/components/warehouse/StoreSelect';
-import { ReceiptFields, receiptSchema, toReceiptForm, toReceiptPayload } from '@/components/warehouse/GoodsReceiptForm';
+import { inputClass } from '@/components/ui/styles';
+import DocumentStatusBadge from './DocumentStatusBadge';
+import StoreSelect from './StoreSelect';
 
-export default function GoodsReceiptsPage() {
-  const router = useRouter();
+/** Список приёмок с фильтрами по статусу и складу. Создание — кнопкой в шапке раздела. */
+export default function ReceiptsList() {
   const [status, setStatus] = useState('');
   const [storeId, setStoreId] = useState('');
   const params: Record<string, string> = {};
@@ -23,15 +19,13 @@ export default function GoodsReceiptsPage() {
   if (storeId) params['filter[store_id]'] = storeId;
 
   const receipts = useResource<GoodsReceiptListItem>('/admin/goods-receipts', params);
-  const suppliers = useResource<Supplier>('/admin/suppliers');
-  const [creating, setCreating] = useState(false);
 
   const columns: Column<GoodsReceiptListItem>[] = [
     {
       key: 'number',
       header: 'Приёмка',
       render: (r) => (
-        <Link href={`/goods-receipts/${r.id}`} className="font-medium text-zinc-900 hover:text-blue-700">
+        <Link href={warehouseHref.receipt(r.id)} className="font-medium text-zinc-900 hover:text-blue-700">
           {r.number || `№${r.id}`}
         </Link>
       ),
@@ -46,10 +40,6 @@ export default function GoodsReceiptsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Приёмки"
-        actions={<button type="button" className={buttonPrimary} onClick={() => setCreating(true)}>Новая приёмка</button>}
-      />
       <div className="mb-4 flex flex-wrap gap-3">
         <select
           aria-label="Статус"
@@ -83,21 +73,6 @@ export default function GoodsReceiptsPage() {
         onPageChange={receipts.setPage}
         emptyText="Приёмок нет"
       />
-
-      {creating && (
-        <CrudModal
-          title="Новая приёмка"
-          schema={receiptSchema}
-          defaultValues={toReceiptForm(null)}
-          onSubmit={async (values) => {
-            const receipt = (await receipts.create(toReceiptPayload(values))) as unknown as GoodsReceipt;
-            router.push(`/goods-receipts/${receipt.id}`);
-          }}
-          onClose={() => setCreating(false)}
-        >
-          {(form) => <ReceiptFields form={form} suppliers={suppliers.items} />}
-        </CrudModal>
-      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
 
 /**
@@ -44,4 +45,49 @@ test("«Склад» в меню ведёт в раздел", async ({ page }) =
   await page.goto("/orders");
   await page.getByRole("link", { name: "Склад", exact: true }).first().click();
   await expect(page).toHaveURL(/\/warehouse\/stock$/);
+});
+
+test("вкладка «Документы» переключает приёмки и списания", async ({ page }) => {
+  await page.goto("/warehouse/stock");
+  await page.getByRole("navigation", { name: "Разделы склада" }).getByRole("link", { name: "Документы" }).click();
+  await expect(page).toHaveURL(/\/warehouse\/documents\?kind=receipts$/);
+
+  const kinds = page.getByRole("navigation", { name: "Вид документов" });
+  await expect(kinds.getByRole("link", { name: "Приёмки" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("columnheader", { name: "Поставщик" })).toBeVisible();
+
+  await kinds.getByRole("link", { name: "Списания" }).click();
+  await expect(page).toHaveURL(/kind=write_offs$/);
+  await expect(page.getByRole("columnheader", { name: "Причина" })).toBeVisible();
+});
+
+test("неизвестный вид документов показывает приёмки", async ({ page }) => {
+  await page.goto("/warehouse/documents?kind=foo");
+  await expect(
+    page.getByRole("navigation", { name: "Вид документов" }).getByRole("link", { name: "Приёмки" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("columnheader", { name: "Поставщик" })).toBeVisible();
+});
+
+test("старые адреса документов ведут в раздел", async ({ page, request }) => {
+  const cases: [string, RegExp][] = [
+    ["/goods-receipts", /\/warehouse\/documents\?kind=receipts$/],
+    ["/write-offs?status=draft", /\/warehouse\/documents\?(kind=write_offs&status=draft|status=draft&kind=write_offs)$/],
+  ];
+  for (const [from, to] of cases) {
+    await page.goto(from);
+    await expect(page, from).toHaveURL(to);
+  }
+
+  // Старая ссылка на конкретный документ.
+  const api = adminApi(request);
+  const store = await api.create<{ data: { id: number } }>("/admin/stores", { name: `E2E склад ${Date.now()}`, is_active: false });
+  const receipt = await api.create<{ data: { id: number } }>("/admin/goods-receipts", { store_id: store.data.id });
+  try {
+    await page.goto(`/goods-receipts/${receipt.data.id}`);
+    await expect(page).toHaveURL(new RegExp(`/warehouse/receipts/${receipt.data.id}$`));
+    await expect(page.getByRole("heading", { level: 1, name: `Приёмка №${receipt.data.id}` })).toBeVisible();
+  } finally {
+    await api.delete(`/admin/goods-receipts/${receipt.data.id}`);
+  }
 });

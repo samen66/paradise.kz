@@ -86,8 +86,8 @@ test("действия строки товара видны без наведе�
 });
 
 test("поля формы приёмки идут в одну колонку", async ({ page }) => {
-  await page.goto("/goods-receipts");
-  await page.getByRole("button", { name: "Новая приёмка" }).click();
+  await page.goto("/warehouse/documents?kind=receipts");
+  await page.getByRole("button", { name: /Принять товар/ }).click();
 
   const dialog = page.getByRole("dialog");
   const number = (await dialog.getByLabel("Номер", { exact: true }).boundingBox())!;

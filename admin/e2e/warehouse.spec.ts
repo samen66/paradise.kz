@@ -54,8 +54,13 @@ async function addLine(page: Page, productName: string) {
   await page.getByRole("option").filter({ hasText: productName }).first().click();
 }
 
+/** Черновик на удаление: адрес карточки — /warehouse/…, а API — /admin/goods-receipts|write-offs/{id}. */
+function draftPath(page: Page, apiPrefix: "/admin/goods-receipts" | "/admin/write-offs"): string {
+  return `${apiPrefix}/${new URL(page.url()).pathname.split("/").pop()}`;
+}
+
 test("приёмка проводится, остаток растёт, движение видно в журнале", async ({ page, request }) => {
-  const stamp = Date.now();
+  const stamp = Date.now() * 100 + test.info().parallelIndex;
   const { productName, storeName } = await setupProductAndStore(request, stamp);
   const supplierName = `E2E поставщик ${stamp}`;
   const dialog = page.getByRole("dialog");
@@ -66,15 +71,15 @@ test("приёмка проводится, остаток растёт, движ
   await dialog.getByRole("button", { name: "Сохранить" }).click();
   await expect(page.locator("tbody tr").filter({ hasText: supplierName })).toHaveCount(1);
 
-  await page.goto("/goods-receipts");
-  await page.getByRole("button", { name: "Новая приёмка" }).click();
+  await page.goto("/warehouse/documents?kind=receipts");
+  await page.getByRole("button", { name: /Принять товар/ }).click();
   await dialog.getByLabel("Склад *").selectOption({ label: `${storeName} (выключен)` });
   await dialog.getByLabel("Поставщик").selectOption({ label: supplierName });
   await dialog.getByLabel("Номер").fill(`E2E-${stamp}`);
   await dialog.getByRole("button", { name: "Сохранить" }).click();
 
-  await expect(page).toHaveURL(/\/goods-receipts\/\d+$/);
-  drafts.push(`/admin${new URL(page.url()).pathname}`);
+  await expect(page).toHaveURL(/\/warehouse\/receipts\/\d+$/);
+  drafts.push(draftPath(page, "/admin/goods-receipts"));
 
   await addLine(page, productName);
   await dialog.getByLabel("Количество *").fill("3");
@@ -89,32 +94,32 @@ test("приёмка проводится, остаток растёт, движ
   await page.getByRole("button", { name: "Провести" }).click();
   await expect(page.getByText(/^Проведена /)).toBeVisible();
 
-  await page.goto("/stock");
+  await page.goto("/warehouse/stock");
   await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(productName);
   const stockRow = page.locator("tbody tr").filter({ hasText: storeName });
   await expect(stockRow.locator("td").nth(2)).toHaveText("3");
 
   await stockRow.getByRole("link", { name: "Движения" }).click();
-  await expect(page).toHaveURL(/\/stock-movements\?/);
+  await expect(page).toHaveURL(/\/warehouse\/movements\?/);
   const movement = page.locator("tbody tr").filter({ hasText: `Приёмка E2E-${stamp}` });
   await expect(movement).toContainText("Приход");
   await expect(movement).toContainText("+3");
 });
 
 test("списание больше остатка отклоняется, исправленное проводится", async ({ page, request }) => {
-  const stamp = Date.now();
+  const stamp = Date.now() * 100 + test.info().parallelIndex;
   const { productId, storeId, productName, storeName } = await setupProductAndStore(request, stamp);
   await receiveViaApi(request, storeId, productId, 2);
   const dialog = page.getByRole("dialog");
 
-  await page.goto("/write-offs");
-  await page.getByRole("button", { name: "Новое списание" }).click();
+  await page.goto("/warehouse/documents?kind=write_offs");
+  await page.getByRole("button", { name: "Списать", exact: true }).click();
   await dialog.getByLabel("Склад *").selectOption({ label: `${storeName} (выключен)` });
   await dialog.getByLabel("Причина *").selectOption({ label: "Брак / повреждение" });
   await dialog.getByRole("button", { name: "Сохранить" }).click();
 
-  await expect(page).toHaveURL(/\/write-offs\/\d+$/);
-  drafts.push(`/admin${new URL(page.url()).pathname}`);
+  await expect(page).toHaveURL(/\/warehouse\/write-offs\/\d+$/);
+  drafts.push(draftPath(page, "/admin/write-offs"));
 
   await addLine(page, productName);
   await dialog.getByLabel("Количество *").fill("5");
@@ -139,7 +144,7 @@ test("списание больше остатка отклоняется, ис�
 });
 
 test("склад с историей удалить нельзя", async ({ page, request }) => {
-  const stamp = Date.now();
+  const stamp = Date.now() * 100 + test.info().parallelIndex;
   const { productId, storeId, storeName } = await setupProductAndStore(request, stamp);
   await receiveViaApi(request, storeId, productId, 1);
 

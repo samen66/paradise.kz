@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       { source: "/warehouse", destination: "/warehouse/stock", permanent: false },
       { source: "/stock", destination: "/warehouse/stock", permanent: false },
       { source: "/stock-movements", destination: "/warehouse/movements", permanent: false },
+      { source: "/goods-receipts", destination: "/warehouse/documents?kind=receipts", permanent: false },
+      { source: "/goods-receipts/:id", destination: "/warehouse/receipts/:id", permanent: false },
+      { source: "/write-offs", destination: "/warehouse/documents?kind=write_offs", permanent: false },
+      { source: "/write-offs/:id", destination: "/warehouse/write-offs/:id", permanent: false },
     ];
   },
 };
