@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import ProductRelations from '@/components/products/ProductRelations';
+import AttributeValuesTab from '@/components/products/AttributeValuesTab';
+import ClientPricesTab from '@/components/products/ClientPricesTab';
+import PricesTab from '@/components/products/PricesTab';
+import VariantsTab from '@/components/products/VariantsTab';
+import Collapsible from '@/components/ui/Collapsible';
 import type { Locale } from '@/components/ui/LocaleSwitch';
 import PageHeader from '@/components/ui/PageHeader';
 import SaveBar from '@/components/ui/SaveBar';
-import { buttonSecondary, cardClass } from '@/components/ui/styles';
+import { buttonSecondary } from '@/components/ui/styles';
 import api, { STOREFRONT_URL } from '@/lib/api';
 import { applyServerErrors } from '@/lib/errors';
-import { ru } from '@/lib/text';
+import { plural, ru } from '@/lib/text';
 import { toast } from '@/stores/toastStore';
 import AccountingCard from './AccountingCard';
 import BasicSection from './BasicSection';
@@ -34,6 +38,16 @@ import { uploadPhoto, type QueuedPhoto } from './photos';
 
 type Props = { initialProduct: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[] };
 
+type RelationTab = ComponentType<{ productId: number; onCount?: (count: number) => void }>;
+
+/** Блоки со списками: сохраняются сразу, каждый в своём окне. `order` — место в ленте на телефоне. */
+const RELATIONS: { id: string; title: string; forms: [string, string, string]; Tab: RelationTab; order: string }[] = [
+  { id: 'prices', title: 'Цены по типам цен', forms: ['цена', 'цены', 'цен'], Tab: PricesTab, order: 'order-9 lg:order-none' },
+  { id: 'client-prices', title: 'Цены для клиентов B2B', forms: ['цена', 'цены', 'цен'], Tab: ClientPricesTab, order: 'order-10 lg:order-none' },
+  { id: 'attributes', title: 'Характеристики', forms: ['значение', 'значения', 'значений'], Tab: AttributeValuesTab, order: 'order-11 lg:order-none' },
+  { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab, order: 'order-12 lg:order-none' },
+];
+
 /**
  * Карточка товара: создание и правка на одной странице.
  *
@@ -52,6 +66,16 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
   const [basicLocale, setBasicLocale] = useState<Locale>('ru');
   const [seoLocale, setSeoLocale] = useState<Locale>('ru');
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  // Сеттеры стабильны: вкладки держат onCount в зависимостях эффекта, и новый
+  // колбэк на каждом рендере зациклил бы его.
+  const countSetters = useMemo(
+    () =>
+      Object.fromEntries(
+        RELATIONS.map((r) => [r.id, (n: number) => setCounts((c) => (c[r.id] === n ? c : { ...c, [r.id]: n }))]),
+      ) as Record<string, (n: number) => void>,
+    [],
+  );
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const queueRef = useRef(queue);
@@ -176,11 +200,25 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
             onExtrasToggle={toggle('price-extra')}
             className="order-3 lg:order-none"
           />
-          {productId !== null && (
-            <section className={`${cardClass} order-9 p-4 md:p-5 lg:order-none`}>
-              <ProductRelations productId={productId} />
-            </section>
-          )}
+          {RELATIONS.map(({ id, title, forms, Tab, order }) => {
+            const count = counts[id];
+
+            return (
+              <div key={id} className={order}>
+                <Collapsible
+                  id={id}
+                  title={title}
+                  note="Сохраняется сразу"
+                  summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
+                  open={open.has(id)}
+                  onToggle={toggle(id)}
+                  disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
+                >
+                  {productId !== null && <Tab productId={productId} onCount={countSetters[id]} />}
+                </Collapsible>
+              </div>
+            );
+          })}
           <div className="order-13 lg:order-none">
             <SeoSection
               form={form}

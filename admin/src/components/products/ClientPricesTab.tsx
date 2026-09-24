@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useResource } from '@/lib/crud';
 import { formatTenge, TENGE_PATTERN, tiynToTenge } from '@/lib/money';
@@ -20,8 +20,15 @@ const schema = z.object({
   price: z.string().regex(TENGE_PATTERN, 'Сумма в ₸, до двух знаков после точки'),
 });
 
-export default function ClientPricesTab({ productId }: { productId: number }) {
+export default function ClientPricesTab({ productId, onCount }: { productId: number; onCount?: (count: number) => void }) {
   const prices = useResource<ClientPrice>(`/admin/products/${productId}/client-prices`);
+
+  // Счётчик для заголовка блока — только когда список уже загружен.
+  useEffect(() => {
+    if (!prices.loading) {
+      onCount?.(prices.items.length);
+    }
+  }, [prices.loading, prices.items.length, onCount]);
   const [editing, setEditing] = useState<ClientPrice | null | undefined>(undefined);
   const [picked, setPicked] = useState<ClientRef | null>(null);
 

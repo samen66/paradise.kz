@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import type { Attribute } from '@/lib/catalogTypes';
 import { useResource } from '@/lib/crud';
@@ -18,8 +18,15 @@ const schema = z.object({
   value: z.string().min(1, REQUIRED).max(255),
 });
 
-export default function AttributeValuesTab({ productId }: { productId: number }) {
+export default function AttributeValuesTab({ productId, onCount }: { productId: number; onCount?: (count: number) => void }) {
   const values = useResource<AttributeValue>(`/admin/products/${productId}/attribute-values`);
+
+  // Счётчик для заголовка блока — только когда список уже загружен.
+  useEffect(() => {
+    if (!values.loading) {
+      onCount?.(values.items.length);
+    }
+  }, [values.loading, values.items.length, onCount]);
   const attributes = useResource<Attribute>('/admin/attributes');
   const [editing, setEditing] = useState<AttributeValue | null | undefined>(undefined);
 

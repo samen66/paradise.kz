@@ -188,6 +188,9 @@ test("новый товар: одно нажатие — один товар, п
   await expect(page.getByRole("heading", { level: 1, name: "Новый товар" })).toBeVisible();
   await page.getByLabel("Название *").fill(name);
   await page.getByLabel("Розничная", { exact: true }).fill("2500");
+  const attributes = page.getByRole("button", { name: /^Характеристики/ });
+  await expect(attributes).toBeDisabled();
+  await expect(attributes).toContainText("Доступно после сохранения товара");
   await saveButton(page).dblclick();
 
   await expect(page).toHaveURL(/\/products\/\d+$/);
@@ -195,6 +198,8 @@ test("новый товар: одно нажатие — один товар, п
   await expect(page.getByText("Товар создан")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   expect(creates).toHaveLength(1);
+  await expect(attributes).toBeEnabled();
+  await expect(page.getByRole("button", { name: /^Варианты/ })).toContainText("нет");
 });
 
 const PIXEL = path.join(__dirname, "assets/pixel.png");

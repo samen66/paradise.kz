@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useResource } from '@/lib/crud';
 import { formatTenge, TENGE_PATTERN, tiynToTenge } from '@/lib/money';
@@ -68,8 +68,15 @@ const toPayload = (f: VariantForm) => ({
   ),
 });
 
-export default function VariantsTab({ productId }: { productId: number }) {
+export default function VariantsTab({ productId, onCount }: { productId: number; onCount?: (count: number) => void }) {
   const variants = useResource<Variant>(`/admin/products/${productId}/variants`);
+
+  // Счётчик для заголовка блока — только когда список уже загружен.
+  useEffect(() => {
+    if (!variants.loading) {
+      onCount?.(variants.items.length);
+    }
+  }, [variants.loading, variants.items.length, onCount]);
   const [editing, setEditing] = useState<Variant | null | undefined>(undefined);
 
   const columns: Column<Variant>[] = [

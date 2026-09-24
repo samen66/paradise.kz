@@ -102,13 +102,15 @@ test("цена по своему типу добавляется, показыв
   await expect(dialog).toBeHidden();
 
   await page.goto(`/products/${product.id}`);
-  await page.getByRole("tab", { name: "Цены", exact: true }).click();
-  await page.getByRole("button", { name: "Добавить цену" }).click();
+  const block = page.locator("#prices");
+  await page.getByRole("button", { name: /^Цены по типам цен/ }).click();
+  await block.getByRole("button", { name: "Добавить цену" }).click();
   await dialog.getByLabel("Тип цены *").selectOption({ label: typeName });
   await dialog.getByLabel("Цена, ₸ *").fill("1234.5");
   await dialog.getByRole("button", { name: "Сохранить" }).click();
 
-  const row = page.getByRole("tabpanel").locator("tbody tr").filter({ hasText: typeName });
+  const row = block.locator("tbody tr").filter({ hasText: typeName });
+  await expect(page.getByRole("button", { name: /^Цены по типам цен/ })).toContainText(/\d+ цен/);
   // toLocaleString('ru-RU') разделяет тысячи неразрывным пробелом.
   await expect(row).toContainText(/1\s234,5 ₸/);
 

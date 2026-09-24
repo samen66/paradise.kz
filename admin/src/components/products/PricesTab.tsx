@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import type { PriceType } from '@/lib/catalogTypes';
 import { useResource } from '@/lib/crud';
@@ -20,8 +20,15 @@ const schema = z.object({
   price: z.string().regex(TENGE_PATTERN, 'Сумма в ₸, до двух знаков после точки'),
 });
 
-export default function PricesTab({ productId }: { productId: number }) {
+export default function PricesTab({ productId, onCount }: { productId: number; onCount?: (count: number) => void }) {
   const prices = useResource<Price>(`/admin/products/${productId}/prices`);
+
+  // Счётчик для заголовка блока — только когда список уже загружен.
+  useEffect(() => {
+    if (!prices.loading) {
+      onCount?.(prices.items.length);
+    }
+  }, [prices.loading, prices.items.length, onCount]);
   const types = useResource<PriceType>('/admin/price-types');
   const [editing, setEditing] = useState<Price | null | undefined>(undefined);
 
