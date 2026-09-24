@@ -25,16 +25,18 @@ type CardListProps<T> = {
 export function CardList<T>({ columns, rows, loading, empty, rowKey }: CardListProps<T>) {
   if (loading) {
     return (
-      <ul className="space-y-3" aria-busy="true">
+      <div aria-busy="true">
         <span className="sr-only">Загрузка…</span>
-        {[0, 1, 2].map((i) => (
-          <li key={i} className={`${cardClass} space-y-3 p-4`}>
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-3 w-1/3" />
-            <Skeleton className="h-3 w-1/2" />
-          </li>
-        ))}
-      </ul>
+        <ul className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className={`${cardClass} space-y-3 p-4`}>
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+              <Skeleton className="h-3 w-1/2" />
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
 

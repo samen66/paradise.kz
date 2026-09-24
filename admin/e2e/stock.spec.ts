@@ -72,5 +72,5 @@ test("без активного склада страница показывае
 
   const banner = page.getByText("Нет ни одного активного склада.");
   await expect(banner).toBeVisible();
-  await expect(page.getByRole("link", { name: /Настроить склады/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Настроить места хранения/ })).toBeVisible();
 });

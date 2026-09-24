@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { adminApi } from "../adminApi";
 import { ADMIN_SESSION } from "../session";
 
 /**
@@ -8,10 +9,21 @@ import { ADMIN_SESSION } from "../session";
  */
 test.use({ storageState: ADMIN_SESSION });
 
-test("«Склад» в нижней панели активен внутри раздела", async ({ page }) => {
-  await page.goto("/warehouse/documents?kind=write_offs");
-  const nav = page.getByRole("navigation", { name: "Основное меню" });
-  await expect(nav.getByRole("link", { name: "Склад" })).toHaveAttribute("aria-current", "page");
+test("«Склад» в нижней панели активен внутри раздела", async ({ page, request }) => {
+  // Документ — страница без шапки раздела; это худший случай для подсветки
+  // пункта меню (см. warehouse-shell.spec.ts для того же паттерна создания).
+  const api = adminApi(request);
+  const store = await api.create<{ data: { id: number } }>("/admin/stores", { name: `E2E склад ${Date.now()}`, is_active: false });
+  const receipt = await api.create<{ data: { id: number } }>("/admin/goods-receipts", { store_id: store.data.id });
+
+  try {
+    await page.goto(`/warehouse/receipts/${receipt.data.id}`);
+    const nav = page.getByRole("navigation", { name: "Основное меню" });
+    await expect(nav.getByRole("link", { name: "Склад" })).toHaveAttribute("aria-current", "page");
+  } finally {
+    await api.delete(`/admin/goods-receipts/${receipt.data.id}`);
+    await api.delete(`/admin/stores/${store.data.id}`);
+  }
 });
 
 test("вкладки раздела — одна строка", async ({ page }) => {

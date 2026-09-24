@@ -41,6 +41,23 @@ test("старые адреса ведут в новый раздел с пар�
   await expect(page.getByText("Показаны движения одного документа.")).toBeVisible();
 });
 
+test("фокус модалки «Новая приёмка» уходит в диалог и возвращается на кнопку", async ({ page }) => {
+  await page.goto("/warehouse/stock");
+
+  const trigger = page.getByRole("button", { name: /Принять товар/ });
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: "Новая приёмка" });
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press("Tab");
+  await expect(dialog.locator(":focus")).toHaveCount(1);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
 test("«Склад» в меню ведёт в раздел", async ({ page }) => {
   await page.goto("/orders");
   await page.getByRole("link", { name: "Склад", exact: true }).first().click();
@@ -89,6 +106,7 @@ test("старые адреса документов ведут в раздел"
     await expect(page.getByRole("heading", { level: 1, name: `Приёмка №${receipt.data.id}` })).toBeVisible();
   } finally {
     await api.delete(`/admin/goods-receipts/${receipt.data.id}`);
+    await api.delete(`/admin/stores/${store.data.id}`);
   }
 });
 
