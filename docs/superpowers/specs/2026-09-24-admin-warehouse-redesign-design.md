@@ -95,15 +95,18 @@
   «⚙ Справочники» (ссылка на `/warehouse/stores`). На телефоне «Принять» и
   «Списать» — две кнопки на всю ширину под заголовком, «⚙» — иконка в строке
   заголовка.
-- Вкладки «Обзор · Остатки · Движения · Документы» — компонент `Tabs`
-  (ссылки, активная по `pathname`). На ПК — подчёркнутые вкладки, на телефоне —
+- Вкладки «Обзор · Остатки · Движения · Документы» — новый компонент
+  `LinkTabs` (ссылки, активная по `pathname`; существующий `ui/Tabs` держит
+  вкладку в состоянии и сам рисует панель — здесь не подходит). На ПК — подчёркнутые вкладки, на телефоне —
   горизонтальная лента «таблеток» с прокруткой. У «Документов» — счётчик
   черновиков из `stock/summary`.
 
 ### Навигация
 
-- `NAV_GROUPS`: группа «Запасы» (шесть ссылок) заменяется одной ссылкой
-  «Склад» → `/warehouse` без группы (как «Главная»), место — после «Продаж».
+- `NAV_GROUPS`: в группе «Запасы» остаётся одна ссылка «Склад» →
+  `/warehouse`. Группа с заголовком, а не без него: `Sidebar` и `MoreSheet`
+  берут `group.title ?? 'root'` ключом, и вторая группа без заголовка
+  повторила бы ключ «Главной».
 - `PRIMARY_LINKS`: «Склад» → `/warehouse`.
 - `isActive` не меняется: `/warehouse/...` подсвечивает `/warehouse`.
 
@@ -140,7 +143,7 @@
 - **`FilterChips`** — ряд чипов `{ value, label, count? }`, один выбран;
   выбранный — заливка `blue-600`, остальные — `zinc-100`. На телефоне
   прокручивается по горизонтали.
-- **`Tabs`** — см. «Шапка раздела».
+- **`LinkTabs`** — см. «Шапка раздела».
 - **`Skeleton`** — серые прямоугольники с `animate-pulse`; `DataTable` при
   `loading` рисует 5 строк-скелетов (таблица) или 3 карточки-скелета
   (телефон) вместо «Загрузка…».
@@ -351,8 +354,8 @@
 `WriteOffItemController@store` / `WriteOffItemRequest` (POST): то же для
 `quantity` (по умолчанию 1) и повторного товара.
 
-`WriteOffItemController@index` добавляет к строке `available` — остаток товара
-на складе списания (`product_store_stock.stock`, 0 если записи нет).
+`WriteOffItemController@index` уже отдаёт у строки `available` — остаток
+товара на складе списания; экран использует его как есть.
 
 `PUT` позиций не меняется: `quantity` и `unit_cost` обязательны, как сейчас.
 Проведение (`post`) не меняется: `WriteOffService` по-прежнему бросает
@@ -406,7 +409,7 @@
 
 ```
 admin/src/app/warehouse/
-  layout.tsx                 — шапка раздела + Tabs (скрыта на документах и справочниках)
+  layout.tsx                 — шапка раздела + LinkTabs (скрыта на документах и справочниках)
   page.tsx                   — Обзор
   stock/page.tsx             — Остатки
   movements/page.tsx         — Движения
@@ -415,7 +418,7 @@ admin/src/app/warehouse/
   write-offs/[id]/page.tsx   — Списание
   stores/page.tsx, suppliers/page.tsx
 admin/src/components/ui/
-  EmptyState.tsx, StatTile.tsx, FilterChips.tsx, Tabs.tsx, Skeleton.tsx
+  EmptyState.tsx, StatTile.tsx, FilterChips.tsx, LinkTabs.tsx, Skeleton.tsx
 admin/src/components/warehouse/
   WarehouseHeader.tsx        — шапка раздела с действиями
   StockRow*.tsx              — раскрытие и карточка остатка, меню «⋯»
@@ -450,8 +453,7 @@ admin/src/lib/
   последней проведённой приёмки; без истории — `avg_cost` склада; без
   ничего — 0; повторный товар увеличивает количество и отвечает 200; в
   проведённый документ — отказ, как сейчас.
-- Позиции списания: POST без `quantity`; повторный товар; `available` в
-  `index`.
+- Позиции списания: POST без `quantity`; повторный товар.
 - Сортировка документов: черновики первыми.
 
 ### Фронтенд
@@ -486,16 +488,21 @@ admin/src/lib/
 
 Каждый этап — отдельный PR, после каждого админка рабочая.
 
-1. **Оболочка и стиль.** Токены `styles.ts` и `buttonGhost`; `EmptyState`,
-   `StatTile`, `FilterChips`, `Tabs`, `Skeleton`, скелеты в `DataTable`;
+1. **Оболочка и стиль.** Токены `styles.ts` и `buttonGhost`; `Modal`
+   рендерится порталом в `document.body` (кнопки создания в липкой шапке
+   открывают модалки, а `z-30` шапки иначе прятал бы их под нижней
+   панелью); `EmptyState`, `LinkTabs`, `Skeleton`, скелеты в `DataTable`;
+   вкладки пока «Остатки · Движения · Документы» — «Обзор» появляется в
+   этапе 2; кнопки «+ Принять товар» / «Списать» в шапке пока открывают
+   прежние модалки создания;
    `app/warehouse/layout.tsx` с шапкой и вкладками; перенос шести страниц
    под `/warehouse` без переделки содержимого (`/warehouse/documents`
    рендерит прежний список приёмок или списаний по `kind` с переключателем
    «Приёмки / Списания» над ним); `/warehouse`
    временно перенаправляет на `/warehouse/stock`; редиректы старых адресов;
    `navConfig`; обновление путей в e2e.
-2. **Обзор и Остатки.** `min_stock` (миграция, конфиг, API, поле в форме
-   товара); `stock/products`, `stock/summary`; экраны «Обзор» и «Остатки»;
+2. **Обзор и Остатки.** `StatTile`, `FilterChips`; `min_stock` (миграция,
+   конфиг, API, поле в форме товара); `stock/products`, `stock/summary`; экраны «Обзор» и «Остатки»;
    главная на `summary`; удаление `GET /admin/stock`.
 3. **Документы.** Вкладка «Документы»; `createDraft` и создание без модалки;
    «живой документ» для приёмки и списания; `useAutosave`; изменения API
@@ -507,7 +514,7 @@ admin/src/lib/
 ## Затронутые файлы
 
 - `admin/src/components/ui/styles.ts`, `DataTable.tsx`, `DataTableCards.tsx`,
-  новые `EmptyState.tsx`, `StatTile.tsx`, `FilterChips.tsx`, `Tabs.tsx`,
+  новые `EmptyState.tsx`, `StatTile.tsx`, `FilterChips.tsx`, `LinkTabs.tsx`, `Modal.tsx`,
   `Skeleton.tsx`; места с `buttonSecondary` в роли «Отмена».
 - `admin/src/components/shell/navConfig.ts`, `AppShell.tsx`.
 - `admin/src/app/warehouse/**` (новое); удаление `app/stock`,
