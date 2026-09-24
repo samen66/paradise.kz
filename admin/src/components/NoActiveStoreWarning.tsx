@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { warehouseHref } from '@/lib/warehouse';
 
 /**
  * Warns that the database has no active warehouse.
@@ -6,7 +7,7 @@ import Link from 'next/link';
  * Without one StoreResolver returns null and everything downstream fails
  * quietly: the catalog reports zero on hand and checkout 404s. A fresh install
  * gets a warehouse from DefaultStoreSeeder, but nothing stops someone
- * deactivating it — the fix lives on /stores, hence the link.
+ * deactivating it — the fix lives on /warehouse/stores, hence the link.
  *
  * `hasActiveStore` is null while the flag is still unknown (request in flight
  * or failed); the banner stays hidden then, so it never flashes on load.
@@ -24,7 +25,7 @@ export default function NoActiveStoreWarning({ hasActiveStore }: { hasActiveStor
         Создайте склад или включите существующий.
       </div>
       <Link
-        href="/stores"
+        href={warehouseHref.stores}
         className="shrink-0 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
       >
         Настроить склады →

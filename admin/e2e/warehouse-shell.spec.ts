@@ -91,3 +91,26 @@ test("старые адреса документов ведут в раздел"
     await api.delete(`/admin/goods-receipts/${receipt.data.id}`);
   }
 });
+
+test("справочники открываются из шапки и переключаются", async ({ page }) => {
+  await page.goto("/warehouse/stock");
+  await page.getByRole("link", { name: "Справочники" }).click();
+
+  await expect(page).toHaveURL(/\/warehouse\/stores$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
+  const dirs = page.getByRole("navigation", { name: "Справочники склада" });
+  await expect(dirs.getByRole("link", { name: "Места хранения" })).toHaveAttribute("aria-current", "page");
+
+  await dirs.getByRole("link", { name: "Поставщики" }).click();
+  await expect(page).toHaveURL(/\/warehouse\/suppliers$/);
+
+  await page.getByRole("link", { name: "Назад" }).click();
+  await expect(page).toHaveURL(/\/warehouse\/stock$/);
+});
+
+test("старые адреса справочников ведут в раздел", async ({ page }) => {
+  await page.goto("/stores");
+  await expect(page).toHaveURL(/\/warehouse\/stores$/);
+  await page.goto("/suppliers");
+  await expect(page).toHaveURL(/\/warehouse\/suppliers$/);
+});

@@ -65,7 +65,7 @@ test("приёмка проводится, остаток растёт, движ
   const supplierName = `E2E поставщик ${stamp}`;
   const dialog = page.getByRole("dialog");
 
-  await page.goto("/suppliers");
+  await page.goto("/warehouse/suppliers");
   await page.getByRole("button", { name: "Добавить поставщика" }).click();
   await dialog.getByLabel("Название *").fill(supplierName);
   await dialog.getByRole("button", { name: "Сохранить" }).click();
@@ -148,7 +148,7 @@ test("склад с историей удалить нельзя", async ({ page
   const { productId, storeId, storeName } = await setupProductAndStore(request, stamp);
   await receiveViaApi(request, storeId, productId, 1);
 
-  await page.goto("/stores");
+  await page.goto("/warehouse/stores");
   const row = page.locator("tbody tr").filter({ hasText: storeName });
   await row.getByRole("button", { name: "Удалить" }).click();
 

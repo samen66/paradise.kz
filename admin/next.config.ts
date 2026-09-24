@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
       { source: "/goods-receipts/:id", destination: "/warehouse/receipts/:id", permanent: false },
       { source: "/write-offs", destination: "/warehouse/documents?kind=write_offs", permanent: false },
       { source: "/write-offs/:id", destination: "/warehouse/write-offs/:id", permanent: false },
+      { source: "/stores", destination: "/warehouse/stores", permanent: false },
+      { source: "/suppliers", destination: "/warehouse/suppliers", permanent: false },
     ];
   },
 };

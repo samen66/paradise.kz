@@ -9,8 +9,8 @@ import ConfirmButton from '@/components/ui/ConfirmButton';
 import CrudModal from '@/components/ui/CrudModal';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import Field from '@/components/ui/Field';
-import PageHeader from '@/components/ui/PageHeader';
 import { buttonLink, buttonPrimary, inputClass } from '@/components/ui/styles';
+import DirectoryHeader from '@/components/warehouse/DirectoryHeader';
 
 const schema = z.object({
   name: z.string().min(1, REQUIRED).max(255),
@@ -61,7 +61,7 @@ export default function StoresPage() {
         <div className="flex justify-end gap-4">
           <button type="button" className={buttonLink} onClick={() => setEditing(s)}>Изменить</button>
           <ConfirmButton
-            question="Удалить склад? Склад с историей удалить нельзя — его можно только выключить."
+            question="Удалить место хранения? Место с историей удалить нельзя — его можно только выключить."
             onConfirm={() => stores.remove(s.id)}
           >
             Удалить
@@ -73,18 +73,18 @@ export default function StoresPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Склады"
-        actions={<button type="button" className={buttonPrimary} onClick={() => setEditing(null)}>Добавить склад</button>}
+      <DirectoryHeader
+        active="stores"
+        actions={<button type="button" className={buttonPrimary} onClick={() => setEditing(null)}>Добавить место хранения</button>}
       />
       <p className="mb-4 text-sm text-zinc-500">
-        Склад «по умолчанию» витрина выбирает первым. Выключенный склад не виден клиентам, но в нём можно проводить приёмки и списания.
+        Место «по умолчанию» витрина выбирает первым. Выключенное место не видно клиентам, но в нём можно проводить приёмки и списания.
       </p>
-      <DataTable columns={columns} rows={stores.items} loading={stores.loading} emptyText="Складов нет" />
+      <DataTable columns={columns} rows={stores.items} loading={stores.loading} emptyText="Мест хранения нет" />
 
       {editing !== undefined && (
         <CrudModal
-          title={editing ? 'Изменить склад' : 'Новый склад'}
+          title={editing ? 'Изменить место хранения' : 'Новое место хранения'}
           schema={schema}
           defaultValues={toForm(editing)}
           onSubmit={(values) => (editing ? stores.update(editing.id, values) : stores.create(values))}
@@ -118,7 +118,7 @@ export default function StoresPage() {
                 </label>
                 <label className="flex items-center gap-2 text-sm text-zinc-700">
                   <input type="checkbox" {...form.register('is_default')} />
-                  Склад по умолчанию
+                  По умолчанию
                 </label>
               </>
             );

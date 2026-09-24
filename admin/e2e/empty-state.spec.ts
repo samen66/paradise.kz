@@ -8,7 +8,7 @@ import { ADMIN_SESSION } from "./session";
 test.use({ storageState: ADMIN_SESSION });
 
 test("пустой поиск поставщиков показывает пустое состояние", async ({ page }) => {
-  await page.goto("/suppliers");
+  await page.goto("/warehouse/suppliers");
   await page.getByPlaceholder(/Поиск/).fill(`нет-такого-${Date.now()}`);
 
   const empty = page.getByTestId("empty-state");

@@ -9,8 +9,8 @@ import ConfirmButton from '@/components/ui/ConfirmButton';
 import CrudModal from '@/components/ui/CrudModal';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import Field from '@/components/ui/Field';
-import PageHeader from '@/components/ui/PageHeader';
 import { buttonLink, buttonPrimary, inputClass } from '@/components/ui/styles';
+import DirectoryHeader from '@/components/warehouse/DirectoryHeader';
 
 const schema = z.object({
   name: z.string().min(1, REQUIRED).max(255),
@@ -57,8 +57,8 @@ export default function SuppliersPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Поставщики"
+      <DirectoryHeader
+        active="suppliers"
         actions={<button type="button" className={buttonPrimary} onClick={() => setEditing(null)}>Добавить поставщика</button>}
       />
       <input

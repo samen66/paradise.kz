@@ -41,6 +41,8 @@ const WAREHOUSE_ROUTES = [
   "/warehouse/movements",
   "/warehouse/documents?kind=receipts",
   "/warehouse/documents?kind=write_offs",
+  "/warehouse/stores",
+  "/warehouse/suppliers",
 ];
 
 for (const route of [...ROUTES, ...WAREHOUSE_ROUTES]) {
