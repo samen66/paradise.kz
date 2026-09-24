@@ -412,3 +412,70 @@ test("новый товар с одними фото — тоже несохра
   await expect.poll(() => asked).toEqual([QUESTION]);
   await expect(page).toHaveURL("/products/create");
 });
+
+test("второе нажатие «Сохранить» во время загрузки фото не создаёт второй товар", async ({ page }) => {
+  const creates: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && /\/admin\/products$/.test(r.url())) {
+      creates.push(r.url());
+    }
+  });
+  await page.route("**/admin/products/*/media", async (route) => {
+    if (route.request().method() === "POST") {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    await route.continue();
+  });
+
+  await page.goto("/products/create");
+  await page.getByLabel("Название *").fill(`E2E двойное ${Date.now()}`);
+  await page.getByLabel("Загрузить фото").setInputFiles(PIXEL);
+  await saveButton(page).click();
+
+  const bar = page.getByRole("region", { name: "Сохранение" });
+  await expect(bar).toContainText("Загружаем фото 1 из 1");
+  await expect(bar.getByRole("button").last()).toBeDisabled();
+  await expect(page.getByLabel("Загрузить фото")).toBeDisabled();
+
+  await expect(page.getByTestId("product-image")).toHaveCount(1);
+  rememberCreated(page);
+  expect(creates).toHaveLength(1);
+});
+
+test("адрес существующего товара нельзя стереть — товар пропал бы с витрины", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  const posts: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.url().includes(`/admin/products/${product.id}`)) {
+      posts.push(r.url());
+    }
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByRole("button", { name: /^SEO — адрес и поисковики/ }).click();
+  await page.getByLabel("Адрес страницы").fill("");
+  await expect(page.getByText("Пусто — создастся из названия")).toHaveCount(0);
+  await saveButton(page).click();
+
+  await expect(page.getByText("Адрес нельзя оставить пустым — товар пропадёт с витрины")).toBeVisible();
+  await expect(page.getByLabel("Адрес страницы")).toBeFocused();
+  expect(posts).toEqual([]);
+});
+
+test("«Назад» в браузере после создания открывает созданный товар", async ({ page }) => {
+  const name = `E2E назад ${Date.now()}`;
+
+  await page.goto("/products/create");
+  await page.getByLabel("Название *").fill(name);
+  await saveButton(page).click();
+  await expect(page).toHaveURL(/\/products\/\d+$/);
+  rememberCreated(page);
+  await expect(page.getByText("Товар создан")).toBeVisible();
+
+  await page.getByRole("link", { name: "Назад" }).click();
+  await expect(page).toHaveURL("/products");
+  await page.goBack();
+
+  await expect(page).toHaveURL(/\/products\/\d+$/);
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+});

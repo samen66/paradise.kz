@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { isAxiosError } from 'axios';
 import ProductForm from '@/components/products/form/ProductForm';
 import ProductFormSkeleton from '@/components/products/form/ProductFormSkeleton';
@@ -18,11 +18,13 @@ const list = (body: unknown): NamedOption[] =>
   Array.isArray(body) ? body : ((body as { data?: NamedOption[] } | null)?.data ?? []);
 
 export default function ProductPage() {
-  const params = useParams<{ id: string }>();
-  // Читается один раз: после первого сохранения форма сама меняет адрес на
-  // /products/{id} (history.replaceState), и страница не должна под ней
-  // перезагружать товар.
-  const [id] = useState(params.id);
+  const pathname = usePathname();
+  // Читается один раз и из адреса, а не из useParams: после первого
+  // сохранения форма меняет адрес на /products/{id} через
+  // history.replaceState. Next синхронизирует с ним pathname, но не параметры
+  // маршрута — при возврате «Назад» useParams отдал бы 'create', и открылась
+  // бы пустая форма под адресом созданного товара.
+  const [id] = useState(() => pathname.split('/').pop() ?? 'create');
   const [state, setState] = useState<State>({ status: 'loading' });
 
   const load = useCallback(async () => {

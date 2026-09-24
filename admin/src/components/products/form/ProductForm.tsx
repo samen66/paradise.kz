@@ -131,10 +131,16 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormValues>,
     defaultValues: initialProduct ? toFormValues(initialProduct) : emptyProductValues(),
   });
-  const { isDirty, isSubmitting } = form.formState;
+  const { isDirty } = form.formState;
+  // Своё «идёт сохранение», а не isSubmitting: RHF снимает isSubmitting в
+  // reset(), а после создания ещё грузятся фото — кнопка и приём файлов
+  // должны оставаться закрытыми до конца. Ref — от второго нажатия раньше,
+  // чем React перерисует кнопку.
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   // Во время сохранения не спрашиваем: форма сама меняет адрес после создания.
-  useUnsavedGuard((isDirty || queue.length > 0) && !isSubmitting);
+  useUnsavedGuard((isDirty || queue.length > 0) && !saving);
 
   const toggle = (id: string) => (next: boolean) =>
     setOpen((prev) => {
@@ -184,6 +190,15 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
   const onValid = async (values: ProductFormValues) => {
     const isCreate = productId === null;
 
+    // Пустой адрес сервер генерирует только при создании; у существующего
+    // товара он стал бы null, и товар пропал бы с витрины.
+    if (product?.slug && values.slug === '') {
+      form.setError('slug', { type: 'manual', message: 'Адрес нельзя оставить пустым — товар пропадёт с витрины' });
+      reveal(['slug']);
+
+      return;
+    }
+
     try {
       const res = await api.post<{ data: ApiProduct }>(
         isCreate ? '/admin/products' : `/admin/products/${productId}`,
@@ -228,7 +243,21 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
 
   // handleSubmit собирается при нажатии, а не при рендере: иначе React
   // Compiler видит обращение к ref (в reveal) во время рендера.
-  const save = () => form.handleSubmit(onValid, (errors) => reveal(errorPaths(errors)))();
+  const save = async () => {
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSaving(true);
+
+    try {
+      await form.handleSubmit(onValid, (errors) => reveal(errorPaths(errors)))();
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
 
   const title = product ? ru(product.name) || `Товар #${product.id}` : 'Новый товар';
 
@@ -261,7 +290,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-6">
         <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4">
           <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className="order-1 lg:order-none" />
-          <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={isSubmitting} className="order-2 lg:order-none" />
+          <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={saving} className="order-2 lg:order-none" />
           <PriceSection
             form={form}
             extrasOpen={open.has('price-extra')}
@@ -311,7 +340,7 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
       <SaveBar
         dirty={isDirty || (productId === null && queue.length > 0)}
         canSave={productId === null || isDirty}
-        saving={isSubmitting}
+        saving={saving}
         status={status}
         onSave={() => void save()}
         onReset={() => form.reset()}

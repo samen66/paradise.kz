@@ -52,7 +52,7 @@ export default function SeoSection({ form, locale, onLocaleChange, savedSlug, op
         <Field
           label="Адрес страницы"
           htmlFor="slug"
-          hint={slug === '' ? 'Пусто — создастся из названия' : undefined}
+          hint={slug === '' && !savedSlug ? 'Пусто — создастся из названия' : undefined}
           error={errors.slug?.message}
         >
           <input id="slug" className={inputClass} placeholder="divan-atlanta" aria-invalid={errors.slug ? true : undefined} {...register('slug')} />
