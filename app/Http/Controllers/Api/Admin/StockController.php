@@ -7,8 +7,10 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProductStoreStock;
 use App\Models\Store;
+use App\Services\Inventory\StockByProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -26,6 +28,8 @@ use Spatie\QueryBuilder\QueryBuilder;
  * — the catalog reports zeroes and checkout 404s on `Store::findOrFail()` — so
  * the admin panel warns about it. This is the only warehouse endpoint the
  * panel has; a separate route for one boolean would not earn its keep.
+ *
+ * `products` — остатки по товару для вкладки «Остатки», см. StockByProduct.
  */
 class StockController extends Controller
 {
@@ -63,6 +67,43 @@ class StockController extends Controller
         $payload = $rows->toArray();
         $payload['meta'] = [
             'has_active_store' => Store::query()->where('is_active', true)->exists(),
+        ];
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Остатки по товару (вкладка «Остатки»).
+     *
+     * Filters: filter[search], filter[store_id], filter[product_id],
+     *          filter[status]=low|out. Sort: name, stock, stock_value (и `-`);
+     *          неизвестная сортировка — по названию.
+     */
+    public function products(Request $request, StockByProduct $stock): JsonResponse
+    {
+        $validated = $request->validate([
+            'filter.search' => ['nullable', 'string', 'max:255'],
+            'filter.store_id' => ['nullable', 'integer'],
+            'filter.product_id' => ['nullable', 'integer'],
+            'filter.status' => ['nullable', Rule::in(StockByProduct::STATUSES)],
+            'sort' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $filter = $validated['filter'] ?? [];
+
+        $result = $stock->list([
+            'search' => $filter['search'] ?? null,
+            'store_id' => isset($filter['store_id']) ? (int) $filter['store_id'] : null,
+            'product_id' => isset($filter['product_id']) ? (int) $filter['product_id'] : null,
+            'status' => $filter['status'] ?? null,
+            'sort' => $validated['sort'] ?? null,
+        ]);
+
+        $payload = $result['page']->appends($request->query())->toArray();
+        $payload['meta'] = [
+            'counts' => $result['counts'],
+            'total_value' => $result['total_value'],
+            'low_stock_threshold' => $stock->threshold(),
         ];
 
         return response()->json($payload);
