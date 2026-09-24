@@ -1,7 +1,7 @@
 'use client';
 
 import Modal from './Modal';
-import { buttonSecondary } from './styles';
+import { buttonGhost } from './styles';
 
 export type SheetAction = {
   key: string;
@@ -29,7 +29,7 @@ export default function ActionSheet({ title, actions, onClose }: Props) {
       title={title}
       onClose={onClose}
       footer={
-        <button type="button" onClick={onClose} className={`${buttonSecondary} w-full`}>
+        <button type="button" onClick={onClose} className={`${buttonGhost} w-full`}>
           Закрыть
         </button>
       }

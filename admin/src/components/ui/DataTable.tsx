@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { PageMeta } from '@/lib/crud';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { CardList } from './DataTableCards';
-import { buttonSecondary } from './styles';
+import { buttonGhost } from './styles';
 
 /**
  * Роль колонки в карточке на телефоне (раскладка — в DataTableCards).
@@ -112,7 +112,7 @@ function Pagination({ meta, onPageChange, compact }: PaginationProps) {
     <>
       <button
         type="button"
-        className={buttonSecondary}
+        className={buttonGhost}
         disabled={meta.current_page <= 1}
         onClick={() => onPageChange(meta.current_page - 1)}
       >
@@ -120,7 +120,7 @@ function Pagination({ meta, onPageChange, compact }: PaginationProps) {
       </button>
       <button
         type="button"
-        className={buttonSecondary}
+        className={buttonGhost}
         disabled={meta.current_page >= meta.last_page}
         onClick={() => onPageChange(meta.current_page + 1)}
       >

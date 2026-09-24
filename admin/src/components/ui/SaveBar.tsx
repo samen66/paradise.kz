@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { buttonPrimary, buttonSecondary } from './styles';
+import { buttonGhost, buttonPrimary } from './styles';
 
 type Props = {
   dirty: boolean;
@@ -46,7 +46,7 @@ export default function SaveBar({ dirty, canSave, saving, status, onSave, onRese
           ) : null}
         </p>
         <div className="flex shrink-0 gap-2">
-          <button type="button" className={buttonSecondary} disabled={!dirty || saving} onClick={onReset}>
+          <button type="button" className={buttonGhost} disabled={!dirty || saving} onClick={onReset}>
             Отменить
           </button>
           <button type="button" className={buttonPrimary} disabled={!canSave || saving} onClick={onSave}>

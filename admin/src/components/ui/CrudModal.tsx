@@ -7,7 +7,7 @@ import type { ZodType } from 'zod';
 import { applyServerErrors } from '@/lib/errors';
 import { toast } from '@/stores/toastStore';
 import Modal from './Modal';
-import { buttonPrimary, buttonSecondary } from './styles';
+import { buttonGhost, buttonPrimary } from './styles';
 
 type CrudModalProps<T extends FieldValues> = {
   title: string;
@@ -52,7 +52,7 @@ export default function CrudModal<T extends FieldValues>({
       onClose={onClose}
       footer={
         <div className="grid grid-cols-2 gap-2 md:flex md:justify-end">
-          <button type="button" onClick={onClose} className={buttonSecondary}>
+          <button type="button" onClick={onClose} className={buttonGhost}>
             Отмена
           </button>
           {/* Кнопка вне <form> — связь через атрибут form; Enter в поле по-прежнему отправляет форму. */}

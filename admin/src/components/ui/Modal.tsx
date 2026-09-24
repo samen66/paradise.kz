@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useOverlay } from './useOverlay';
 
 type ModalProps = { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode };
@@ -11,12 +12,16 @@ type ModalProps = { title: string; onClose: () => void; children: ReactNode; foo
  * `footer` рисуется вне прокручиваемой области: кнопки остаются на виду,
  * сколько бы полей ни было в форме. Кнопка отправки в футере связывается с
  * формой атрибутом `form`, а не вложенностью (см. CrudModal).
+ *
+ * Рисуется порталом в `document.body`: липкая шапка экрана (`PageHeader`,
+ * `sticky z-30`) — свой контекст наложения, и модалка, открытая кнопкой из
+ * шапки, иначе оказалась бы под нижней панелью (`z-40`).
  */
 export default function Modal({ title, onClose, children, footer }: ModalProps) {
   const titleId = useId();
   useOverlay(onClose);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center md:p-4" onMouseDown={onClose}>
       <div
         role="dialog"
@@ -41,6 +46,7 @@ export default function Modal({ title, onClose, children, footer }: ModalProps) 
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
