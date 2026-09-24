@@ -9,10 +9,10 @@ import { ADMIN_SESSION } from "../session";
 test.use({ storageState: ADMIN_SESSION });
 
 test("шапка экрана прилипает к верху при прокрутке", async ({ page }) => {
-  await page.goto("/stock-movements");
+  await page.goto("/warehouse/movements");
   await page.waitForLoadState("networkidle");
 
-  const heading = page.getByRole("heading", { level: 1, name: "Движения" });
+  const heading = page.getByRole("heading", { level: 1, name: "Склад" });
   const header = heading.locator("xpath=../..");
   expect(await header.evaluate((el) => getComputedStyle(el).position)).toBe("sticky");
 

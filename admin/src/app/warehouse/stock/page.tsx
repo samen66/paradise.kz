@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { warehouseHref } from '@/lib/warehouse';
 import NoActiveStoreWarning from '@/components/NoActiveStoreWarning';
 
 /**
@@ -64,21 +65,7 @@ export default function StockPage() {
   return (
     <div>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Склад</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Остатки по складам.
-              {total > 0 && <span className="ml-2 font-medium text-gray-700">{total} позиций</span>}
-            </p>
-          </div>
-          <Link
-            href="/goods-receipts"
-            className="shrink-0 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Приёмки и списания →
-          </Link>
-        </div>
+        {total > 0 && <p className="text-sm text-zinc-500">{total} позиций</p>}
 
         <NoActiveStoreWarning hasActiveStore={hasActiveStore} />
 
@@ -157,7 +144,7 @@ export default function StockPage() {
                         <td className="px-6 py-4 text-right text-gray-700">{money(row.avg_cost)}</td>
                         <td className="px-6 py-4 text-right">
                           <Link
-                            href={`/stock-movements?product_id=${row.product_id}${row.store ? `&store_id=${row.store.id}` : ''}`}
+                            href={`${warehouseHref.movements}?product_id=${row.product_id}${row.store ? `&store_id=${row.store.id}` : ''}`}
                             className="text-sm font-medium text-blue-600 hover:text-blue-800"
                           >
                             Движения

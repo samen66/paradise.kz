@@ -177,9 +177,27 @@ export const formatDateTime = (value: string | null | undefined): string =>
 export const dayBoundary = (date: string, end: boolean): string =>
   new Date(`${date}T${end ? '23:59:59.999' : '00:00:00'}`).toISOString();
 
+export type DocumentKind = 'receipts' | 'write_offs';
+
+/** Неизвестное значение (ручной ввод, старая ссылка) — приёмки, а не пустой экран. */
+export const parseDocumentKind = (value: string | null): DocumentKind =>
+  value === 'write_offs' ? 'write_offs' : 'receipts';
+
+/** Адреса раздела «Склад». Все ссылки на склад в админке строятся отсюда. */
+export const warehouseHref = {
+  overview: '/warehouse',
+  stock: '/warehouse/stock',
+  movements: '/warehouse/movements',
+  documents: (kind: DocumentKind = 'receipts') => `/warehouse/documents?kind=${kind}`,
+  receipt: (id: number) => `/warehouse/receipts/${id}`,
+  writeOff: (id: number) => `/warehouse/write-offs/${id}`,
+  stores: '/warehouse/stores',
+  suppliers: '/warehouse/suppliers',
+} as const;
+
 export const documentHref = (document: NonNullable<StockMovement['document']>): string =>
   document.type === 'receipt'
-    ? `/goods-receipts/${document.id}`
+    ? warehouseHref.receipt(document.id)
     : document.type === 'write_off'
-      ? `/write-offs/${document.id}`
+      ? warehouseHref.writeOff(document.id)
       : `/orders/${document.id}`;

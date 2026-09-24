@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { buttonLink } from '@/components/ui/styles';
 import { formatQuantity } from '@/lib/text';
+import { warehouseHref } from '@/lib/warehouse';
 import FormCard from './FormCard';
 import type { ApiProduct } from './formModel';
 
@@ -13,8 +14,8 @@ export default function StockCard({ product, className }: { product: ApiProduct;
       </p>
       <p className="text-xs text-zinc-500">Меняется приёмками, заказами и списаниями</p>
       <div className="flex flex-wrap gap-x-4">
-        <Link href="/stock" className={buttonLink}>По складам →</Link>
-        <Link href="/stock-movements" className={buttonLink}>Движения →</Link>
+        <Link href={warehouseHref.stock} className={buttonLink}>По складам →</Link>
+        <Link href={`${warehouseHref.movements}?product_id=${product.id}`} className={buttonLink}>Движения →</Link>
       </div>
     </FormCard>
   );

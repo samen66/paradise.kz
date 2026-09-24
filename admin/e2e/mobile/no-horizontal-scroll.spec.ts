@@ -36,8 +36,9 @@ async function horizontalOverflow(page: Page): Promise<string[]> {
 }
 
 const ROUTES = [...new Set(NAV_GROUPS.flatMap((group) => group.links.map((link) => link.href)))];
+const WAREHOUSE_ROUTES = ["/warehouse/stock", "/warehouse/movements"];
 
-for (const route of ROUTES) {
+for (const route of [...ROUTES, ...WAREHOUSE_ROUTES]) {
   test(`${route} не прокручивается вбок`, async ({ page }) => {
     await page.goto(route);
     expect(await horizontalOverflow(page)).toEqual([]);

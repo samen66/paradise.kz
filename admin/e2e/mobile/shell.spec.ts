@@ -34,8 +34,8 @@ test("«Ещё» показывает все разделы и ведёт в н�
   }
   await expect(sheet.getByRole("button", { name: "Выйти" })).toBeVisible();
 
-  await sheet.getByRole("link", { name: "Поставщики", exact: true }).click();
-  await expect(page).toHaveURL(/\/suppliers$/);
+  await sheet.getByRole("link", { name: "Категории", exact: true }).click();
+  await expect(page).toHaveURL(/\/categories$/);
   await expect(sheet).toBeHidden();
 
   // Раздел не из четырёх главных — подсвечено «Ещё».

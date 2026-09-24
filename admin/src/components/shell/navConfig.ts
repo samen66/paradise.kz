@@ -40,15 +40,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // Одна ссылка, но с заголовком группы: Sidebar и MoreSheet берут
+    // `group.title ?? 'root'` ключом, вторая группа без заголовка повторила бы ключ.
     title: 'Запасы',
-    links: [
-      { href: '/stock', label: 'Склад' },
-      { href: '/stock-movements', label: 'Движения' },
-      { href: '/goods-receipts', label: 'Приёмки' },
-      { href: '/write-offs', label: 'Списания' },
-      { href: '/stores', label: 'Склады' },
-      { href: '/suppliers', label: 'Поставщики' },
-    ],
+    links: [{ href: '/warehouse', label: 'Склад' }],
   },
 ];
 
@@ -61,7 +56,7 @@ export type PrimaryIcon = 'orders' | 'products' | 'stock' | 'clients';
 export const PRIMARY_LINKS: (NavLink & { icon: PrimaryIcon })[] = [
   { href: '/orders', label: 'Заказы', icon: 'orders' },
   { href: '/products', label: 'Товары', icon: 'products' },
-  { href: '/stock', label: 'Склад', icon: 'stock' },
+  { href: '/warehouse', label: 'Склад', icon: 'stock' },
   { href: '/users', label: 'Клиенты', icon: 'clients' },
 ];
 

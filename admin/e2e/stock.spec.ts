@@ -3,7 +3,7 @@ import { requireInStockProduct, requireProduct, requireStore } from "./fixtures"
 import { ADMIN_SESSION } from "./session";
 
 /**
- * Страница «Склад».
+ * Вкладка «Остатки» раздела «Склад».
  *
  * Остаток здесь только показывают — меняется он приёмками и заказами, через
  * FIFO-журнал. Прогон приёмки уже доказал, что журнал и проекция сходятся;
@@ -21,7 +21,7 @@ test("остаток товара виден в таблице вместе со
   const product = requireProduct();
   const store = requireStore();
 
-  await page.goto("/stock");
+  await page.goto("/warehouse/stock");
   await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(product.article);
 
   const row = page.locator("tbody tr").filter({ hasText: product.article });
@@ -42,7 +42,7 @@ test("товар в наличии виден с тем же остатком, �
   // Этот товар браузерные тесты не покупают — остаток ровно тот, что принял прогон.
   expect(product.stock, "прогон должен принять товар «в наличии» ровно на 7 шт").toBe(7);
 
-  await page.goto("/stock");
+  await page.goto("/warehouse/stock");
   await page.getByPlaceholder("Поиск по названию, коду или артикулу...").fill(product.article);
 
   const row = page.locator("tbody tr").filter({ hasText: product.article });
@@ -68,7 +68,7 @@ test("без активного склада страница показывае
     });
   });
 
-  await page.goto("/stock");
+  await page.goto("/warehouse/stock");
 
   const banner = page.getByText("Нет ни одного активного склада.");
   await expect(banner).toBeVisible();

@@ -10,7 +10,6 @@ import { productLabel, ru, type ProductRef } from '@/lib/text';
 import { dayBoundary, documentHref, formatDateTime, formatQty, MOVEMENT_TYPES, type StockMovement } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EntityPicker from '@/components/ui/EntityPicker';
-import PageHeader from '@/components/ui/PageHeader';
 import { buttonLink, buttonSecondary, inputClass } from '@/components/ui/styles';
 import StoreSelect from '@/components/warehouse/StoreSelect';
 
@@ -115,16 +114,21 @@ function MovementsView() {
 
   return (
     <div>
-      <PageHeader
-        title="Движения"
-        actions={
-          hasFilters ? (
-            <button type="button" className={buttonSecondary} onClick={() => { movements.setPage(1); router.replace(pathname); setProductName(''); }}>
-              Сбросить фильтры
-            </button>
-          ) : null
-        }
-      />
+      {hasFilters && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            className={buttonSecondary}
+            onClick={() => {
+              movements.setPage(1);
+              router.replace(pathname);
+              setProductName('');
+            }}
+          >
+            Сбросить фильтры
+          </button>
+        </div>
+      )}
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <div className="md:col-span-2">
           {productId ? (
