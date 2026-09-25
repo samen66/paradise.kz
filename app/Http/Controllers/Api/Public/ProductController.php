@@ -111,7 +111,7 @@ class ProductController extends Controller
 
         $store = $this->stores->resolve(null, $this->requestedStoreId($request));
 
-        $product->loadMissing('media', 'variants', 'category', 'brand', 'attributeValues.attribute', 'reviews', 'shorts', 'storeStocks.store');
+        $product->loadMissing('media', 'variants.attributeValues.attribute', 'variants.images', 'category', 'brand', 'attributeValues.attribute', 'reviews', 'shorts', 'storeStocks.store');
         $this->presenter->enrich($product->newCollection([$product]), $store);
         $product->with_description = true;
 

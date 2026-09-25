@@ -113,7 +113,7 @@ class ProductController extends Controller
 
         $store = $this->stores->resolve($user, $this->requestedStoreId($request));
 
-        $product->loadMissing('media', 'variants');
+        $product->loadMissing('media', 'variants.attributeValues.attribute', 'variants.images');
         $product->with_description = true;
 
         if (! $user->is_approved) {

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * Product payload for the B2B catalog. The per-client price is resolved by the
@@ -135,8 +137,9 @@ class ProductResource extends JsonResource
     }
 
     /**
-     * Mirrored product variants (modifications). Relies on the `variants`
-     * relation being eager-loaded by the controller to avoid N+1.
+     * Mirrored product variants (modifications). Relies on
+     * `variants.attributeValues.attribute` and `variants.images` being
+     * eager-loaded by the controller to avoid N+1.
      *
      * @return list<array<string, mixed>>
      */
@@ -151,7 +154,8 @@ class ProductResource extends JsonResource
                     'id' => $variant->id,
                     'external_id' => $variant->external_id,
                     'name' => $variant->name,
-                    'characteristics' => $variant->characteristics ?? [],
+                    'characteristics' => $this->variantCharacteristics($variant),
+                    'images' => $variant->images->map(fn (Media $media): array => self::imageUrls($media))->values()->all(),
                     'barcodes' => $variant->barcodes ?? [],
                 ];
 
@@ -169,6 +173,30 @@ class ProductResource extends JsonResource
     }
 
     /**
+     * Structured characteristics in the request locale; a variant mirrored
+     * from the ERP that has none keeps its legacy {"Цвет": "красный"} object.
+     *
+     * @return list<array{name: string, slug: string, value: string}>|array<string, mixed>
+     */
+    private function variantCharacteristics(ProductVariant $variant): array
+    {
+        $values = $variant->attributeValues->filter(fn ($value): bool => $value->attribute !== null);
+
+        if ($values->isEmpty()) {
+            return $variant->characteristics ?? [];
+        }
+
+        return $values
+            ->map(fn ($value): array => [
+                'name' => $value->attribute->name,
+                'slug' => $value->attribute->slug,
+                'value' => $value->value,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Mirrored product images as on-disk URLs in three sizes. Relies on the
      * `media` relation being eager-loaded by the controller to avoid N+1.
      *
@@ -177,13 +205,21 @@ class ProductResource extends JsonResource
     private function imagePayload(): array
     {
         return $this->getMedia(Product::IMAGE_COLLECTION)
-            ->map(fn ($media): array => [
-                'thumb' => $media->getUrl('thumb'),
-                'medium' => $media->getUrl('card'),
-                'full' => $media->getUrl('full'),
-            ])
+            ->map(fn (Media $media): array => self::imageUrls($media))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{thumb: string, medium: string, full: string}
+     */
+    private static function imageUrls(Media $media): array
+    {
+        return [
+            'thumb' => $media->getUrl('thumb'),
+            'medium' => $media->getUrl('card'),
+            'full' => $media->getUrl('full'),
+        ];
     }
 
     /**
