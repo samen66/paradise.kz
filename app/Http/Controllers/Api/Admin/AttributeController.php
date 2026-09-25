@@ -7,13 +7,22 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AttributeRequest;
 use App\Models\Attribute;
+use App\Support\Translations;
+use App\Support\UniqueSlug;
 use Illuminate\Http\JsonResponse;
 
 class AttributeController extends Controller
 {
+    /**
+     * Usage counters every response carries, for the attributes screen.
+     *
+     * @var list<string>
+     */
+    private const COUNTS = ['values'];
+
     public function index(): JsonResponse
     {
-        $attributes = Attribute::query()->get()
+        $attributes = Attribute::query()->withCount(self::COUNTS)->get()
             ->sortBy(fn (Attribute $attribute): string => mb_strtolower($attribute->getTranslation('name', 'ru')))
             ->values();
 
@@ -22,19 +31,40 @@ class AttributeController extends Controller
 
     public function store(AttributeRequest $request): JsonResponse
     {
-        return response()->json(['data' => Attribute::create($request->validated())], 201);
+        $data = $request->validated();
+
+        $attribute = new Attribute([
+            'slug' => $data['slug'] ?? UniqueSlug::make('attributes', $data['name']['ru'], 'attribute'),
+            'is_filterable' => $data['is_filterable'] ?? false,
+        ]);
+        $attribute->replaceTranslations('name', Translations::filled($data['name']));
+        $attribute->save();
+
+        return response()->json(['data' => $attribute->loadCount(self::COUNTS)], 201);
     }
 
     public function show(Attribute $attribute): JsonResponse
     {
-        return response()->json(['data' => $attribute]);
+        return response()->json(['data' => $attribute->loadCount(self::COUNTS)]);
     }
 
     public function update(AttributeRequest $request, Attribute $attribute): JsonResponse
     {
-        $attribute->update($request->validated());
+        $data = $request->validated();
 
-        return response()->json(['data' => $attribute]);
+        $attribute->replaceTranslations('name', Translations::filled($data['name']));
+
+        if (($data['slug'] ?? null) !== null) {
+            $attribute->slug = $data['slug'];
+        }
+
+        if (array_key_exists('is_filterable', $data)) {
+            $attribute->is_filterable = $data['is_filterable'];
+        }
+
+        $attribute->save();
+
+        return response()->json(['data' => $attribute->loadCount(self::COUNTS)]);
     }
 
     /**

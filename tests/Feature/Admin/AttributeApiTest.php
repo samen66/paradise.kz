@@ -32,8 +32,8 @@ class AttributeApiTest extends TestCase
     public function it_lists_attributes_by_name(): void
     {
         $this->actingAsManager();
-        Attribute::factory()->create(['name' => 'Цвет']);
-        Attribute::factory()->create(['name' => 'Материал']);
+        Attribute::factory()->create(['name' => ['ru' => 'Цвет']]);
+        Attribute::factory()->create(['name' => ['ru' => 'Материал']]);
 
         $this->getJson('/api/admin/attributes')
             ->assertOk()
@@ -47,13 +47,13 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
 
         $id = $this->postJson('/api/admin/attributes', [
-            'name' => 'Цвет',
+            'name' => ['ru' => 'Цвет'],
             'slug' => 'color',
             'is_filterable' => true,
         ])->assertCreated()->json('data.id');
 
         $this->putJson("/api/admin/attributes/{$id}", [
-            'name' => 'Цвет обивки',
+            'name' => ['ru' => 'Цвет обивки'],
             'slug' => 'color',
             'is_filterable' => false,
         ])->assertOk()->assertJsonPath('data.name.ru', 'Цвет обивки');
@@ -70,10 +70,10 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
         Attribute::factory()->create(['slug' => 'color']);
 
-        $this->postJson('/api/admin/attributes', ['name' => 'Цвет', 'slug' => 'color'])
+        $this->postJson('/api/admin/attributes', ['name' => ['ru' => 'Цвет'], 'slug' => 'color'])
             ->assertUnprocessable()->assertJsonValidationErrors('slug');
 
-        $this->postJson('/api/admin/attributes', ['name' => 'Цвет', 'slug' => 'Цвет!'])
+        $this->postJson('/api/admin/attributes', ['name' => ['ru' => 'Цвет'], 'slug' => 'Цвет!'])
             ->assertUnprocessable()->assertJsonValidationErrors('slug');
     }
 
@@ -83,7 +83,7 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
         $attribute = Attribute::factory()->create(['slug' => 'color']);
 
-        $this->putJson("/api/admin/attributes/{$attribute->id}", ['name' => 'Цвет', 'slug' => 'color'])
+        $this->putJson("/api/admin/attributes/{$attribute->id}", ['name' => ['ru' => 'Цвет'], 'slug' => 'color'])
             ->assertOk();
     }
 

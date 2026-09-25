@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Support\UniqueSlug;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,6 +15,7 @@ class BrandController extends Controller
     public function index(): JsonResponse
     {
         $brands = Brand::orderBy('id', 'desc')->get();
+
         return response()->json($brands);
     }
 
@@ -23,9 +25,11 @@ class BrandController extends Controller
             'name' => 'required|array',
             'name.ru' => 'required|string|max:255',
             'name.kk' => 'nullable|string|max:255',
-            'slug' => 'required|string|max:255|unique:brands,slug',
+            'slug' => 'nullable|string|max:255|unique:brands,slug',
             'is_active' => 'boolean',
         ]);
+
+        $validated['slug'] ??= UniqueSlug::make('brands', $validated['name']['ru'], 'brand');
 
         $brand = Brand::create($validated);
 
@@ -38,7 +42,7 @@ class BrandController extends Controller
             'name' => 'required|array',
             'name.ru' => 'required|string|max:255',
             'name.kk' => 'nullable|string|max:255',
-            'slug' => 'required|string|max:255|unique:brands,slug,' . $brand->id,
+            'slug' => 'required|string|max:255|unique:brands,slug,'.$brand->id,
             'is_active' => 'boolean',
         ]);
 
@@ -50,6 +54,7 @@ class BrandController extends Controller
     public function destroy(Brand $brand): JsonResponse
     {
         $brand->delete();
+
         return response()->json(null, 204);
     }
 }
