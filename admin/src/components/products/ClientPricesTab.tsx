@@ -88,8 +88,16 @@ export default function ClientPricesTab({ productId, onCount }: { productId: num
                 ) : (
                   <EntityPicker<ClientRef>
                     searchPath="/admin/users"
+                    sort="company_name"
                     placeholder="Найти B2B-клиента"
-                    label={clientLabel}
+                    label={(c) => c.company_name || c.name || `Клиент #${c.id}`}
+                    description={(c) => (
+                      <>
+                        {[c.company_name ? c.name : null, c.phone || c.email].filter(Boolean).join(' · ')}
+                        {c.is_approved === false && <span className="ml-2 rounded bg-amber-100 px-1.5 text-amber-800">не одобрен</span>}
+                      </>
+                    )}
+                    allExcludedText="Все клиенты уже с ценой"
                     excludeIds={prices.items.map((p) => p.user_id)}
                     onPick={(c) => {
                       setPicked(c);
