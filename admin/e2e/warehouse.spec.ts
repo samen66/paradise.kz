@@ -169,6 +169,64 @@ test("неверное количество блокирует проведен�
   await expect(page.getByRole("button", { name: "Провести" })).toBeEnabled();
 });
 
+test("Подбор: три товара одним нажатием", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const store = await createStore(request, stamp);
+  const a = await createProduct(request, stamp, {}, " А");
+  const b = await createProduct(request, stamp, {}, " Б");
+  const c = await createProduct(request, stamp, {}, " В");
+  const receiptId = await createReceiptDraft(request, store.id);
+  drafts.push(`/admin/goods-receipts/${receiptId}`);
+
+  await page.goto(`/warehouse/receipts/${receiptId}`);
+  await page.getByRole("button", { name: "☰ Подбор" }).click();
+  const picker = page.getByRole("dialog", { name: "Подбор" });
+  await picker.getByLabel("Поиск в подборе").fill(`E2E товар ${stamp}`);
+  const row = (name: string) => picker.getByTestId("picker-row").filter({ hasText: name });
+  await expect(row(a.name)).toBeVisible();
+
+  await row(a.name).getByTestId("picker-pick").click();
+  await row(b.name).getByTestId("picker-pick").click();
+  await row(b.name).getByTestId("picker-pick").click();
+  await row(c.name).getByRole("button", { name: `Больше: ${c.name}` }).click();
+  await expect(picker).toContainText("Выбрано: 3");
+
+  await picker.getByRole("button", { name: "Добавить 3 позиции · 4 шт" }).click();
+  await expect(picker).toBeHidden();
+  await expect(page.getByText("Добавлено 3 позиции")).toBeVisible();
+  await expect(documentLine(page, a.name).getByLabel(`Количество: ${a.name}`)).toHaveValue("1");
+  await expect(documentLine(page, b.name).getByLabel(`Количество: ${b.name}`)).toHaveValue("2");
+  await expect(documentLine(page, c.name).getByLabel(`Количество: ${c.name}`)).toHaveValue("1");
+});
+
+test("Подбор: закрытие с выбором спрашивает", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const { productName, storeId } = await setupProductAndStore(request, stamp);
+  const receiptId = await createReceiptDraft(request, storeId);
+  drafts.push(`/admin/goods-receipts/${receiptId}`);
+
+  await page.goto(`/warehouse/receipts/${receiptId}`);
+  await page.getByRole("button", { name: "☰ Подбор" }).click();
+  const picker = page.getByRole("dialog", { name: "Подбор" });
+  await picker.getByLabel("Поиск в подборе").fill(productName);
+  await picker.getByTestId("picker-row").filter({ hasText: productName }).getByTestId("picker-pick").click();
+
+  page.removeAllListeners("dialog");
+  const questions: string[] = [];
+  page.once("dialog", (dialog) => {
+    questions.push(dialog.message());
+    void dialog.dismiss();
+  });
+  await picker.getByRole("button", { name: "Закрыть" }).click();
+  expect(questions).toEqual(["Отменить подбор? Выбрано 1 товар."]);
+  await expect(picker).toContainText("Выбрано: 1");
+
+  page.once("dialog", (dialog) => void dialog.accept());
+  await picker.getByRole("button", { name: "Закрыть" }).click();
+  await expect(picker).toBeHidden();
+  await expect(documentLine(page, productName)).toHaveCount(0);
+});
+
 test("списание больше остатка отклоняется, исправленное проводится", async ({ page, request }) => {
   const stamp = uniqueStamp();
   const { productId, storeId, productName, storeName } = await setupProductAndStore(request, stamp);

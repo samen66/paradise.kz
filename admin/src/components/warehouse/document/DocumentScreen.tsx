@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 import { formatTenge } from '@/lib/money';
 import { productLabel } from '@/lib/text';
 import {
@@ -16,18 +17,20 @@ import {
 } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import Skeleton from '@/components/ui/Skeleton';
-import { buttonGhost, buttonLink } from '@/components/ui/styles';
+import { buttonGhost, buttonLink, buttonSecondary } from '@/components/ui/styles';
 import AddProductField from './AddProductField';
 import DocumentFields from './DocumentFields';
 import DocumentFooter from './DocumentFooter';
 import DocumentHeader from './DocumentHeader';
 import DocumentLines from './DocumentLines';
+import ProductPicker from './ProductPicker';
 import { useDocument, type LineRow } from './useDocument';
 
 /** Карточка приёмки или списания: черновик правится на месте, проведённый — только читается. */
 export default function DocumentScreen({ kind }: { kind: DraftKind }) {
   const { id } = useParams<{ id: string }>();
   const doc = useDocument(kind, id);
+  const [picking, setPicking] = useState(false);
 
   if (doc.loadError === 'not_found') {
     return (
@@ -85,7 +88,13 @@ export default function DocumentScreen({ kind }: { kind: DraftKind }) {
           />
           <div className="flex flex-col gap-2 md:flex-row">
             <AddProductField kind={kind} storeId={header.store_id} onPick={(product) => doc.addProduct(product.id)} />
+            <button type="button" className={buttonSecondary} onClick={() => setPicking(true)}>
+              ☰ Подбор
+            </button>
           </div>
+          {picking && (
+            <ProductPicker kind={kind} storeId={header.store_id} rows={doc.rows} onAdd={doc.addMany} onClose={() => setPicking(false)} />
+          )}
           <DocumentFooter kind={kind} totals={doc.totals} blocker={doc.blocker} onPost={doc.post} onDelete={doc.removeDraft} />
         </>
       ) : (

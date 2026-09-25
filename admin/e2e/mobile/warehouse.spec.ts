@@ -106,3 +106,33 @@ test("на телефоне товар добавляется из поиска 
     await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
   }
 });
+
+test("Подбор на телефоне — на весь экран, «Добавить» над нижней панелью", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const store = await createStore(request, stamp);
+  const receiptId = await createReceiptDraft(request, store.id);
+
+  try {
+    await page.goto(`/warehouse/receipts/${receiptId}`);
+    await page.getByRole("button", { name: "☰ Подбор" }).click();
+    const picker = page.getByRole("dialog", { name: "Подбор" });
+    const box = (await picker.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(Math.round(box.height)).toBe(viewport.height);
+
+    await picker.getByLabel("Поиск в подборе").fill(product.name);
+    await picker.getByTestId("picker-row").filter({ hasText: product.name }).getByTestId("picker-pick").click();
+    const add = picker.getByRole("button", { name: "Добавить 1 позицию · 1 шт" });
+    const addBox = (await add.boundingBox())!;
+    const hit = await page.evaluate(
+      ([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.textContent?.trim() ?? null,
+      [addBox.x + addBox.width / 2, addBox.y + addBox.height / 2],
+    );
+    expect(hit).toBe("Добавить 1 позицию · 1 шт");
+    await add.click();
+    await expect(page.getByTestId("document-line").filter({ hasText: product.name })).toHaveCount(1);
+  } finally {
+    await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
+  }
+});
