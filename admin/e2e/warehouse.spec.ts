@@ -261,6 +261,18 @@ test("списание: подбор ограничен остатком, стр
   await expect(page.getByText(/Себестоимость: 1\s000 ₸/)).toBeVisible();
 });
 
+test("«+ Принять товар» сразу открывает черновик на складе из фильтра", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const store = await createStore(request, stamp);
+
+  await page.goto(`/warehouse/documents?kind=receipts&store_id=${store.id}`);
+  await page.getByRole("button", { name: /Принять товар/ }).click();
+  await expect(page).toHaveURL(/\/warehouse\/receipts\/\d+$/);
+  drafts.push(draftPath(page, "/admin/goods-receipts"));
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("document-fields")).toContainText(store.name);
+});
+
 test("склад с историей удалить нельзя", async ({ page, request }) => {
   const stamp = uniqueStamp();
   const { productId, storeId, storeName } = await setupProductAndStore(request, stamp);

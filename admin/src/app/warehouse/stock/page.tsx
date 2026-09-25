@@ -22,6 +22,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import FilterChips from '@/components/ui/FilterChips';
 import { buttonLink, buttonSecondary, inputClass } from '@/components/ui/styles';
 import StoreSelect from '@/components/warehouse/StoreSelect';
+import StockRowActions from '@/components/warehouse/StockRowActions';
 import { StockStoresLine, StockStoresTable } from '@/components/warehouse/StockStores';
 import { useWarehouseSummary } from '@/components/warehouse/WarehouseSummary';
 
@@ -202,7 +203,13 @@ function StockView() {
       className: 'text-right',
       mobile: 'actions',
       render: (row) => (
-        <div className="flex justify-end gap-4">
+        <div className="flex items-center justify-end gap-4">
+          <StockRowActions
+            productId={row.product.id}
+            productName={ru(row.product.name) || `#${row.product.id}`}
+            stock={row.stock}
+            storeId={storeId ? Number(storeId) : null}
+          />
           <Link href={`${warehouseHref.movements}?product_id=${row.product.id}${storeId ? `&store_id=${storeId}` : ''}`} className={buttonLink}>
             Движения
           </Link>

@@ -1,3 +1,4 @@
+import api from '@/lib/api';
 import type { ProductRef, Translatable } from '@/lib/text';
 
 export type Ref = { id: number; name: string };
@@ -291,7 +292,23 @@ export const toLocalInput = (value: string | null): string => {
 
 /**
  * Значение `datetime-local` («2026-09-17T14:30», без пояса) → ISO. Как
- * прежний `toReceiptPayload`: `new Date(...)` читает его в поясе браузера,
+ * прежняя форма приёмки: `new Date(...)` читает его в поясе браузера,
  * сервер хранит UTC — иначе алматинские 14:30 после перезагрузки стали бы 19:30.
  */
 export const localInputToIso = (value: string): string | null => (value ? new Date(value).toISOString() : null);
+
+/**
+ * Черновик приёмки или списания одним запросом: склад — переданный (фильтр
+ * страницы) или по умолчанию на сервере; дата, поставщик, причина и автор —
+ * тоже сервер. С `productId` товар сразу становится первой строкой.
+ */
+export async function createDraft(kind: DraftKind, { storeId = null, productId }: { storeId?: number | null; productId?: number } = {}): Promise<number> {
+  const res = await api.post<{ data: { id: number } }>(documentApiPath(kind), storeId ? { store_id: storeId } : {});
+  const id = res.data.data.id;
+
+  if (productId) {
+    await api.post(`${documentApiPath(kind)}/${id}/items`, { product_id: productId });
+  }
+
+  return id;
+}

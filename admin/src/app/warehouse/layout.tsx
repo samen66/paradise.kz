@@ -1,9 +1,8 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
-import NewReceiptButton from '@/components/warehouse/NewReceiptButton';
-import NewWriteOffButton from '@/components/warehouse/NewWriteOffButton';
+import { Suspense, type ReactNode } from 'react';
+import { HeaderCreateButtons } from '@/components/warehouse/CreateDocumentButton';
 import WarehouseHeader, { warehouseTabFor } from '@/components/warehouse/WarehouseHeader';
 import { WarehouseSummaryProvider } from '@/components/warehouse/WarehouseSummary';
 
@@ -21,10 +20,9 @@ export default function WarehouseLayout({ children }: { children: ReactNode }) {
           <WarehouseHeader
             active={tab}
             actions={
-              <>
-                <NewReceiptButton />
-                <NewWriteOffButton />
-              </>
+              <Suspense fallback={null}>
+                <HeaderCreateButtons />
+              </Suspense>
             }
           />
         )}

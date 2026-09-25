@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { requireInStockProduct, requireProduct } from "./fixtures";
+import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
 import { createProduct, createStore, receive, uniqueStamp } from "./warehouseApi";
 
@@ -144,4 +145,25 @@ test("без активного склада обзор показывает к�
 
   await expect(page.getByText("Нет ни одного активного склада.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Настроить места хранения/ })).toBeVisible();
+});
+
+test("«⋯ → Принять товар» открывает приёмку с этим товаром на выбранном складе", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const store = await createStore(request, stamp);
+  await receive(request, store.id, product.id, 1);
+
+  await page.goto(`/warehouse/stock?store_id=${store.id}`);
+  await page.getByPlaceholder("Название, код или артикул").fill(product.name);
+  await page.getByRole("button", { name: `Действия: ${product.name}` }).click();
+  await page.getByRole("menuitem", { name: "Принять товар" }).click();
+
+  await expect(page).toHaveURL(/\/warehouse\/receipts\/\d+$/);
+  const receiptId = new URL(page.url()).pathname.split("/").pop();
+  try {
+    await expect(page.getByTestId("document-line").filter({ hasText: product.name })).toHaveCount(1);
+    await expect(page.getByTestId("document-fields")).toContainText(store.name);
+  } finally {
+    await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
+  }
 });

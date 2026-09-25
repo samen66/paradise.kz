@@ -9,7 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Skeleton from '@/components/ui/Skeleton';
 import StatTile from '@/components/ui/StatTile';
 import { buttonLink, buttonSecondary, cardClass } from '@/components/ui/styles';
-import NewReceiptButton from '@/components/warehouse/NewReceiptButton';
+import CreateDocumentButton from '@/components/warehouse/CreateDocumentButton';
 import { useWarehouseSummary } from '@/components/warehouse/WarehouseSummary';
 
 /** Куда ведёт плитка «Черновики»: туда, где черновики есть; приёмки — по умолчанию. */
@@ -65,7 +65,7 @@ export default function WarehouseOverviewPage() {
             bare
             title="Движений ещё нет"
             hint="Остаток появится после первой проведённой приёмки."
-            action={<NewReceiptButton />}
+            action={<CreateDocumentButton kind="receipt" />}
           />
         ) : (
           <ul className="divide-y divide-zinc-100">

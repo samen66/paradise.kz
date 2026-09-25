@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { adminApi } from "../adminApi";
 import { ADMIN_SESSION } from "../session";
+import { createReceiptDraft, createStore, uniqueStamp } from "../warehouseApi";
 
 /**
  * Мелочи, без которых админкой на телефоне неудобно пользоваться: шапка
@@ -85,16 +87,19 @@ test("действия строки товара видны без наведе�
   expect(opacity).toBe("1");
 });
 
-test("поля формы приёмки идут в одну колонку", async ({ page }) => {
-  await page.goto("/warehouse/documents?kind=receipts");
-  await page.getByRole("button", { name: /Принять товар/ }).click();
+test("поля шапки приёмки идут в одну колонку", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const store = await createStore(request, stamp);
+  const receiptId = await createReceiptDraft(request, store.id);
 
-  const dialog = page.getByRole("dialog");
-  const number = (await dialog.getByLabel("Номер", { exact: true }).boundingBox())!;
-  const date = (await dialog.getByLabel("Дата приёмки").boundingBox())!;
-  expect(Math.round(date.x)).toBe(Math.round(number.x));
-  expect(date.y).toBeGreaterThan(number.y);
-
-  await dialog.getByRole("button", { name: "Отмена" }).click();
-  await expect(dialog).toBeHidden();
+  try {
+    await page.goto(`/warehouse/receipts/${receiptId}`);
+    await page.getByTestId("document-fields").getByRole("button", { name: /Изменить/ }).click();
+    const date = (await page.getByLabel("Дата приёмки").boundingBox())!;
+    const number = (await page.getByLabel("Номер накладной").boundingBox())!;
+    expect(Math.round(number.x)).toBe(Math.round(date.x));
+    expect(number.y).toBeGreaterThan(date.y);
+  } finally {
+    await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
+  }
 });
