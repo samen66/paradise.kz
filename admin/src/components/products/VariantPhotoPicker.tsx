@@ -42,7 +42,7 @@ export default function VariantPhotoPicker({ productId, images, selected, onTogg
 
     for (const file of accepted) {
       try {
-        onUploaded(await uploadPhoto(productId, file));
+        onUploaded(await uploadPhoto(`/admin/products/${productId}/media`, file));
       } catch (error) {
         reportPhotoError(file, error);
       } finally {

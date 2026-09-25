@@ -37,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: '/banners', label: 'Баннеры' },
       { href: '/b2b-home', label: 'B2B-главная' },
+      { href: '/showrooms', label: 'Шоурумы' },
     ],
   },
   {

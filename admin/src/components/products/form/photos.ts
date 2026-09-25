@@ -57,15 +57,15 @@ export class PhotoUploadError extends Error {
 }
 
 /**
- * Загружает одно фото в товар. Возвращает загруженное фото. Ошибка —
- * PhotoUploadError с текстом для человека.
+ * Загружает одно фото в коллекцию (`/admin/products/{id}/media`, `/admin/showrooms/{id}/photos`).
+ * Возвращает загруженное фото. Ошибка — PhotoUploadError с текстом для человека.
  */
-export async function uploadPhoto(productId: number, file: File): Promise<ProductImage> {
+export async function uploadPhoto(mediaPath: string, file: File): Promise<ProductImage> {
   const body = new FormData();
   body.append('file', file);
 
   try {
-    const res = await api.post<{ data: ProductImage }>(`/admin/products/${productId}/media`, body, {
+    const res = await api.post<{ data: ProductImage }>(mediaPath, body, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
