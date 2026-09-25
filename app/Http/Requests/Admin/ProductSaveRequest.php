@@ -22,6 +22,9 @@ use Illuminate\Validation\Rule;
  * through a goods receipt or a stock correction (FifoInventoryService); a
  * `stock` key in the payload is dropped by validation and never reaches the
  * model.
+ *
+ * `attribute_values` is not a products column: the controller hands it to
+ * AttributeValueSync.
  */
 class ProductSaveRequest extends FormRequest
 {
@@ -79,6 +82,12 @@ class ProductSaveRequest extends FormRequest
             if ($this->has($field) && $this->input($field) === '') {
                 $normalised[$field] = null;
             }
+        }
+
+        // A multipart form cannot send an empty array: the admin sends "" for
+        // "no characteristics", which ConvertEmptyStringsToNull has made null.
+        if ($this->has('attribute_values') && $this->input('attribute_values') === null) {
+            $normalised['attribute_values'] = [];
         }
 
         if ($normalised !== []) {
@@ -140,6 +149,14 @@ class ProductSaveRequest extends FormRequest
             // Storefront flags
             'is_active' => 'boolean',
             'is_new_arrival' => 'boolean',
+
+            // Characteristics — the whole set, synced by AttributeValueSync.
+            // Absent: left as they are; empty: all removed.
+            'attribute_values' => 'sometimes|array',
+            'attribute_values.*.attribute_id' => 'required|integer|distinct|exists:attributes,id',
+            'attribute_values.*.value' => 'required|array',
+            'attribute_values.*.value.ru' => 'required|string|max:255',
+            'attribute_values.*.value.kk' => 'nullable|string|max:255',
         ];
     }
 
