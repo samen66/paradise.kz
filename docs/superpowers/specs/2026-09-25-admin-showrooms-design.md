@@ -106,7 +106,7 @@ ORDER BY sort_order, name
 | Метод | Путь | Что делает |
 |---|---|---|
 | GET | `/admin/showrooms` | список `retail_point` (все, включая черновики и выключенные) с обложкой |
-| POST | `/admin/showrooms` | создаёт склад: `name`, `address`, `slug`; `type = retail_point`, `is_active = true`, `show_on_site = false` |
+| POST | `/admin/showrooms` | создаёт склад: `name`, `address`, `slug`; `type = retail_point`, `is_active = true`, `show_on_site = false`; пустой `slug` → `Str::slug(name)` с суффиксом `-2`, `-3`… |
 | GET | `/admin/showrooms/{store}` | все поля + фото + `products_in_stock` (число товаров с остатком > 0 на этом складе) |
 | PUT | `/admin/showrooms/{store}` | обновляет поля карточки |
 | GET | `/admin/showrooms/{store}/photos` | фото по порядку |
@@ -138,7 +138,8 @@ ORDER BY sort_order, name
 - `landmark.*`, `parking.*` — max 255; `description.*` — max 5000.
 
 Ответ — `ShowroomAdminResource`: поля выше, `landmark`/`parking`/`description`
-как `{ru, kk}`, `is_active`, `photos: [{id, url, thumb_url}]`,
+как `{ru, kk}`, `is_active`
+(фото — через `/photos`),
 `cover_url`, `products_in_stock`, `public_url` (ссылка на витрину, если
 опубликован; из `config('services.storefront.url')`).
 
@@ -204,8 +205,8 @@ ORDER BY sort_order, name
   обложки, название, «город · адрес», статус-чип. Строка ведёт в карточку.
 - Статус: «На сайте» — опубликован; «Склад выключен» — `is_active = false`
   (подсказка: включается в «Склад → Места хранения»); иначе «Черновик».
-- «Добавить шоурум» — `CrudModal`: название *, адрес, slug. Slug
-  подставляется транслитом из названия, пока менеджер не правил его руками.
+- «Добавить шоурум» — `CrudModal`: название *, адрес, slug. Slug можно
+  оставить пустым — сервер составит его из названия (транслит, суффикс при совпадении).
   После создания — переход в `/showrooms/{id}`.
 - Пустое состояние: «Шоурумов нет. Шоурум — это место хранения с типом
   „Точка выдачи / шоурум“ — его остатки показываются на сайте».
@@ -251,8 +252,8 @@ ORDER BY sort_order, name
   `scheduleRows`, `routeUrl`, `mapUrl`, `whatsappUrl`, `DAY_LABELS` —
   переносится в `lib/showrooms.ts` и переписывается под новые поля
   (`weekly_hours[i].open/close`). Ссылки 2ГИС — без сегмента города:
-  `https://2gis.kz/geo/{lng},{lat}` и
-  `https://2gis.kz/directions/points/|{lng},{lat}`.
+  карта — `https://2gis.kz/?m={lng}%2C{lat}%2F17`, маршрут —
+  `https://2gis.kz/directions/points/%7C{lng}%2C{lat}%3B`.
 - `lib/types.ts`: тип `Showroom` по публичному API; `ProductShowroom.store`
   получает `slug: string | null`.
 - **`/showrooms`** — серверная страница делает
@@ -261,12 +262,12 @@ ORDER BY sort_order, name
   Полоска превью — `products_preview` со ссылками на `/product/{slug}`,
   «ещё N» из `products_count`. Нарисованная карта с точками удаляется;
   вместо неё у карточки ссылка «На карте 2ГИС». Без шоурумов — пустое
-  состояние с контактами из `/public/settings`.
+  состояние с контактами из `/public/settings`. Фильтр по району удаляется.
 - **`/showrooms/[slug]`** — `apiGet('/public/showrooms/{slug}',
   { tags: ['showrooms', 'showroom:{slug}'] })`; 404 → `notFound()`.
   Галерея из `photos`, без рейтинга. Блок «Товары в шоуруме» — сетка
   обычных `ProductCard` из
-  `/public/products?store_id={id}&filter[in_stock]=1` с «Показать ещё».
+  `/public/products?store_id={id}&filter[in_stock]=1` с нумерованной `Pagination`, как в каталоге.
   Выдуманные статусы «Мало / Под заказ / Образец» удаляются.
 - **`ShowroomAvailability.tsx`** — ссылка на `/showrooms/{store.slug}`,
   только если `slug` не `null`; иначе название без ссылки.
