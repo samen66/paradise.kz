@@ -17,6 +17,8 @@ type CrudModalProps<T extends FieldValues> = {
   onClose: () => void;
   children: (form: UseFormReturn<T>) => ReactNode;
   submitLabel?: string;
+  /** Кнопка отправки недоступна: например, ещё грузится фото. */
+  submitDisabled?: boolean;
 };
 
 export default function CrudModal<T extends FieldValues>({
@@ -27,6 +29,7 @@ export default function CrudModal<T extends FieldValues>({
   onClose,
   children,
   submitLabel = 'Сохранить',
+  submitDisabled = false,
 }: CrudModalProps<T>) {
   // Schemas here never coerce (numbers stay strings), so input and output
   // types coincide and the resolver can be narrowed to T.
@@ -56,13 +59,24 @@ export default function CrudModal<T extends FieldValues>({
             Отмена
           </button>
           {/* Кнопка вне <form> — связь через атрибут form; Enter в поле по-прежнему отправляет форму. */}
-          <button type="submit" form={formId} disabled={form.formState.isSubmitting} className={buttonPrimary}>
+          <button type="submit" form={formId} disabled={form.formState.isSubmitting || submitDisabled} className={buttonPrimary}>
             {form.formState.isSubmitting ? 'Сохранение…' : submitLabel}
           </button>
         </div>
       }
     >
-      <form id={formId} onSubmit={submit} noValidate className="space-y-4">
+      <form
+        id={formId}
+        // Шторка может открыться поверх другой (атрибут из окна варианта).
+        // Портал не меняет дерево React: без остановки submit этой формы
+        // дошёл бы до внешней и сохранил бы её раньше времени.
+        onSubmit={(e) => {
+          e.stopPropagation();
+          void submit(e);
+        }}
+        noValidate
+        className="space-y-4"
+      >
         {formError && (
           <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
             {formError}
