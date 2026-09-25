@@ -39,6 +39,9 @@ class GoodsReceiptController extends Controller
                 'supplier:id,name',
                 'items:id,goods_receipt_id,quantity,unit_cost',
             ])
+            // Черновики — незаконченная работа — сверху, затем по дате документа.
+            ->orderByRaw("CASE WHEN status = 'draft' THEN 0 ELSE 1 END")
+            ->orderByDesc('received_at')
             ->orderByDesc('id')
             ->paginate(20)
             ->appends($request->query());

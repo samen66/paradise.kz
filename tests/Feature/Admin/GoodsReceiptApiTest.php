@@ -205,4 +205,19 @@ class GoodsReceiptApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Нельзя провести пустую приёмку.');
     }
+
+    #[Test]
+    public function drafts_come_first_then_the_newest(): void
+    {
+        $this->actingAsManager();
+        $postedNew = GoodsReceipt::factory()->posted()->create(['received_at' => '2026-09-25 10:00:00']);
+        $draftOld = GoodsReceipt::factory()->create(['received_at' => '2026-09-01 10:00:00']);
+        $draftNew = GoodsReceipt::factory()->create(['received_at' => '2026-09-20 10:00:00']);
+        $postedOld = GoodsReceipt::factory()->posted()->create(['received_at' => '2026-09-02 10:00:00']);
+
+        $this->assertSame(
+            [$draftNew->id, $draftOld->id, $postedNew->id, $postedOld->id],
+            collect($this->getJson('/api/admin/goods-receipts')->assertOk()->json('data'))->pluck('id')->all(),
+        );
+    }
 }

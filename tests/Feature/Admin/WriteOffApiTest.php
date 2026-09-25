@@ -169,4 +169,18 @@ class WriteOffApiTest extends TestCase
 
         $this->assertFalse($writeOff->fresh()->isPosted());
     }
+
+    #[Test]
+    public function draft_write_offs_come_first(): void
+    {
+        $this->actingAsManager();
+        $draftOld = WriteOff::factory()->create();
+        $posted = WriteOff::factory()->posted()->create();
+        $draftNew = WriteOff::factory()->create();
+
+        $this->assertSame(
+            [$draftNew->id, $draftOld->id, $posted->id],
+            collect($this->getJson('/api/admin/write-offs')->assertOk()->json('data'))->pluck('id')->all(),
+        );
+    }
 }

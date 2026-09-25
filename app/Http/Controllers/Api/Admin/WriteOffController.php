@@ -34,6 +34,9 @@ class WriteOffController extends Controller
             )
             ->withCount('items')
             ->with('store:id,name')
+            // Черновики — незаконченная работа — сверху; у списания нет даты
+            // документа, `id` растёт с созданием.
+            ->orderByRaw("CASE WHEN status = 'draft' THEN 0 ELSE 1 END")
             ->orderByDesc('id')
             ->paginate(20)
             ->appends($request->query());
