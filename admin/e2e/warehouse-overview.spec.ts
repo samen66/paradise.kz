@@ -54,7 +54,7 @@ test("черновик приёмки виден в плитке и на вкл�
 
     await tile.click();
     await expect(page).toHaveURL(/\/warehouse\/documents\?/);
-    await expect(page.getByLabel("Статус")).toHaveValue("draft");
+    await expect(page.getByRole("radiogroup", { name: "Статус" }).getByRole("radio", { name: /Черновики/ })).toHaveAttribute("aria-checked", "true");
 
     const storeRows = page.locator("tbody tr").filter({ hasText: store.name });
     await expect(storeRows).toHaveCount(1);

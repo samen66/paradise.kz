@@ -312,3 +312,7 @@ export async function createDraft(kind: DraftKind, { storeId = null, productId }
 
   return id;
 }
+
+/** Причина списания из адреса: неизвестная — «все». */
+export const parseWriteOffReason = (value: string | null): '' | WriteOffReason =>
+  value && Object.hasOwn(WRITE_OFF_REASONS, value) ? (value as WriteOffReason) : '';

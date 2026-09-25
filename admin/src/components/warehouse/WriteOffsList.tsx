@@ -1,73 +1,72 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useResource } from '@/lib/crud';
-import { formatDateTime, parseDocumentStatus, warehouseHref, WRITE_OFF_REASONS, type DocumentStatus, type WriteOffListItem } from '@/lib/warehouse';
+import { formatDateTime, warehouseHref, WRITE_OFF_REASONS, type DocumentStatus, type WriteOffListItem, type WriteOffReason } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
-import { inputClass } from '@/components/ui/styles';
+import EmptyState from '@/components/ui/EmptyState';
+import { buttonGhost } from '@/components/ui/styles';
+import CreateDocumentButton from './CreateDocumentButton';
 import DocumentStatusBadge from './DocumentStatusBadge';
-import StoreSelect from './StoreSelect';
 
-type Props = { initialStatus?: '' | DocumentStatus };
+type Props = {
+  status: '' | DocumentStatus;
+  storeId: string;
+  reason: '' | WriteOffReason;
+  page: number;
+  onPageChange: (page: number) => void;
+  hasFilters: boolean;
+  onResetFilters: () => void;
+};
 
-/**
- * Список списаний с фильтрами по статусу, складу и причине. Создание —
- * кнопкой в шапке раздела. `initialStatus` — из адреса (плитка «Черновики» на обзоре).
- */
-export default function WriteOffsList({ initialStatus = '' }: Props) {
-  const [status, setStatus] = useState(initialStatus);
-  const [storeId, setStoreId] = useState('');
-  const [reason, setReason] = useState('');
-  const params: Record<string, string> = {};
+/** Списания: черновики сверху (сортирует сервер), фильтры и страница — из адреса. */
+export default function WriteOffsList({ status, storeId, reason, page, onPageChange, hasFilters, onResetFilters }: Props) {
+  const params: Record<string, string | number> = { page };
   if (status) params['filter[status]'] = status;
   if (storeId) params['filter[store_id]'] = storeId;
   if (reason) params['filter[reason]'] = reason;
 
   const writeOffs = useResource<WriteOffListItem>('/admin/write-offs', params);
-  const resetPage = () => writeOffs.setPage(1);
 
   const columns: Column<WriteOffListItem>[] = [
     {
       key: 'label',
       header: 'Списание',
+      mobile: 'title',
       render: (w) => (
         <Link href={warehouseHref.writeOff(w.id)} className="font-medium text-zinc-900 hover:text-blue-700">
           №{w.id}
         </Link>
       ),
     },
-    { key: 'date', header: 'Дата', render: (w) => formatDateTime(w.posted_at ?? w.created_at) },
-    { key: 'store', header: 'Склад', render: (w) => w.store.name },
-    { key: 'reason', header: 'Причина', render: (w) => WRITE_OFF_REASONS[w.reason] ?? w.reason },
-    { key: 'items', header: 'Позиций', render: (w) => w.items_count },
-    { key: 'status', header: 'Статус', render: (w) => <DocumentStatusBadge status={w.status} postedLabel="Проведено" /> },
+    { key: 'status', header: 'Статус', mobile: 'badge', render: (w) => <DocumentStatusBadge status={w.status} postedLabel="Проведено" /> },
+    { key: 'date', header: 'Дата', mobile: 'meta', render: (w) => `${formatDateTime(w.posted_at ?? w.created_at)} · ${w.store.name}` },
+    { key: 'reason', header: 'Причина', mobile: 'meta', render: (w) => WRITE_OFF_REASONS[w.reason] ?? w.reason },
+    { key: 'items', header: 'Позиций', mobile: 'hidden', render: (w) => w.items_count },
   ];
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap gap-3">
-        <select aria-label="Статус" className={`${inputClass} max-w-48`} value={status} onChange={(e) => { setStatus(parseDocumentStatus(e.target.value)); resetPage(); }}>
-          <option value="">Все статусы</option>
-          <option value="draft">Черновики</option>
-          <option value="posted">Проведённые</option>
-        </select>
-        <StoreSelect aria-label="Склад" emptyLabel="Все склады" className="max-w-64" value={storeId} onChange={(e) => { setStoreId(e.target.value); resetPage(); }} />
-        <select aria-label="Причина" className={`${inputClass} max-w-56`} value={reason} onChange={(e) => { setReason(e.target.value); resetPage(); }}>
-          <option value="">Все причины</option>
-          {Object.entries(WRITE_OFF_REASONS).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </div>
-      <DataTable
-        columns={columns}
-        rows={writeOffs.items}
-        loading={writeOffs.loading}
-        meta={writeOffs.meta}
-        onPageChange={writeOffs.setPage}
-        emptyText="Списаний нет"
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      rows={writeOffs.items}
+      loading={writeOffs.loading}
+      meta={writeOffs.meta}
+      onPageChange={onPageChange}
+      empty={
+        hasFilters ? (
+          <EmptyState
+            title="Ничего не найдено"
+            hint="Измените или сбросьте фильтры."
+            action={
+              <button type="button" className={buttonGhost} onClick={onResetFilters}>
+                Сбросить фильтры
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState title="Списаний пока нет" hint="Нажмите «Списать» — черновик откроется сразу." action={<CreateDocumentButton kind="write_off" />} />
+        )
+      }
+    />
   );
 }

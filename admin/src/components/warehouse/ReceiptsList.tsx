@@ -1,25 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useResource } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
-import { formatDateTime, parseDocumentStatus, warehouseHref, type DocumentStatus, type GoodsReceiptListItem } from '@/lib/warehouse';
+import { formatDateTime, warehouseHref, type DocumentStatus, type GoodsReceiptListItem } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
-import { inputClass } from '@/components/ui/styles';
+import EmptyState from '@/components/ui/EmptyState';
+import { buttonGhost } from '@/components/ui/styles';
+import CreateDocumentButton from './CreateDocumentButton';
 import DocumentStatusBadge from './DocumentStatusBadge';
-import StoreSelect from './StoreSelect';
 
-type Props = { initialStatus?: '' | DocumentStatus };
+type Props = {
+  status: '' | DocumentStatus;
+  storeId: string;
+  page: number;
+  onPageChange: (page: number) => void;
+  hasFilters: boolean;
+  onResetFilters: () => void;
+};
 
-/**
- * Список приёмок с фильтрами по статусу и складу. Создание — кнопкой в шапке
- * раздела. `initialStatus` — из адреса (плитка «Черновики» на обзоре).
- */
-export default function ReceiptsList({ initialStatus = '' }: Props) {
-  const [status, setStatus] = useState(initialStatus);
-  const [storeId, setStoreId] = useState('');
-  const params: Record<string, string> = {};
+/** Приёмки: черновики сверху (сортирует сервер), фильтры и страница — из адреса. */
+export default function ReceiptsList({ status, storeId, page, onPageChange, hasFilters, onResetFilters }: Props) {
+  const params: Record<string, string | number> = { page };
   if (status) params['filter[status]'] = status;
   if (storeId) params['filter[store_id]'] = storeId;
 
@@ -29,55 +31,42 @@ export default function ReceiptsList({ initialStatus = '' }: Props) {
     {
       key: 'number',
       header: 'Приёмка',
+      mobile: 'title',
       render: (r) => (
         <Link href={warehouseHref.receipt(r.id)} className="font-medium text-zinc-900 hover:text-blue-700">
           {r.number || `№${r.id}`}
         </Link>
       ),
     },
-    { key: 'date', header: 'Дата', render: (r) => formatDateTime(r.received_at) },
-    { key: 'supplier', header: 'Поставщик', render: (r) => r.supplier?.name ?? '—' },
-    { key: 'store', header: 'Склад', render: (r) => r.store.name },
-    { key: 'items', header: 'Позиций', render: (r) => r.items_count },
-    { key: 'total', header: 'Сумма', render: (r) => formatTenge(r.total_cost) },
-    { key: 'status', header: 'Статус', render: (r) => <DocumentStatusBadge status={r.status} postedLabel="Проведена" /> },
+    { key: 'status', header: 'Статус', mobile: 'badge', render: (r) => <DocumentStatusBadge status={r.status} postedLabel="Проведена" /> },
+    { key: 'date', header: 'Дата', mobile: 'meta', render: (r) => `${formatDateTime(r.received_at)} · ${r.store.name}` },
+    { key: 'supplier', header: 'Поставщик', mobile: 'meta', render: (r) => r.supplier?.name ?? '—' },
+    { key: 'items', header: 'Позиций', mobile: 'hidden', render: (r) => r.items_count },
+    { key: 'total', header: 'Сумма', mobile: 'meta', render: (r) => formatTenge(r.total_cost) },
   ];
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap gap-3">
-        <select
-          aria-label="Статус"
-          className={`${inputClass} max-w-48`}
-          value={status}
-          onChange={(e) => {
-            setStatus(parseDocumentStatus(e.target.value));
-            receipts.setPage(1);
-          }}
-        >
-          <option value="">Все статусы</option>
-          <option value="draft">Черновики</option>
-          <option value="posted">Проведённые</option>
-        </select>
-        <StoreSelect
-          aria-label="Склад"
-          emptyLabel="Все склады"
-          className="max-w-64"
-          value={storeId}
-          onChange={(e) => {
-            setStoreId(e.target.value);
-            receipts.setPage(1);
-          }}
-        />
-      </div>
-      <DataTable
-        columns={columns}
-        rows={receipts.items}
-        loading={receipts.loading}
-        meta={receipts.meta}
-        onPageChange={receipts.setPage}
-        emptyText="Приёмок нет"
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      rows={receipts.items}
+      loading={receipts.loading}
+      meta={receipts.meta}
+      onPageChange={onPageChange}
+      empty={
+        hasFilters ? (
+          <EmptyState
+            title="Ничего не найдено"
+            hint="Измените или сбросьте фильтры."
+            action={
+              <button type="button" className={buttonGhost} onClick={onResetFilters}>
+                Сбросить фильтры
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState title="Приёмок пока нет" hint="Нажмите «Принять товар» — черновик откроется сразу, товары добавите в нём." action={<CreateDocumentButton kind="receipt" />} />
+        )
+      }
+    />
   );
 }

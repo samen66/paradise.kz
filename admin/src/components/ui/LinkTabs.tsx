@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export type LinkTab = { key: string; href: string; label: string; count?: number | null };
 
-type Props = { label: string; tabs: LinkTab[]; active: string };
+type Props = { label: string; tabs: LinkTab[]; active: string; variant?: 'tabs' | 'segmented' };
 
 /**
  * Вкладки-ссылки: каждая вкладка — адрес, поэтому F5, «назад» и ссылка в
@@ -12,8 +12,33 @@ type Props = { label: string; tabs: LinkTab[]; active: string };
  * С `md` — подчёркнутые вкладки; на телефоне — «таблетки» одной строкой,
  * которая листается вбок и выходит под поля каркаса (`-mx-4 px-4`), чтобы
  * крайняя вкладка не обрезалась по рамке.
+ *
+ * `segmented` — переключатель из двух-трёх вариантов внутри вкладки
+ * (приёмки / списания), чтобы не выглядел вторым рядом вкладок раздела.
  */
-export default function LinkTabs({ label, tabs, active }: Props) {
+export default function LinkTabs({ label, tabs, active, variant = 'tabs' }: Props) {
+  if (variant === 'segmented') {
+    return (
+      <nav aria-label={label} className="inline-flex rounded-xl bg-zinc-100 p-1">
+        {tabs.map((tab) => {
+          const isActive = tab.key === active;
+          return (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              aria-current={isActive ? 'page' : undefined}
+              className={`inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors ${
+                isActive ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
     <nav
       aria-label={label}

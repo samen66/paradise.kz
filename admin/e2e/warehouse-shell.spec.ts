@@ -81,6 +81,10 @@ test("старые адреса документов ведут в раздел"
     await expect(page, from).toHaveURL(to);
   }
 
+  // Параметр дошёл до экрана, а не только до адреса.
+  await page.goto("/write-offs?status=draft");
+  await expect(page.getByRole("radiogroup", { name: "Статус" }).getByRole("radio", { name: /Черновики/ })).toHaveAttribute("aria-checked", "true");
+
   // Старая ссылка на конкретный документ.
   const api = adminApi(request);
   const store = await api.create<{ data: { id: number } }>("/admin/stores", { name: `E2E склад ${Date.now()}`, is_active: false });

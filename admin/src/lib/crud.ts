@@ -13,6 +13,9 @@ type ListBody<T> = T[] | { data: T[]; current_page?: number; last_page?: number 
 /**
  * One REST collection: list (plain array, {data: []} or a Laravel paginator),
  * create, update, remove — each followed by a reload.
+ *
+ * `params.page`, если передан, важнее внутренней страницы — так список
+ * берёт страницу из адреса.
  */
 export function useResource<T extends { id: number }>(path: string | null, params?: Record<string, unknown>) {
   const [items, setItems] = useState<T[]>([]);
@@ -35,7 +38,7 @@ export function useResource<T extends { id: number }>(path: string | null, param
     setLoading(true);
 
     try {
-      const res = await api.get<ListBody<T>>(path, { params: { ...JSON.parse(paramsKey), page } });
+      const res = await api.get<ListBody<T>>(path, { params: { page, ...JSON.parse(paramsKey) } });
 
       if (requestId !== requestIdRef.current) {
         return;
