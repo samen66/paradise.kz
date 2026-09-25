@@ -168,16 +168,16 @@ export function FilterSidebar({ facets, isB2B }: { facets: Facets; isB2B?: boole
               <Chevron />
             </summary>
             <ul className="pt-4 max-h-48 space-y-2.5 overflow-y-auto pr-2 scrollbar-hide">
-              {attribute.values.map((value) => (
-                <li key={value}>
+              {attribute.values.map((option) => (
+                <li key={option.value}>
                   <label className="flex cursor-pointer items-center gap-3 text-ink">
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-line-strong text-zinc-900 focus:ring-zinc-900"
-                      checked={selectedAttrs.get(attribute.slug)?.has(value) ?? false}
-                      onChange={() => apply((params) => toggleSetParam(params, `attr[${attribute.slug}]`, value))}
+                      checked={selectedAttrs.get(attribute.slug)?.has(option.value) ?? false}
+                      onChange={() => apply((params) => toggleSetParam(params, `attr[${attribute.slug}]`, option.value))}
                     />
-                    <span className="text-sm">{value}</span>
+                    <span className="text-sm">{option.label}</span>
                   </label>
                 </li>
               ))}

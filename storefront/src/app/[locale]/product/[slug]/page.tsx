@@ -7,8 +7,9 @@ import { apiGet, ApiError } from "@/lib/api";
 import { tValue } from "@/lib/format";
 import type { Product, Category } from "@/lib/types";
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs";
-import { ProductGallery } from "@/components/ProductGallery";
 import { ProductInfo } from "@/components/product/ProductInfo";
+import { initialVariantId, SelectedVariantProvider } from "@/components/product/SelectedVariant";
+import { VariantGallery } from "@/components/product/VariantGallery";
 import { ProductDescription } from "@/components/product/ProductDescription";
 import { ProductCharacteristics } from "@/components/product/ProductCharacteristics";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -181,23 +182,26 @@ export default async function ProductPage({
       <ProductMobileHeader product={product} />
 
       {/* ═══ Hero block: Gallery + Sidebar (two-column) ═══ */}
-      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-x-14 gap-y-2 lg:gap-y-0 items-start">
+      {/* Галерея и блок покупки делят выбранный вариант. */}
+      <SelectedVariantProvider initialVariantId={initialVariantId(product)}>
+        <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-x-14 gap-y-2 lg:gap-y-0 items-start">
         
-        {/* Gallery */}
-        <div>
-          <ProductGallery images={product.images} alt={tValue(product.name, locale)} />
+          {/* Gallery */}
+          <div>
+            <VariantGallery product={product} alt={tValue(product.name, locale)} />
 
-          {/* Trust strip under gallery (desktop only) */}
-          <div className="hidden lg:block">
-            <TrustStrip />
+            {/* Trust strip under gallery (desktop only) */}
+            <div className="hidden lg:block">
+              <TrustStrip />
+            </div>
+          </div>
+
+          {/* Purchase Sidebar (sticky) */}
+          <div className="lg:sticky lg:top-[150px] z-10">
+            <ProductInfo product={product} locale={locale} categoryName={categoryDisplayName} />
           </div>
         </div>
-
-        {/* Purchase Sidebar (sticky) */}
-        <div className="lg:sticky lg:top-[150px] z-10">
-          <ProductInfo product={product} locale={locale} categoryName={categoryDisplayName} />
-        </div>
-      </div>
+      </SelectedVariantProvider>
 
       {/* Trust strip (mobile — full width) */}
       <div className="lg:hidden mt-6">
