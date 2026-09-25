@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPickerController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
+use App\Http\Controllers\Api\Admin\ShowroomController as AdminShowroomController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\StockMovementController;
 use App\Http\Controllers\Api\Admin\StoreController as AdminStoreController;
@@ -205,6 +206,9 @@ Route::prefix('admin')
         Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('stores', AdminStoreController::class);
+        Route::apiResource('showrooms', AdminShowroomController::class)
+            ->only(['index', 'store', 'show', 'update'])
+            ->parameters(['showrooms' => 'store']);
         Route::apiResource('goods-receipts', GoodsReceiptController::class);
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post']);
         Route::apiResource('goods-receipts.items', GoodsReceiptItemController::class)->except('show')->scoped();
