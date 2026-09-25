@@ -23,9 +23,10 @@ and stock. The MoySklad integration it used to mirror from has been removed;
 
 - **`admin/` (Next.js)** — operational screens for managers: orders and status
   changes, products (with photos, prices by type, per-client prices,
-  attributes, variants), stock with the movement ledger, goods receipts,
-  write-offs, warehouses, suppliers, B2B client approval, categories, brands,
-  attributes, price types, catalog groups, product collections, banners, B2B home content,
+  attributes, variants (characteristics, photos from the product gallery)),
+  stock with the movement ledger, goods receipts, write-offs, warehouses,
+  suppliers, B2B client approval, categories, brands, attributes (ru/kk),
+  price types, catalog groups, product collections, banners, B2B home content,
   collection covers.
   Calls `/api/admin/*` (`auth:sanctum` + `role:admin|manager`). Shared UI lives
   in `admin/src/components/ui`, data access in `admin/src/lib/crud.ts`.
