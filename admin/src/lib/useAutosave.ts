@@ -38,12 +38,18 @@ const without = (errors: Record<string, string>, key: string): Record<string, st
  * сразу. Запросы одного ключа идут строго по очереди, так что последним на
  * сервер приходит последний ввод. Ошибка остаётся у ключа до удачного
  * сохранения или `cancel`; `retry` повторяет все упавшие.
+ *
+ * `cancel` поднимает поколение ключа: запрос этого ключа, уже стоящий в
+ * очереди или в сети, после отмены ни на что не влияет (строку удалили —
+ * её поздний 404 не должен повесить «Не сохранено»). При уходе со страницы
+ * отложенные правки не выбрасываются, а отправляются.
  */
 export function useAutosave(delayMs = 600) {
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const waiting = useRef(new Map<string, Job>());
   const chains = useRef(new Map<string, Promise<void>>());
   const failed = useRef(new Map<string, Job>());
+  const generations = useRef(new Map<string, number>());
   const [waitingCount, setWaitingCount] = useState(0);
   const [inFlight, setInFlight] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,17 +58,26 @@ export function useAutosave(delayMs = 600) {
   const run = useCallback((key: string, job: Job): Promise<boolean> => {
     setInFlight((n) => n + 1);
     let ok = false;
+    const generation = generations.current.get(key) ?? 0;
+    const isCurrent = () => (generations.current.get(key) ?? 0) === generation;
     const previous = chains.current.get(key) ?? Promise.resolve();
     const next = previous.then(async () => {
       try {
+        if (!isCurrent()) {
+          return;
+        }
         await job();
         ok = true;
-        failed.current.delete(key);
-        setErrors((current) => without(current, key));
-        setSavedOnce(true);
+        if (isCurrent()) {
+          failed.current.delete(key);
+          setErrors((current) => without(current, key));
+          setSavedOnce(true);
+        }
       } catch (error) {
-        failed.current.set(key, job);
-        setErrors((current) => ({ ...current, [key]: saveErrorMessage(error) }));
+        if (isCurrent()) {
+          failed.current.set(key, job);
+          setErrors((current) => ({ ...current, [key]: saveErrorMessage(error) }));
+        }
       } finally {
         setInFlight((n) => n - 1);
       }
@@ -103,6 +118,7 @@ export function useAutosave(delayMs = 600) {
   );
 
   const cancel = useCallback((key: string) => {
+    generations.current.set(key, (generations.current.get(key) ?? 0) + 1);
     const timer = timers.current.get(key);
     if (timer) {
       clearTimeout(timer);
@@ -121,8 +137,15 @@ export function useAutosave(delayMs = 600) {
   }, [run]);
 
   useEffect(() => {
-    const pending = timers.current;
-    return () => pending.forEach((timer) => clearTimeout(timer));
+    const pendingTimers = timers.current;
+    const pendingJobs = waiting.current;
+    return () => {
+      pendingTimers.forEach((timer) => clearTimeout(timer));
+      // Ушли со страницы раньше задержки — правка всё равно уходит на сервер.
+      pendingJobs.forEach((job) => {
+        void job().catch(() => undefined);
+      });
+    };
   }, []);
 
   const hasErrors = Object.keys(errors).length > 0;

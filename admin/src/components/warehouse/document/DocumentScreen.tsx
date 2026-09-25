@@ -11,13 +11,14 @@ import {
   kindOfDocuments,
   lineCost,
   warehouseHref,
+  WRITE_OFF_REASONS,
   type DraftKind,
   type GoodsReceipt,
   type WriteOff,
 } from '@/lib/warehouse';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import Skeleton from '@/components/ui/Skeleton';
-import { buttonGhost, buttonLink, buttonSecondary } from '@/components/ui/styles';
+import { buttonGhost, buttonLink, buttonSecondary, cardClass } from '@/components/ui/styles';
 import AddProductField from './AddProductField';
 import DocumentFields from './DocumentFields';
 import DocumentFooter from './DocumentFooter';
@@ -122,9 +123,38 @@ function PostedDocument({ kind, header, rows }: { kind: DraftKind; header: Goods
       : []),
   ];
   const writeOffCost = kind === 'write_off' ? (header as WriteOff).total_cost : null;
+  const receipt = header as GoodsReceipt;
+  const writeOff = header as WriteOff;
+  const fields: [string, string][] =
+    kind === 'receipt'
+      ? [
+          ['Склад', header.store.name],
+          ['Поставщик', receipt.supplier?.name ?? 'Без поставщика'],
+          ['Дата приёмки', formatDateTime(receipt.received_at)],
+          ['Номер накладной', receipt.number || '—'],
+        ]
+      : [
+          ['Склад', header.store.name],
+          ['Причина', WRITE_OFF_REASONS[writeOff.reason] ?? writeOff.reason],
+        ];
+  const note = kind === 'receipt' ? receipt.note : writeOff.note;
 
   return (
     <>
+      <dl data-testid="document-fields" className={`${cardClass} grid grid-cols-1 gap-3 p-4 text-sm md:grid-cols-4`}>
+        {fields.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-zinc-500">{label}</dt>
+            <dd className="text-zinc-900">{value}</dd>
+          </div>
+        ))}
+        {note && (
+          <div className="md:col-span-4">
+            <dt className="text-zinc-500">Комментарий</dt>
+            <dd className="text-zinc-900">{note}</dd>
+          </div>
+        )}
+      </dl>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
         <span>
           {kind === 'receipt' ? 'Проведена' : 'Проведено'} {formatDateTime(header.posted_at)}

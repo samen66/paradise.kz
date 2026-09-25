@@ -93,6 +93,9 @@ test("живая приёмка: товар из поля, правки сохр
   await page.getByRole("button", { name: "Провести" }).click();
   await expect(page.getByText(/^Проведена /)).toBeVisible();
   await expect(page.getByRole("button", { name: "Провести" })).toHaveCount(0);
+  // Шапка проведённой приёмки — текстом: откуда и по какой накладной.
+  await expect(page.getByTestId("document-fields")).toContainText(storeName);
+  await expect(page.getByTestId("document-fields")).toContainText(`E2E-${stamp}`);
 
   await page.goto("/warehouse/stock");
   await page.getByPlaceholder("Название, код или артикул").fill(productName);
@@ -292,6 +295,60 @@ test("фото товара видно в поле, в «Подборе» и в 
   const picker = page.getByRole("dialog", { name: "Подбор" });
   await picker.getByLabel("Поиск в подборе").fill(productName);
   await expect(picker.getByTestId("picker-row").filter({ hasText: productName }).getByTestId("product-thumb").locator("img")).toHaveCount(1);
+});
+
+test("уход сразу после правки не теряет её", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const { productId, productName, storeId } = await setupProductAndStore(request, stamp);
+  const receiptId = await createReceiptDraft(request, storeId);
+  drafts.push(`/admin/goods-receipts/${receiptId}`);
+  const api = adminApi(request);
+  await api.create(`/admin/goods-receipts/${receiptId}/items`, { product_id: productId });
+
+  await page.goto(`/warehouse/receipts/${receiptId}`);
+  const line = documentLine(page, productName);
+  await expect(line.getByLabel(`Количество: ${productName}`)).toHaveValue("1");
+  await line.getByRole("button", { name: `Больше: ${productName}` }).click();
+  // Раньше 600 мс задержки — уходим «Назад» (вопрос об уходе принимается в beforeEach).
+  await page.getByRole("link", { name: "Назад" }).click();
+  await expect(page).toHaveURL(/\/warehouse\/documents/);
+
+  await expect
+    .poll(async () => (await api.get<{ data: { quantity: string }[] }>(`/admin/goods-receipts/${receiptId}/items`))?.data[0]?.quantity)
+    .toBe("2.000");
+});
+
+test("удалённая строка не оставляет ошибку сохранения", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const store = await createStore(request, stamp);
+  const a = await createProduct(request, stamp, {}, " А");
+  const b = await createProduct(request, stamp, {}, " Б");
+  const receiptId = await createReceiptDraft(request, store.id);
+  drafts.push(`/admin/goods-receipts/${receiptId}`);
+  const api = adminApi(request);
+  const lineA = await api.create<{ data: { id: number } }>(`/admin/goods-receipts/${receiptId}/items`, { product_id: a.id, unit_cost: 100 });
+  await api.create(`/admin/goods-receipts/${receiptId}/items`, { product_id: b.id, unit_cost: 100 });
+
+  // Сохранение строки А «висит» в сети и в итоге получает 404 — строку уже удалили.
+  await page.route(`**/admin/goods-receipts/${receiptId}/items/${lineA.data.id}`, async (route) => {
+    if (route.request().method() !== "PUT") {
+      await route.continue();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Not found" }) });
+  });
+
+  await page.goto(`/warehouse/receipts/${receiptId}`);
+  const put = page.waitForRequest((r) => r.method() === "PUT" && r.url().endsWith(`/items/${lineA.data.id}`));
+  await documentLine(page, a.name).getByRole("button", { name: `Больше: ${a.name}` }).click();
+  await put;
+  await documentLine(page, a.name).getByRole("button", { name: `Удалить: ${a.name}` }).click();
+  await expect(documentLine(page, a.name)).toHaveCount(0);
+
+  await page.waitForTimeout(2000);
+  await expect(page.getByText("⚠ Не сохранено")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Провести" })).toBeEnabled();
 });
 
 test("склад с историей удалить нельзя", async ({ page, request }) => {
