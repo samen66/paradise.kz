@@ -48,6 +48,8 @@ export interface ProductShowroom {
     id: number;
     name: string;
     address: string | null;
+    /** Set only for a published showroom — the storefront page to link to. */
+    slug: string | null;
   };
   stock: number;
 }
@@ -266,4 +268,44 @@ export interface PaginationMeta {
 export interface Paginated<T> {
   data: T[];
   meta: PaginationMeta;
+}
+
+/** One day of `weekly_hours` (index 0 = Monday); null = day off. */
+export type ShowroomDay = { open: string; close: string } | null;
+
+export type ShowroomService = "pickup" | "consult" | "card" | "kids" | "cafe" | "assembly";
+
+export interface ShowroomPhoto {
+  wide: string;
+  card: string;
+}
+
+export interface ShowroomProductPreview {
+  id: number;
+  slug: string | null;
+  name: string;
+  image: string | null;
+}
+
+export interface Showroom {
+  id: number;
+  slug: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  landmark: string | null;
+  parking: string | null;
+  description: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  lat: number | null;
+  lng: number | null;
+  weekly_hours: ShowroomDay[];
+  services: ShowroomService[];
+  area: string | null;
+  floors: string | null;
+  is_flagship: boolean;
+  photos: ShowroomPhoto[];
+  products_count: number;
+  products_preview: ShowroomProductPreview[];
 }
