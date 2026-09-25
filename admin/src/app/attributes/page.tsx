@@ -11,6 +11,7 @@ import Field from '@/components/ui/Field';
 import PageHeader from '@/components/ui/PageHeader';
 import { buttonLink, buttonPrimary, inputClass } from '@/components/ui/styles';
 import type { Attribute } from '@/lib/catalogTypes';
+import { ru } from '@/lib/text';
 
 const schema = z.object({
   name: z.string().min(1, REQUIRED).max(255),
@@ -21,7 +22,7 @@ const schema = z.object({
 type AttributeForm = z.infer<typeof schema>;
 
 const toForm = (a: Attribute | null): AttributeForm => ({
-  name: a?.name ?? '',
+  name: ru(a?.name),
   slug: a?.slug ?? '',
   is_filterable: a?.is_filterable ?? false,
 });
@@ -31,7 +32,7 @@ export default function AttributesPage() {
   const [editing, setEditing] = useState<Attribute | null | undefined>(undefined);
 
   const columns: Column<Attribute>[] = [
-    { key: 'name', header: 'Название', render: (a) => <span className="font-medium text-zinc-900">{a.name}</span> },
+    { key: 'name', header: 'Название', render: (a) => <span className="font-medium text-zinc-900">{ru(a.name)}</span> },
     { key: 'slug', header: 'Slug', render: (a) => a.slug },
     { key: 'filterable', header: 'В фильтрах', render: (a) => (a.is_filterable ? 'Да' : 'Нет') },
     {

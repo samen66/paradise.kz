@@ -87,6 +87,8 @@ const LEFT = 'lg:col-span-2 lg:col-start-1';
  */
 export default function ProductForm({ initialProduct, categories, brands }: Props) {
   const [product, setProduct] = useState<ApiProduct | null>(initialProduct);
+  const [categoryList, setCategoryList] = useState(categories);
+  const [brandList, setBrandList] = useState(brands);
   const productId = product?.id ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const [basicLocale, setBasicLocale] = useState<Locale>('ru');
@@ -310,7 +312,13 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
 
         <div className="flex flex-col gap-4 lg:col-start-3 lg:row-span-8 lg:row-start-1">
           <StatusCard form={form} />
-          <CatalogCard form={form} categories={categories} brands={brands} />
+          <CatalogCard
+            form={form}
+            categories={categoryList}
+            brands={brandList}
+            onCategoryCreated={(c) => setCategoryList((list) => [...list, c])}
+            onBrandCreated={(b) => setBrandList((list) => [...list, b])}
+          />
           <AccountingCard form={form} defaultMinStock={product?.min_stock_default} />
           {product && <StockCard product={product} />}
           <DimensionsCard form={form} />

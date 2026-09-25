@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import type { Attribute } from '@/lib/catalogTypes';
 import { useResource } from '@/lib/crud';
+import { ru } from '@/lib/text';
 import { REQUIRED } from '@/lib/validation';
 import ConfirmButton from '@/components/ui/ConfirmButton';
 import CrudModal from '@/components/ui/CrudModal';
@@ -31,7 +32,7 @@ export default function AttributeValuesTab({ productId, onCount }: { productId: 
   const [editing, setEditing] = useState<AttributeValue | null | undefined>(undefined);
 
   const columns: Column<AttributeValue>[] = [
-    { key: 'attribute', header: 'Атрибут', render: (v) => v.attribute?.name ?? `#${v.attribute_id}` },
+    { key: 'attribute', header: 'Атрибут', render: (v) => ru(v.attribute?.name) || `#${v.attribute_id}` },
     { key: 'value', header: 'Значение', render: (v) => v.value },
     {
       key: 'actions',
@@ -65,7 +66,7 @@ export default function AttributeValuesTab({ productId, onCount }: { productId: 
                 <select id="av-attribute" className={inputClass} {...form.register('attribute_id')}>
                   <option value="">Выберите атрибут</option>
                   {attributes.items.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                    <option key={a.id} value={a.id}>{ru(a.name)}</option>
                   ))}
                 </select>
               </Field>

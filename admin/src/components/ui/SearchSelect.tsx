@@ -13,7 +13,17 @@ type Props = {
   /** Подпись пустого значения: «Без категории». */
   emptyLabel: string;
   invalid?: boolean;
+  /**
+   * «+ Создать „…“» последним пунктом, когда введённого текста нет среди
+   * пунктов. Получает набранный текст, список закрывается.
+   */
+  onCreate?: (query: string) => void;
+  /** Фокус при появлении — список сразу открыт (новая строка характеристики). */
+  autoFocus?: boolean;
 };
+
+// value пункта «+ Создать» — не может совпасть с id записи.
+const CREATE = '\u0000create';
 
 /**
  * Выбор одного значения из списка с поиском по подстроке (combobox).
@@ -22,8 +32,12 @@ type Props = {
  * фильтрует; стрелки, Enter и Escape работают с клавиатуры. Пункт выбирается
  * на mousedown с preventDefault — иначе blur поля закрыл бы список раньше
  * клика.
+ *
+ * `onCreate` добавляет последним пунктом «+ Создать „…“», когда набранный
+ * текст не совпадает ни с одним из вариантов; выбор пункта вызывает `onCreate`
+ * вместо `onChange` и закрывает список.
  */
-export default function SearchSelect({ id, options, value, onChange, emptyLabel, invalid }: Props) {
+export default function SearchSelect({ id, options, value, onChange, emptyLabel, invalid, onCreate, autoFocus }: Props) {
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -32,7 +46,10 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
   const all = useMemo(() => [{ value: '', label: emptyLabel }, ...options], [options, emptyLabel]);
   const selected = all.find((o) => o.value === value) ?? all[0];
   const needle = query.trim().toLocaleLowerCase('ru');
-  const visible = needle ? all.filter((o) => o.value !== '' && o.label.toLocaleLowerCase('ru').includes(needle)) : all;
+  const typed = query.trim();
+  const filtered = needle ? all.filter((o) => o.value !== '' && o.label.toLocaleLowerCase('ru').includes(needle)) : all;
+  const exact = options.some((o) => o.label.toLocaleLowerCase('ru') === needle);
+  const visible = onCreate && typed !== '' && !exact ? [...filtered, { value: CREATE, label: `+ Создать «${typed}»` }] : filtered;
 
   const close = () => {
     setOpen(false);
@@ -40,7 +57,11 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
   };
 
   const pick = (option: SelectOption) => {
-    onChange(option.value);
+    if (option.value === CREATE) {
+      onCreate?.(typed);
+    } else {
+      onChange(option.value);
+    }
     close();
   };
 
@@ -78,6 +99,7 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
         aria-activedescendant={open && visible[active] ? `${listId}-${active}` : undefined}
         aria-invalid={invalid || undefined}
         autoComplete="off"
+        autoFocus={autoFocus}
         className={`${inputClass} pr-8`}
         value={open ? query : selected.label}
         placeholder={open ? selected.label : undefined}
@@ -112,7 +134,7 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
                 }}
                 onMouseEnter={() => setActive(index)}
                 className={`flex min-h-11 cursor-pointer items-center px-3 text-sm md:min-h-9 ${index === active ? 'bg-zinc-100' : ''} ${
-                  option.value === value ? 'font-medium text-blue-700' : 'text-zinc-800'
+                  option.value === CREATE ? 'font-medium text-blue-700' : option.value === value ? 'font-medium text-blue-700' : 'text-zinc-800'
                 }`}
               >
                 {option.label}

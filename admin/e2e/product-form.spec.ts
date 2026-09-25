@@ -14,9 +14,11 @@ import { createProduct, uniqueStamp } from "./warehouseApi";
 test.use({ storageState: ADMIN_SESSION });
 
 let created: number[] = [];
+let createdBrands: number[] = [];
 
 test.beforeEach(() => {
   created = [];
+  createdBrands = [];
 });
 
 test.afterEach(async ({ request }) => {
@@ -24,6 +26,9 @@ test.afterEach(async ({ request }) => {
 
   for (const id of created) {
     await api.delete(`/admin/products/${id}`);
+  }
+  for (const id of createdBrands) {
+    await api.delete(`/admin/brands/${id}`);
   }
 });
 
@@ -289,6 +294,29 @@ test("категория выбирается поиском и показыва
     await api.delete(`/admin/categories/${child.id}`);
     await api.delete(`/admin/categories/${parent.id}`);
   }
+});
+
+test("бренд создаётся прямо из поля «Бренд»", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  const brandName = `E2E бренд ${Date.now()}`;
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByRole("combobox", { name: "Бренд" }).fill(brandName);
+  await page.getByRole("option", { name: `+ Создать «${brandName}»` }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Новый бренд" });
+  await expect(dialog.getByLabel("Название (RU) *")).toHaveValue(brandName);
+  await dialog.getByLabel("Название (KK)").fill(`${brandName} kk`);
+  await dialog.getByRole("button", { name: "Создать" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("combobox", { name: "Бренд" })).toHaveValue(brandName);
+
+  await saveButton(page).click();
+  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+
+  const saved = await adminApi(request).get<{ data: { brand_id: number | null } }>(`/admin/products/${product.id}`);
+  expect(saved?.data.brand_id).not.toBeNull();
+  createdBrands.push(saved!.data.brand_id!);
 });
 
 test("выбор с клавиатуры: стрелки, Enter, Escape", async ({ page, request }) => {

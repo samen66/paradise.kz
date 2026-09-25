@@ -3,6 +3,9 @@ export type Translatable = string | { ru?: string; kk?: string } | null | undefi
 /** The Russian text of a translatable column, whichever shape the API sent. */
 export const ru = (value: Translatable): string => (typeof value === 'string' ? value : value?.ru ?? '');
 
+/** Казахский текст переводимой колонки; '' — перевода нет. */
+export const kk = (value: Translatable): string => (typeof value === 'string' ? '' : value?.kk ?? '');
+
 export type ProductRef = { id: number; name: Translatable; code: string | null; article: string | null; thumb_url?: string | null };
 
 export const productLabel = (p: ProductRef): string =>
