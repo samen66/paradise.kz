@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useOverlay } from './useOverlay';
 
-type ModalProps = { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode };
+type ModalProps = { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; variant?: 'sheet' | 'panel' };
 
 /**
  * Диалог. На телефоне — шторка снизу во всю ширину, с `md` — окно по центру.
@@ -22,8 +22,12 @@ type ModalProps = { title: string; onClose: () => void; children: ReactNode; foo
  * затемнённым фоном. При монтировании фокус уходит в сам диалог (если поле
  * внутри уже не забрало его автофокусом), при размонтировании — возвращается
  * туда, где был до открытия.
+ *
+ * `variant="panel"` — на телефоне на весь экран, с `md` — панель справа
+ * шириной 420 px во всю высоту; в заголовке кнопка ✕ (на весь экран не во
+ * что нажать мимо). Для «Подбора» и поиска товара.
  */
-export default function Modal({ title, onClose, children, footer }: ModalProps) {
+export default function Modal({ title, onClose, children, footer, variant = 'sheet' }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   useOverlay(onClose);
@@ -42,20 +46,41 @@ export default function Modal({ title, onClose, children, footer }: ModalProps) 
     };
   }, []);
 
+  const panel = variant === 'panel';
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center md:p-4" onMouseDown={onClose}>
+    <div
+      className={`fixed inset-0 z-50 flex bg-black/50 ${panel ? 'items-stretch justify-end' : 'items-end justify-center md:items-center md:p-4'}`}
+      onMouseDown={onClose}
+    >
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-white shadow-xl outline-none md:max-w-lg md:rounded-xl"
+        className={
+          panel
+            ? 'flex h-dvh w-full flex-col bg-white shadow-xl outline-none md:max-w-[420px]'
+            : 'flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-white shadow-xl outline-none md:max-w-lg md:rounded-xl'
+        }
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className="shrink-0 px-4 pt-5 pb-3 text-lg font-semibold text-zinc-900 md:px-6 md:pt-6 md:pb-4">
-          {title}
-        </h2>
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-5 pb-3 md:px-6 md:pt-6 md:pb-4">
+          <h2 id={titleId} className="text-lg font-semibold text-zinc-900">
+            {title}
+          </h2>
+          {panel && (
+            <button
+              type="button"
+              aria-label="Закрыть"
+              onClick={onClose}
+              className="-mr-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-xl text-zinc-400 hover:text-zinc-700"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div
           className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-6 ${
             footer ? 'pb-4' : 'pb-[calc(1.25rem_+_env(safe-area-inset-bottom))] md:pb-6'

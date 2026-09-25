@@ -8,9 +8,11 @@ type Props = {
   question?: string;
   children: ReactNode;
   className?: string;
+  disabled?: boolean;
+  title?: string;
 };
 
-export default function ConfirmButton({ onConfirm, question = 'Удалить? Это действие необратимо.', children, className }: Props) {
+export default function ConfirmButton({ onConfirm, question = 'Удалить? Это действие необратимо.', children, className, disabled = false, title }: Props) {
   const [busy, setBusy] = useState(false);
 
   const handleClick = async () => {
@@ -28,7 +30,7 @@ export default function ConfirmButton({ onConfirm, question = 'Удалить? �
   };
 
   return (
-    <button type="button" disabled={busy} onClick={handleClick} className={className ?? buttonDanger}>
+    <button type="button" disabled={busy || disabled} title={title} onClick={handleClick} className={className ?? buttonDanger}>
       {children}
     </button>
   );

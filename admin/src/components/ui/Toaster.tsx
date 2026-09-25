@@ -11,18 +11,39 @@ export default function Toaster() {
       role="status"
       aria-live="polite"
     >
-      {toasts.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => dismiss(t.id)}
-          className={`rounded-lg px-4 py-3 text-left text-sm shadow-lg ${
-            t.kind === 'error' ? 'bg-red-600 text-white' : 'bg-zinc-900 text-white'
-          }`}
-        >
-          {t.message}
-        </button>
-      ))}
+      {toasts.map((t) =>
+        t.action ? (
+          <div
+            key={t.id}
+            className={`flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm shadow-lg ${
+              t.kind === 'error' ? 'bg-red-600 text-white' : 'bg-zinc-900 text-white'
+            }`}
+          >
+            <span className="min-w-0">{t.message}</span>
+            <button
+              type="button"
+              className="inline-flex min-h-11 shrink-0 items-center font-semibold text-blue-300 hover:text-blue-200 md:min-h-0"
+              onClick={() => {
+                dismiss(t.id);
+                t.action?.onClick();
+              }}
+            >
+              {t.action.label}
+            </button>
+          </div>
+        ) : (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => dismiss(t.id)}
+            className={`rounded-lg px-4 py-3 text-left text-sm shadow-lg ${
+              t.kind === 'error' ? 'bg-red-600 text-white' : 'bg-zinc-900 text-white'
+            }`}
+          >
+            {t.message}
+          </button>
+        ),
+      )}
     </div>
   );
 }

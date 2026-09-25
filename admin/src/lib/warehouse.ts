@@ -245,3 +245,53 @@ export const documentHref = (document: NonNullable<StockMovement['document']>): 
     : document.type === 'write_off'
       ? warehouseHref.writeOff(document.id)
       : `/orders/${document.id}`;
+
+/** Вид документа в API и на карточке (во вкладке «Документы» — `DocumentKind`). */
+export type DraftKind = 'receipt' | 'write_off';
+
+export const documentApiPath = (kind: DraftKind): string => (kind === 'receipt' ? '/admin/goods-receipts' : '/admin/write-offs');
+
+export const draftHref = (kind: DraftKind, id: number): string =>
+  kind === 'receipt' ? warehouseHref.receipt(id) : warehouseHref.writeOff(id);
+
+export const kindOfDocuments = (kind: DraftKind): DocumentKind => (kind === 'receipt' ? 'receipts' : 'write_offs');
+
+/** Строка поля «+ Товар» и «Подбора» — `GET /admin/product-picker`. */
+export type PickerProduct = {
+  id: number;
+  name: Translatable;
+  code: string | null;
+  article: string | null;
+  uom: string | null;
+  /** Остаток на складе документа. */
+  on_hand: number;
+  /** Себестоимость новой строки приёмки, тиыны. */
+  suggested_unit_cost: number;
+};
+
+/** Строка документа из `GET …/items`: у приёмки есть `unit_cost`, у списания — `available`. */
+export type DocumentItem = {
+  id: number;
+  product_id: number;
+  quantity: string;
+  unit_cost?: number;
+  available?: number;
+  product: ProductRef;
+};
+
+/** ISO → значение `<input type="datetime-local">` в часовом поясе браузера. */
+export const toLocalInput = (value: string | null): string => {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+/**
+ * Значение `datetime-local` («2026-09-17T14:30», без пояса) → ISO. Как
+ * прежний `toReceiptPayload`: `new Date(...)` читает его в поясе браузера,
+ * сервер хранит UTC — иначе алматинские 14:30 после перезагрузки стали бы 19:30.
+ */
+export const localInputToIso = (value: string): string | null => (value ? new Date(value).toISOString() : null);
