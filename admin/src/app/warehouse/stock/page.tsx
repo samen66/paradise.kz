@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import type { PageMeta } from '@/lib/crud';
 import { formatTenge } from '@/lib/money';
@@ -54,12 +54,30 @@ function StockView() {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
-  // Строится из window.location.search, а не из params (снимка на момент
-  // рендера): иначе отложенный вызов из дебаунса поиска ниже мог бы взять
-  // устаревший адрес и откатить фильтр, выставленный кликом по чипу или
-  // складу, пока таймер ещё ждёт.
+  // В App Router router.replace/push асинхронны: адрес (а с ним params и
+  // window.location) обновляется, только когда навигация-переход
+  // закоммитится, а не в момент вызова. Поэтому очередной setParam/setPage
+  // строит следующий адрес не из params и не из window.location (оба —
+  // снимок на момент рендера, может быть устаревшим, пока предыдущий переход
+  // ещё не закоммитился), а из этого рефа: он правится синхронно, сразу же
+  // при вызове, так что несколько вызовов подряд складываются независимо от
+  // того, когда именно каждый переход закоммитится.
+  const queryRef = useRef(params.toString());
+
+  // Синхронизировать реф, когда адрес меняется извне (Назад/Вперёд, переход
+  // по ссылке на вкладку) — но только если params действительно принёс
+  // другое значение. Без этой проверки промежуточный коммит одного из двух
+  // почти одновременных переходов мог бы откатить реф к уже устаревшему
+  // адресу поверх более нового намерения (см. отчёт: остаточный случай).
+  useEffect(() => {
+    const current = params.toString();
+    if (queryRef.current !== current) {
+      queryRef.current = current;
+    }
+  }, [params]);
+
   const setParam = (updates: Record<string, string>) => {
-    const next = new URLSearchParams(window.location.search);
+    const next = new URLSearchParams(queryRef.current);
     for (const [key, value] of Object.entries(updates)) {
       if (value) {
         next.set(key, value);
@@ -70,19 +88,21 @@ function StockView() {
     if (!('page' in updates)) {
       next.delete('page');
     }
-    router.replace(`${pathname}${next.toString() ? `?${next}` : ''}`);
+    queryRef.current = next.toString();
+    router.replace(`${pathname}${queryRef.current ? `?${queryRef.current}` : ''}`);
   };
 
   // Отдельно от setParam: смена страницы кладёт запись в историю (router.push),
   // так «Назад» листает страницы списка назад, а не сразу уходит из раздела.
   const setPage = (nextPage: number) => {
-    const next = new URLSearchParams(window.location.search);
+    const next = new URLSearchParams(queryRef.current);
     if (nextPage > 1) {
       next.set('page', String(nextPage));
     } else {
       next.delete('page');
     }
-    router.push(`${pathname}${next.toString() ? `?${next}` : ''}`);
+    queryRef.current = next.toString();
+    router.push(`${pathname}${queryRef.current ? `?${queryRef.current}` : ''}`);
   };
 
   // Поиск уходит в адрес с задержкой, чтобы не делать запрос на каждую букву.
@@ -261,6 +281,7 @@ function StockView() {
                     className={buttonSecondary}
                     onClick={() => {
                       setDraft('');
+                      queryRef.current = '';
                       router.replace(pathname);
                     }}
                   >
