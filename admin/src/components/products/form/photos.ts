@@ -53,13 +53,16 @@ export class PhotoUploadError extends Error {
   }
 }
 
-/** Загружает одно фото в товар. Ошибка — PhotoUploadError с текстом для человека. */
-export async function uploadPhoto(productId: number, file: File): Promise<void> {
+/**
+ * Загружает одно фото в коллекцию (`/admin/products/{id}/media`, `/admin/showrooms/{id}/photos`).
+ * Ошибка — PhotoUploadError с текстом для человека.
+ */
+export async function uploadPhoto(mediaPath: string, file: File): Promise<void> {
   const body = new FormData();
   body.append('file', file);
 
   try {
-    await api.post(`/admin/products/${productId}/media`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
+    await api.post(mediaPath, body, { headers: { 'Content-Type': 'multipart/form-data' } });
   } catch (error) {
     const status = isAxiosError(error) ? error.response?.status : undefined;
     const reported = isAxiosError(error) && (status === undefined || status >= 500 || status === 403);

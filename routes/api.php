@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Http\Controllers\Api\Admin\ProductPickerController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
+use App\Http\Controllers\Api\Admin\ShowroomController as AdminShowroomController;
+use App\Http\Controllers\Api\Admin\ShowroomPhotoController;
 use App\Http\Controllers\Api\Admin\StockController;
 use App\Http\Controllers\Api\Admin\StockMovementController;
 use App\Http\Controllers\Api\Admin\StoreController as AdminStoreController;
@@ -47,6 +49,7 @@ use App\Http\Controllers\Api\Public\PageController;
 use App\Http\Controllers\Api\Public\ProductController as PublicProductController;
 use App\Http\Controllers\Api\Public\ProductReviewController;
 use App\Http\Controllers\Api\Public\SettingsController;
+use App\Http\Controllers\Api\Public\ShowroomController as PublicShowroomController;
 use App\Http\Controllers\Api\Public\SitemapController;
 use App\Http\Controllers\Api\Public\StoreController;
 use Illuminate\Http\Request;
@@ -113,6 +116,8 @@ Route::get('/b2b/home', B2bHomeController::class);
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
     Route::get('/stores', [StoreController::class, 'index']);
+    Route::get('/showrooms', [PublicShowroomController::class, 'index']);
+    Route::get('/showrooms/{slug}', [PublicShowroomController::class, 'show']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);
@@ -205,6 +210,13 @@ Route::prefix('admin')
         Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('stores', AdminStoreController::class);
+        Route::apiResource('showrooms', AdminShowroomController::class)
+            ->only(['index', 'store', 'show', 'update'])
+            ->parameters(['showrooms' => 'store']);
+        Route::get('showrooms/{store}/photos', [ShowroomPhotoController::class, 'index']);
+        Route::post('showrooms/{store}/photos', [ShowroomPhotoController::class, 'store']);
+        Route::put('showrooms/{store}/photos/order', [ShowroomPhotoController::class, 'order']);
+        Route::delete('showrooms/{store}/photos/{media}', [ShowroomPhotoController::class, 'destroy'])->scopeBindings();
         Route::apiResource('goods-receipts', GoodsReceiptController::class);
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post']);
         Route::apiResource('goods-receipts.items', GoodsReceiptItemController::class)->except('show')->scoped();
