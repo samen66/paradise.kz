@@ -3,89 +3,96 @@ import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
 
 /**
- * Атрибуты — первый экран на общих компонентах: форма в модалке, клиентская
- * валидация, ошибка сервера под полем, удаление с подтверждением.
+ * Экран «Атрибуты»: создание без slug (его делает сервер), поиск и чипы в
+ * адресе, перевод, переключатель «В фильтрах» и запрет удалить используемый.
  */
 test.use({ storageState: ADMIN_SESSION });
 
-// Slug(и), заведённые текущим тестом — читается в afterEach. Воркер Playwright
-// выполняет тесты одного файла по одному, не параллельно, так что модульная
-// переменная между тестами не путается.
-let createdSlugs: string[] = [];
+// Названия и товары, заведённые текущим тестом — читаются в afterEach. Воркер
+// Playwright выполняет тесты одного файла по одному, так что модульные
+// переменные между тестами не путаются.
+let createdNames: string[] = [];
+let createdProducts: number[] = [];
 
 test.beforeEach(({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
-  createdSlugs = [];
+  createdNames = [];
+  createdProducts = [];
 });
 
 /**
- * Страховка на случай, если тест упал раньше своего шага удаления через
- * интерфейс: подчищает по API любой атрибут, чей slug начинается с одного из
- * сгенерированных в этом тесте. Тихая — не должна ронять прогон.
+ * Страховка: удаляет товары теста (их значения уходят каскадом), затем любой
+ * атрибут, чьё русское название совпадает с заведённым в тесте. Тихая — не
+ * должна ронять прогон.
  */
 test.afterEach(async ({ request }) => {
   const api = adminApi(request);
-  const body = await api.get<{ data: { id: number; slug: string }[] }>("/admin/attributes");
 
-  for (const slug of createdSlugs) {
-    for (const attribute of body?.data ?? []) {
-      if (attribute.slug.startsWith(slug)) {
-        await api.delete(`/admin/attributes/${attribute.id}`);
-      }
+  for (const id of createdProducts) {
+    await api.delete(`/admin/products/${id}`);
+  }
+
+  const body = await api.get<{ data: { id: number; name: { ru?: string } }[] }>("/admin/attributes");
+
+  for (const attribute of body?.data ?? []) {
+    if (attribute.name.ru && createdNames.includes(attribute.name.ru)) {
+      await api.delete(`/admin/attributes/${attribute.id}`);
     }
   }
 });
 
-test("атрибут создаётся, правится и удаляется", async ({ page }) => {
-  const slug = `e2e-attr-${Date.now()}`;
-  createdSlugs.push(slug);
+test("атрибут создаётся без slug, переводится, правится и удаляется", async ({ page }) => {
+  const name = `E2E цвет ${Date.now()}`;
+  createdNames.push(name);
 
   await page.goto("/attributes");
-  await page.getByRole("button", { name: "Добавить атрибут" }).click();
-
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Название *").fill("E2E цвет");
-  await dialog.getByLabel("Slug *").fill("Bad Slug");
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(dialog.getByText("Латиница в нижнем регистре, цифры и дефисы")).toBeVisible();
-
-  await dialog.getByLabel("Slug *").fill(slug);
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await page.getByRole("button", { name: "Добавить атрибут" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Новый атрибут" });
+  await dialog.getByLabel("Название (RU) *").fill(name);
+  await dialog.getByRole("button", { name: "Создать" }).click();
   await expect(dialog).toBeHidden();
 
-  const row = page.locator("tbody tr").filter({ hasText: slug });
-  await expect(row).toContainText("E2E цвет");
+  await page.getByLabel("Поиск атрибута").fill(name);
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  await expect(page.getByText("нет перевода на казахский")).toBeVisible();
+  await expect(page.getByText("не используется")).toBeVisible();
 
-  await row.getByRole("button", { name: "Изменить" }).click();
-  await dialog.getByLabel("Название *").fill("E2E цвет обивки");
-  await dialog.getByLabel("Показывать в фильтрах витрины").check();
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(row).toContainText("E2E цвет обивки");
-  await expect(row).toContainText("Да");
-
-  await row.getByRole("button", { name: "Удалить" }).click();
-  await expect(page.locator("tbody tr").filter({ hasText: slug })).toHaveCount(0);
+  await page.getByRole("radio", { name: /Без перевода/ }).click();
+  await expect(page).toHaveURL(/filter=untranslated/);
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
 });
 
-test("занятый slug возвращается ошибкой под полем", async ({ page }) => {
-  const slug = `e2e-dup-${Date.now()}`;
-  createdSlugs.push(slug);
-  const dialog = page.getByRole("dialog");
+test("переключатель «В фильтрах» сохраняется сразу", async ({ page, request }) => {
+  const name = `E2E фильтр ${Date.now()}`;
+  createdNames.push(name);
+  await adminApi(request).create("/admin/attributes", { name: { ru: name } });
 
-  await page.goto("/attributes");
+  await page.goto(`/attributes?q=${encodeURIComponent(name)}`);
+  await page.getByRole("switch").first().click();
+  await expect(page.getByText("Показывается в фильтрах витрины")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("switch").first()).toHaveAttribute("aria-checked", "true");
+});
 
-  for (const attempt of [1, 2]) {
-    await page.getByRole("button", { name: "Добавить атрибут" }).click();
-    await dialog.getByLabel("Название *").fill(`E2E дубль ${attempt}`);
-    await dialog.getByLabel("Slug *").fill(slug);
-    await dialog.getByRole("button", { name: "Сохранить" }).click();
+test("используемый атрибут удалить нельзя", async ({ page, request }) => {
+  const api = adminApi(request);
+  const name = `E2E занят ${Date.now()}`;
+  createdNames.push(name);
+  const attribute = await api.create<{ data: { id: number } }>("/admin/attributes", { name: { ru: name } });
+  const product = await api.create<{ data: { id: number } }>("/admin/products", {
+    name: { ru: `E2E товар ${Date.now()}` },
+    is_active: false,
+    attribute_values: [{ attribute_id: attribute.data.id, value: { ru: "Серый" } }],
+  });
+  createdProducts.push(product.data.id);
+
+  await page.goto(`/attributes?q=${encodeURIComponent(name)}`);
+  await expect(page.getByText("в 1 товаре")).toBeVisible();
+  // ПК — неактивная кнопка, телефон — неактивный пункт шторки.
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
+    await expect(page.getByRole("button", { name: "Удалить" })).toBeDisabled();
+  } else {
+    await page.getByRole("button", { name: `Действия: ${name}` }).click();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Удалить/ })).toBeDisabled();
   }
-
-  // Вторая попытка: модалка осталась, у поля slug — текст ошибки от Laravel.
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("alert")).toBeVisible();
-
-  await dialog.getByRole("button", { name: "Отмена" }).click();
-  await page.locator("tbody tr").filter({ hasText: slug }).getByRole("button", { name: "Удалить" }).click();
-  await expect(page.locator("tbody tr").filter({ hasText: slug })).toHaveCount(0);
 });

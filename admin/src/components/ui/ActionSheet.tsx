@@ -8,6 +8,9 @@ export type SheetAction = {
   label: string;
   /** Красным: действие необратимо или что-то отменяет. */
   destructive?: boolean;
+  /** Пункт виден, но не нажимается; `hint` — почему. */
+  disabled?: boolean;
+  hint?: string;
   onSelect: () => void;
 };
 
@@ -39,15 +42,19 @@ export default function ActionSheet({ title, actions, onClose }: Props) {
           <li key={action.key}>
             <button
               type="button"
+              disabled={action.disabled}
               onClick={() => {
                 onClose();
                 action.onSelect();
               }}
-              className={`flex min-h-12 w-full items-center px-4 text-left text-base active:bg-zinc-100 md:px-6 ${
+              className={`flex min-h-12 w-full items-center px-4 text-left text-base active:bg-zinc-100 disabled:text-zinc-400 md:px-6 ${
                 action.destructive ? 'text-red-600' : 'text-zinc-800'
               }`}
             >
-              {action.label}
+              <span className="flex flex-col py-2">
+                {action.label}
+                {action.hint && <span className="text-xs text-zinc-500">{action.hint}</span>}
+              </span>
             </button>
           </li>
         ))}
