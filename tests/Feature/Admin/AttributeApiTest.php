@@ -37,8 +37,8 @@ class AttributeApiTest extends TestCase
 
         $this->getJson('/api/admin/attributes')
             ->assertOk()
-            ->assertJsonPath('data.0.name', 'Материал')
-            ->assertJsonPath('data.1.name', 'Цвет');
+            ->assertJsonPath('data.0.name.ru', 'Материал')
+            ->assertJsonPath('data.1.name.ru', 'Цвет');
     }
 
     #[Test]
@@ -56,7 +56,7 @@ class AttributeApiTest extends TestCase
             'name' => 'Цвет обивки',
             'slug' => 'color',
             'is_filterable' => false,
-        ])->assertOk()->assertJsonPath('data.name', 'Цвет обивки');
+        ])->assertOk()->assertJsonPath('data.name.ru', 'Цвет обивки');
 
         $this->assertDatabaseHas('attributes', ['id' => $id, 'slug' => 'color', 'is_filterable' => false]);
 

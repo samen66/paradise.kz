@@ -13,7 +13,11 @@ class AttributeController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(['data' => Attribute::orderBy('name')->get()]);
+        $attributes = Attribute::query()->get()
+            ->sortBy(fn (Attribute $attribute): string => mb_strtolower($attribute->getTranslation('name', 'ru')))
+            ->values();
+
+        return response()->json(['data' => $attributes]);
     }
 
     public function store(AttributeRequest $request): JsonResponse

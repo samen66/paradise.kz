@@ -8,11 +8,20 @@ use Database\Factories\AttributeValueFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Translatable\HasTranslations;
 
+/**
+ * value is {ru, kk}.
+ */
 class AttributeValue extends Model
 {
     /** @use HasFactory<AttributeValueFactory> */
     use HasFactory;
+
+    use HasTranslations;
+
+    /** @var list<string> */
+    public array $translatable = ['value'];
 
     protected $fillable = [
         'product_id',

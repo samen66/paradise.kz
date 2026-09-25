@@ -41,12 +41,12 @@ class AttributeValueApiTest extends TestCase
         $id = $this->postJson("/api/admin/products/{$product->id}/attribute-values", [
             'attribute_id' => $attribute->id,
             'value' => 'Серый',
-        ])->assertCreated()->assertJsonPath('data.attribute.name', 'Цвет')->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.attribute.name.ru', 'Цвет')->json('data.id');
 
         $this->putJson("/api/admin/products/{$product->id}/attribute-values/{$id}", [
             'attribute_id' => $attribute->id,
             'value' => 'Графит',
-        ])->assertOk()->assertJsonPath('data.value', 'Графит');
+        ])->assertOk()->assertJsonPath('data.value.ru', 'Графит');
 
         $this->getJson("/api/admin/products/{$product->id}/attribute-values")->assertOk()->assertJsonCount(1, 'data');
 

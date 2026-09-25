@@ -32,7 +32,10 @@ class FacetsTest extends TestCase
         $response = $this->getJson('/api/public/facets')->assertOk();
 
         $this->assertSame('color', $response->json('attributes.0.slug'));
-        $this->assertEqualsCanonicalizing(['красный', 'синий'], $response->json('attributes.0.values'));
+        $this->assertEqualsCanonicalizing(
+            [['value' => 'красный', 'label' => 'красный'], ['value' => 'синий', 'label' => 'синий']],
+            $response->json('attributes.0.values'),
+        );
         $this->assertSame('ikea', $response->json('brands.0.slug'));
         $this->assertSame(1, $response->json('brands.0.count'));
         $this->assertEqualsWithDelta(1000.0, $response->json('price.min'), 0.001);
@@ -64,8 +67,27 @@ class FacetsTest extends TestCase
 
         $response = $this->getJson('/api/public/facets?category=divany')->assertOk();
 
-        $this->assertSame(['красный'], $response->json('attributes.0.values'));
+        $this->assertSame([['value' => 'красный', 'label' => 'красный']], $response->json('attributes.0.values'));
         $this->assertEqualsWithDelta(1000.0, $response->json('price.max'), 0.001);
+    }
+
+    #[Test]
+    public function facet_labels_follow_the_locale_and_keep_the_ru_key(): void
+    {
+        $color = Attribute::factory()->create(['name' => ['ru' => 'Цвет', 'kk' => 'Түсі'], 'slug' => 'color', 'is_filterable' => true]);
+        $grey = Product::factory()->create();
+        $white = Product::factory()->create();
+        AttributeValue::factory()->create(['product_id' => $grey->id, 'attribute_id' => $color->id, 'value' => ['ru' => 'Серый', 'kk' => 'Сұр']]);
+        // kk не заполнен — подпись откатывается на ru.
+        AttributeValue::factory()->create(['product_id' => $white->id, 'attribute_id' => $color->id, 'value' => ['ru' => 'Белый']]);
+
+        $response = $this->getJson('/api/public/facets?locale=kk')->assertOk();
+
+        $this->assertSame('Түсі', $response->json('attributes.0.name'));
+        $this->assertEqualsCanonicalizing(
+            [['value' => 'Серый', 'label' => 'Сұр'], ['value' => 'Белый', 'label' => 'Белый']],
+            $response->json('attributes.0.values'),
+        );
     }
 
     #[Test]

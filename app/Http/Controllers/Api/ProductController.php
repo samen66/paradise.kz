@@ -212,7 +212,8 @@ class ProductController extends Controller
                     ->whereColumn('attribute_values.product_id', 'products.id')
                     ->where('attributes.slug', (string) $attributeSlug)
                     ->where('attributes.is_filterable', true)
-                    ->whereIn('attribute_values.value', $values);
+                    // The ru text is the filter key in both languages (see FacetController).
+                    ->whereIn('attribute_values.value->ru', $values);
             });
         }
     }

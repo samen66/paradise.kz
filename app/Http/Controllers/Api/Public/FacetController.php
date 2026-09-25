@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\Catalog\CategoryTree;
 use App\Services\Catalog\VisibilityService;
 use App\Services\Pricing\PricingService;
+use App\Support\Translations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,26 +49,39 @@ class FacetController extends Controller
     }
 
     /**
+     * Values are keyed by their ru text — the key filter[attr] matches on,
+     * the same in both languages — and labelled in the request's locale,
+     * falling back to ru where kk is not filled in.
+     *
      * @param  Builder<Product>  $productIds
-     * @return list<array{name: string, slug: string, values: list<string>}>
+     * @return list<array{name: string, slug: string, values: list<array{value: string, label: string}>}>
      */
     private function attributeFacets(Builder $productIds): array
     {
-        $values = DB::table('attribute_values')
+        $locale = app()->getLocale();
+
+        $rows = DB::table('attribute_values')
             ->join('attributes', 'attributes.id', '=', 'attribute_values.attribute_id')
             ->where('attributes.is_filterable', true)
             ->whereIn('attribute_values.product_id', $productIds)
             ->distinct()
-            ->orderBy('attributes.slug')
-            ->orderBy('attribute_values.value')
             ->get(['attributes.name', 'attributes.slug', 'attribute_values.value']);
 
-        return $values
+        return $rows
             ->groupBy('slug')
-            ->map(fn ($rows): array => [
-                'name' => $rows->first()->name,
-                'slug' => $rows->first()->slug,
-                'values' => $rows->pluck('value')->values()->all(),
+            ->sortKeys()
+            ->map(fn ($group): array => [
+                'name' => Translations::pick($group->first()->name, $locale),
+                'slug' => $group->first()->slug,
+                'values' => $group
+                    ->map(fn (object $row): array => [
+                        'value' => Translations::pick($row->value, 'ru'),
+                        'label' => Translations::pick($row->value, $locale),
+                    ])
+                    ->unique('value')
+                    ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values()
+                    ->all(),
             ])
             ->values()
             ->all();

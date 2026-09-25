@@ -22,7 +22,7 @@ class AttributeValueFactory extends Factory
         return [
             'product_id' => Product::factory(),
             'attribute_id' => Attribute::factory(),
-            'value' => fake()->word(),
+            'value' => ['ru' => fake()->word()],
         ];
     }
 }

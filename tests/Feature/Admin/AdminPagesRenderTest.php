@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Filament\Resources\Attributes\Pages\EditAttribute;
+use App\Filament\Resources\Attributes\Pages\ListAttributes;
 use App\Filament\Resources\CatalogGroups\Pages\ListCatalogGroups;
 use App\Filament\Resources\Orders\Pages\EditOrder;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
+use App\Filament\Resources\Products\RelationManagers\AttributeValuesRelationManager;
 use App\Filament\Resources\Products\RelationManagers\VariantsRelationManager;
 use App\Filament\Resources\Stores\Pages\ListStores;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\RelationManagers\AddressesRelationManager;
 use App\Models\Address;
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductExternalMapping;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
@@ -70,7 +76,7 @@ class AdminPagesRenderTest extends TestCase
             'country' => 'Казахстан',
             'supplier' => 'ТОО Поставщик',
         ]);
-        $product->externalMapping()->save(\App\Models\ProductExternalMapping::factory()->make([
+        $product->externalMapping()->save(ProductExternalMapping::factory()->make([
             'barcodes' => ['4600000000017'],
             'erp_attributes' => ['Материал' => 'дерево'],
         ]));
@@ -112,5 +118,20 @@ class AdminPagesRenderTest extends TestCase
             'ownerRecord' => $user,
             'pageClass' => EditUser::class,
         ])->assertOk();
+    }
+
+    #[Test]
+    public function the_attribute_pages_and_the_attribute_values_relation_manager_render(): void
+    {
+        $attribute = Attribute::factory()->create(['name' => ['ru' => 'Цвет', 'kk' => 'Түсі']]);
+        $product = Product::factory()->create();
+        AttributeValue::factory()->create(['product_id' => $product->id, 'attribute_id' => $attribute->id, 'value' => ['ru' => 'Серый']]);
+
+        Livewire::test(ListAttributes::class)->assertOk()->assertSee('Цвет');
+        Livewire::test(EditAttribute::class, ['record' => $attribute->getRouteKey()])->assertOk();
+        Livewire::test(AttributeValuesRelationManager::class, [
+            'ownerRecord' => $product,
+            'pageClass' => EditProduct::class,
+        ])->assertOk()->assertSee('Серый');
     }
 }
