@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductSaveRequest;
 use App\Models\Product;
 use App\Services\Pricing\PricingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -57,7 +58,7 @@ class ProductController extends Controller
     private const BLOCKING_ISSUES = ['inactive', 'hidden_by_group', 'no_price', 'no_slug', 'no_category'];
 
     /**
-     * Filters: filter[category_id], filter[is_active], filter[search]=<name|code>,
+     * Filters: filter[category_id], filter[is_active], filter[search]=<name|code|article> (без учёта регистра),
      *          filter[issues]=1 (only products that will not reach the storefront).
      *
      * Every product carries `issues: string[]` — see {@see ISSUES}.
@@ -68,13 +69,11 @@ class ProductController extends Controller
             ->allowedFilters(
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::exact('is_active'),
-                AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where(function ($q) use ($value) {
-                        $q->where('name->ru', 'LIKE', "%{$value}%")
-                            ->orWhere('name->kk', 'LIKE', "%{$value}%")
-                            ->orWhere('code', 'LIKE', "%{$value}%");
-                    });
-                }),
+                // query-builder режет значение фильтра по запятой в массив —
+                // «Диван 2,5 м» склеивается обратно.
+                AllowedFilter::callback('search', fn (Builder $query, mixed $value) => $query->search(
+                    is_array($value) ? implode(',', $value) : (string) $value,
+                )),
                 AllowedFilter::callback('issues', function ($query, $value) {
                     if (! filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
                         return;

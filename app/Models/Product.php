@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\ProductSearch;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,6 +62,13 @@ class Product extends Model implements HasMedia
     ];
 
     /**
+     * Служебная колонка поиска ({@see ProductSearch}) — не для ответов API.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['search_text'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -83,6 +91,10 @@ class Product extends Model implements HasMedia
 
     protected static function booted(): void
     {
+        static::saving(function (Product $product): void {
+            $product->search_text = ProductSearch::haystack($product);
+        });
+
         // Storefront URL slug, generated from the ru name once the id is
         // known and then kept stable (SEO). Bulk inserts bypass model events,
         // so `catalog:generate-product-slugs` backfills any row that misses it.
@@ -274,6 +286,15 @@ class Product extends Model implements HasMedia
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /**
+     * Товары, у которых название (ru/kk), код или артикул содержат $term,
+     * без учёта регистра.
+     */
+    public function scopeSearch(Builder $query, string $term): void
+    {
+        ProductSearch::apply($query, $term);
     }
 
     /**

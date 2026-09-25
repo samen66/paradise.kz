@@ -7,6 +7,7 @@ namespace App\Services\Inventory;
 use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Models\Product;
 use App\Models\ProductStoreStock;
+use App\Support\ProductSearch;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -131,14 +132,7 @@ final class StockByProduct
                 "CASE WHEN {$qty} <= 0 THEN 'out' WHEN {$qty} <= COALESCE(products.min_stock, {$threshold}) THEN 'low' ELSE 'ok' END as stock_status",
             )
             ->when($filters['product_id'] ?? null, fn (Builder $query, int $id) => $query->where('products.id', $id))
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->where('products.name->ru', 'like', "%{$search}%")
-                        ->orWhere('products.name->kk', 'like', "%{$search}%")
-                        ->orWhere('products.code', 'like', "%{$search}%")
-                        ->orWhere('products.article', 'like', "%{$search}%");
-                });
-            });
+            ->when($filters['search'] ?? null, fn (Builder $query, string $search) => ProductSearch::apply($query, $search));
 
         return DB::query()->fromSub($products, 'stock_rows');
     }
