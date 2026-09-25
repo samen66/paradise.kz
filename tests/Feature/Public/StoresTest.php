@@ -24,4 +24,14 @@ class StoresTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Active Store');
     }
+
+    #[Test]
+    public function it_returns_only_public_fields(): void
+    {
+        Store::factory()->create(['name' => 'Склад', 'is_active' => true]);
+
+        $this->getJson('/api/public/stores')
+            ->assertOk()
+            ->assertExactJsonStructure(['data' => [['id', 'name']]]);
+    }
 }
