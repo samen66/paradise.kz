@@ -13,7 +13,8 @@ import { PHOTO_ACCEPT, photoProblem, queuePhoto, reportPhotoError, uploadPhoto, 
 type Image = { id: number; file_name: string; url: string; thumb_url: string; order: number | null };
 
 type Props = {
-  productId: number | null;
+  /** Путь коллекции фото в API; null — запись ещё не сохранена, файлы копятся в очереди. */
+  mediaPath: string | null;
   queue: QueuedPhoto[];
   onQueueChange: Dispatch<SetStateAction<QueuedPhoto[]>>;
   /** Идёт сохранение товара — новые файлы не принимаем. */
@@ -26,16 +27,15 @@ const MainBadge = () => (
 );
 
 /**
- * Фото товара. У сохранённого товара файлы загружаются сразу. У нового —
+ * Фото товара или шоурума. У сохранённого товара файлы загружаются сразу. У нового —
  * копятся в очереди с превью и уходят после первого сохранения (это делает
  * ProductForm); не загрузившиеся остаются здесь с кнопкой «Повторить».
  */
-export default function PhotosSection({ productId, queue, onQueueChange, busy, className }: Props) {
-  const path = productId ? `/admin/products/${productId}/media` : null;
-  const images = useResource<Image>(path);
+export default function PhotosSection({ mediaPath, queue, onQueueChange, busy, className }: Props) {
+  const images = useResource<Image>(mediaPath);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const saved = productId !== null ? images.items : [];
+  const saved = mediaPath !== null ? images.items : [];
 
   const addFiles = async (files: FileList | null) => {
     const accepted: File[] = [];
@@ -53,7 +53,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
       return;
     }
 
-    if (productId === null) {
+    if (mediaPath === null) {
       onQueueChange((q) => [...q, ...accepted.map(queuePhoto)]);
 
       return;
@@ -62,7 +62,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
     setUploading(true);
     for (const file of accepted) {
       try {
-        await uploadPhoto(productId, file);
+        await uploadPhoto(mediaPath, file);
       } catch (error) {
         reportPhotoError(file, error);
       }
@@ -72,14 +72,14 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
   };
 
   const retry = async (photo: QueuedPhoto) => {
-    if (productId === null) {
+    if (mediaPath === null) {
       return;
     }
 
     onQueueChange((q) => q.map((p) => (p.key === photo.key ? { ...p, status: 'uploading', error: undefined } : p)));
 
     try {
-      await uploadPhoto(productId, photo.file);
+      await uploadPhoto(mediaPath, photo.file);
       URL.revokeObjectURL(photo.preview);
       onQueueChange((q) => q.filter((p) => p.key !== photo.key));
       await images.reload();
@@ -107,7 +107,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
     [ids[index], ids[index + delta]] = [ids[index + delta], ids[index]];
 
     try {
-      await api.put(`${path}/order`, { ids });
+      await api.put(`${mediaPath}/order`, { ids });
     } catch (error) {
       toast.error(serverMessage(error) ?? 'Не удалось изменить порядок');
     }
@@ -143,7 +143,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
           <li key={photo.key} data-testid="queued-photo" className="relative overflow-hidden rounded-lg border border-dashed border-zinc-300">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo.preview} alt={photo.file.name} className="aspect-square w-full object-cover opacity-80" />
-            {productId === null && index === 0 && <MainBadge />}
+            {mediaPath === null && index === 0 && <MainBadge />}
             {photo.status === 'failed' && (
               <span className="absolute inset-x-0 top-0 bg-red-600/90 px-2 py-1 text-[11px] font-medium text-white">Не загрузилось</span>
             )}
@@ -153,9 +153,9 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
             {/* Пока идёт сохранение, очередь уже отдана в загрузку: убирать и
                 переставлять поздно — фото всё равно уйдёт. */}
             <div className={`flex items-center justify-between gap-1 p-1 text-xs ${busy ? 'invisible' : ''}`}>
-              {busy ? null : productId !== null && photo.status === 'failed' ? (
+              {busy ? null : mediaPath !== null && photo.status === 'failed' ? (
                 <button type="button" className={buttonLink} onClick={() => void retry(photo)}>Повторить</button>
-              ) : productId === null ? (
+              ) : mediaPath === null ? (
                 arrows(index, queue.length, moveQueued)
               ) : (
                 <span />
@@ -208,7 +208,7 @@ export default function PhotosSection({ productId, queue, onQueueChange, busy, c
       <p className="text-xs text-zinc-500">
         {saved.length === 0 && queue.length === 0 && 'Фото нет. '}
         Первое фото — главное на витрине.
-        {productId === null && queue.length > 0 && ' Загрузятся после сохранения.'}
+        {mediaPath === null && queue.length > 0 && ' Загрузятся после сохранения.'}
       </p>
     </FormCard>
   );
