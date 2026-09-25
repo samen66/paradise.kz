@@ -18,7 +18,7 @@ class AttributeController extends Controller
      *
      * @var list<string>
      */
-    private const COUNTS = ['values'];
+    private const COUNTS = ['values', 'variantValues'];
 
     public function index(): JsonResponse
     {
@@ -68,13 +68,13 @@ class AttributeController extends Controller
     }
 
     /**
-     * Deleting would cascade away every product's value for it — a manager
-     * clears the values first, on purpose.
+     * Deleting would cascade away every product's and variant's value for
+     * it — a manager clears the values first, on purpose.
      */
     public function destroy(Attribute $attribute): JsonResponse
     {
-        if ($attribute->values()->exists()) {
-            return response()->json(['message' => 'Атрибут используется в товарах — сначала удалите его значения.'], 422);
+        if ($attribute->values()->exists() || $attribute->variantValues()->exists()) {
+            return response()->json(['message' => 'Атрибут используется в товарах или вариантах — сначала удалите его значения.'], 422);
         }
 
         $attribute->delete();

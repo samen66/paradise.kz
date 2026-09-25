@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
 use Tests\TestCase;
 
@@ -20,6 +24,12 @@ class ProductVariantApiTest extends TestCase
     {
         parent::setUp();
         $this->setUpStaff();
+        Storage::fake(config('media-library.disk_name'));
+    }
+
+    private function photo(Product $product, string $name = 'a.jpg'): Media
+    {
+        return $product->addMedia(UploadedFile::fake()->image($name))->toMediaCollection(Product::IMAGE_COLLECTION);
     }
 
     #[Test]
@@ -42,7 +52,6 @@ class ProductVariantApiTest extends TestCase
             'retail_price' => '150000',
             'b2b_price' => 120000.5,
             'barcodes' => ['4870000000011'],
-            'characteristics' => ['Цвет' => 'Серый'],
         ])->assertCreated();
 
         $variant = ProductVariant::findOrFail($response->json('data.id'));
@@ -52,7 +61,6 @@ class ProductVariantApiTest extends TestCase
         $this->assertSame(15_000_000, $variant->retail_price);
         $this->assertSame(12_000_050, $variant->b2b_price);
         $this->assertSame(['4870000000011'], $variant->barcodes);
-        $this->assertSame(['Цвет' => 'Серый'], $variant->characteristics);
 
         $response->assertJsonMissingPath('data.external_id')
             ->assertJsonMissingPath('data.source')
@@ -97,5 +105,70 @@ class ProductVariantApiTest extends TestCase
         $product = Product::factory()->create();
 
         $this->putJson("/api/admin/products/{$product->id}/variants/{$foreign->id}", ['name' => 'x'])->assertNotFound();
+    }
+
+    #[Test]
+    public function a_variant_keeps_its_characteristics_and_photos_in_order(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $color = Attribute::factory()->create(['name' => ['ru' => 'Цвет', 'kk' => 'Түсі']]);
+        $first = $this->photo($product, 'a.jpg');
+        $second = $this->photo($product, 'b.jpg');
+
+        $this->postJson("/api/admin/products/{$product->id}/variants", [
+            'name' => 'Серый',
+            'attribute_values' => [['attribute_id' => $color->id, 'value' => ['ru' => 'Серый', 'kk' => 'Сұр']]],
+            'media_ids' => [$second->id, $first->id],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.attribute_values.0.value.kk', 'Сұр')
+            ->assertJsonPath('data.attribute_values.0.attribute.name.ru', 'Цвет')
+            ->assertJsonPath('data.images.0.id', $second->id)
+            ->assertJsonPath('data.images.1.id', $first->id);
+
+        $this->getJson("/api/admin/products/{$product->id}/variants")
+            ->assertOk()
+            ->assertJsonPath('data.0.images.0.id', $second->id)
+            ->assertJsonPath('data.0.attribute_values.0.value.ru', 'Серый');
+    }
+
+    #[Test]
+    public function a_photo_of_another_product_is_refused(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $foreign = $this->photo(Product::factory()->create());
+
+        $this->postJson("/api/admin/products/{$product->id}/variants", ['name' => 'Серый', 'media_ids' => [$foreign->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('media_ids.0');
+    }
+
+    #[Test]
+    public function an_update_without_media_ids_keeps_the_photos(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $variant = ProductVariant::factory()->for($product)->create();
+        $photo = $this->photo($product);
+        $variant->images()->attach($photo->id, ['sort_order' => 0]);
+
+        $this->putJson("/api/admin/products/{$product->id}/variants/{$variant->id}", ['name' => 'Белый'])
+            ->assertOk()
+            ->assertJsonPath('data.images.0.id', $photo->id);
+    }
+
+    #[Test]
+    public function deleting_a_gallery_photo_unmarks_it_on_variants(): void
+    {
+        $product = Product::factory()->create();
+        $variant = ProductVariant::factory()->for($product)->create();
+        $photo = $this->photo($product);
+        $variant->images()->attach($photo->id, ['sort_order' => 0]);
+
+        $photo->delete();
+
+        $this->assertDatabaseMissing('product_variant_media', ['product_variant_id' => $variant->id]);
     }
 }

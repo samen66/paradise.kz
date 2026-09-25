@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\ProductVariantAttributeValue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -98,5 +99,28 @@ class AttributeApiTest extends TestCase
             ->assertJsonStructure(['message']);
 
         $this->assertDatabaseHas('attributes', ['id' => $value->attribute_id]);
+    }
+
+    #[Test]
+    public function an_attribute_used_by_a_variant_cannot_be_deleted(): void
+    {
+        $this->actingAsManager();
+        $attribute = Attribute::factory()->create();
+        ProductVariantAttributeValue::factory()->create(['attribute_id' => $attribute->id]);
+
+        $this->deleteJson("/api/admin/attributes/{$attribute->id}")->assertUnprocessable();
+        $this->assertDatabaseHas('attributes', ['id' => $attribute->id]);
+    }
+
+    #[Test]
+    public function the_list_counts_variant_usage_too(): void
+    {
+        $this->actingAsManager();
+        $attribute = Attribute::factory()->create();
+        ProductVariantAttributeValue::factory()->count(3)->create(['attribute_id' => $attribute->id]);
+
+        $this->getJson('/api/admin/attributes')
+            ->assertOk()
+            ->assertJsonPath('data.0.variant_values_count', 3);
     }
 }

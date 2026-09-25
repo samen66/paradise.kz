@@ -49,4 +49,12 @@ class Attribute extends Model
     {
         return $this->hasMany(AttributeValue::class);
     }
+
+    /**
+     * @return HasMany<ProductVariantAttributeValue, $this>
+     */
+    public function variantValues(): HasMany
+    {
+        return $this->hasMany(ProductVariantAttributeValue::class);
+    }
 }
