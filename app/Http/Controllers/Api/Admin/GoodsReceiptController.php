@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\Admin\Concerns\DefaultsDocumentStore;
 use App\Http\Controllers\Api\Admin\Concerns\RefusesPostedDocuments;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\GoodsReceiptRequest;
 use App\Models\GoodsReceipt;
+use App\Models\User;
 use App\Services\Inventory\GoodsReceiptService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class GoodsReceiptController extends Controller
 {
+    use DefaultsDocumentStore;
     use RefusesPostedDocuments;
 
     public function index(Request $request): JsonResponse
@@ -50,9 +53,29 @@ class GoodsReceiptController extends Controller
         return response()->json($receipts);
     }
 
+    /**
+     * Черновик создаётся и пустым запросом: склад — {@see DefaultsDocumentStore},
+     * дата — сейчас, поставщик — из последней приёмки этого менеджера, где он
+     * был указан (если ключа `supplier_id` в запросе нет вовсе), автор — менеджер.
+     */
     public function store(GoodsReceiptRequest $request): JsonResponse
     {
-        $receipt = GoodsReceipt::create([...$request->validated(), 'status' => GoodsReceipt::STATUS_DRAFT]);
+        /** @var User $user */
+        $user = $request->user();
+        $data = $request->validated();
+
+        $data['store_id'] = $this->documentStoreId(isset($data['store_id']) ? (int) $data['store_id'] : null, $user);
+        $data['received_at'] ??= now();
+
+        if (! array_key_exists('supplier_id', $data)) {
+            $data['supplier_id'] = GoodsReceipt::query()
+                ->where('user_id', $user->id)
+                ->whereNotNull('supplier_id')
+                ->latest('id')
+                ->value('supplier_id');
+        }
+
+        $receipt = GoodsReceipt::create([...$data, 'status' => GoodsReceipt::STATUS_DRAFT, 'user_id' => $user->id]);
 
         return response()->json(['data' => $this->present($receipt)], 201);
     }

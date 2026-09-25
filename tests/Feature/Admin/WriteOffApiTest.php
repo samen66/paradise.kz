@@ -65,13 +65,42 @@ class WriteOffApiTest extends TestCase
     }
 
     #[Test]
-    public function store_and_a_known_reason_are_required(): void
+    public function an_unknown_reason_is_refused(): void
     {
         $this->actingAsManager();
+        Store::factory()->create();
 
         $this->postJson('/api/admin/write-offs', ['reason' => 'stolen'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['store_id', 'reason']);
+            ->assertJsonValidationErrors('reason')
+            ->assertJsonMissingValidationErrors('store_id');
+    }
+
+    #[Test]
+    public function an_empty_body_creates_a_damaged_goods_draft_at_the_default_store(): void
+    {
+        $manager = $this->actingAsManager();
+        Store::factory()->create(['name' => 'Б-другой']);
+        $default = Store::factory()->create(['name' => 'Я-основной', 'is_default' => true]);
+
+        $id = $this->postJson('/api/admin/write-offs', [])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.reason', 'damaged')
+            ->assertJsonPath('data.store.id', $default->id)
+            ->json('data.id');
+
+        $this->assertDatabaseHas('write_offs', ['id' => $id, 'user_id' => $manager->id]);
+    }
+
+    #[Test]
+    public function without_an_active_store_a_write_off_is_refused(): void
+    {
+        $this->actingAsManager();
+
+        $this->postJson('/api/admin/write-offs', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['store_id' => 'Нет активного места хранения.']);
     }
 
     #[Test]

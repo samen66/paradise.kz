@@ -7,7 +7,9 @@ namespace App\Http\Requests\Admin;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Receipt header only; status, posted_at and user_id are set by posting.
+ * Receipt header only; status and posted_at are set by posting. On create every
+ * field is optional — GoodsReceiptController::store fills the store, date,
+ * supplier and author.
  */
 class GoodsReceiptRequest extends FormRequest
 {
@@ -18,7 +20,7 @@ class GoodsReceiptRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['supplier_id', 'number', 'received_at', 'note'] as $field) {
+        foreach (['store_id', 'supplier_id', 'number', 'received_at', 'note'] as $field) {
             if ($this->input($field) === '') {
                 $this->merge([$field => null]);
             }
@@ -31,7 +33,7 @@ class GoodsReceiptRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'store_id' => [$this->isMethod('POST') ? 'required' : 'sometimes', 'integer', 'exists:stores,id'],
+            'store_id' => [$this->isMethod('POST') ? 'nullable' : 'sometimes', 'integer', 'exists:stores,id'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'number' => ['nullable', 'string', 'max:255'],
             'received_at' => ['nullable', 'date'],

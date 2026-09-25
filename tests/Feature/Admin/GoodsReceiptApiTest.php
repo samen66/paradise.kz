@@ -11,6 +11,7 @@ use App\Models\Store;
 use App\Models\Supplier;
 use App\Services\Inventory\FifoInventoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
 use Tests\TestCase;
@@ -106,13 +107,66 @@ class GoodsReceiptApiTest extends TestCase
     }
 
     #[Test]
-    public function the_store_is_required_on_create(): void
+    public function an_empty_body_creates_a_draft_with_defaults(): void
+    {
+        Carbon::setTestNow('2026-09-25 10:32:00');
+        $manager = $this->actingAsManager();
+        Store::factory()->inactive()->create(['name' => 'А-закрыт', 'is_default' => true]);
+        $default = Store::factory()->create(['name' => 'Я-основной', 'is_default' => true]);
+        Store::factory()->create(['name' => 'Б-другой']);
+        $usual = Supplier::factory()->create();
+        GoodsReceipt::factory()->create(['user_id' => $manager->id, 'supplier_id' => $usual->id]);
+        GoodsReceipt::factory()->create(['user_id' => $manager->id, 'supplier_id' => null]);
+        GoodsReceipt::factory()->create(['supplier_id' => Supplier::factory()->create()->id]);
+
+        $id = $this->postJson('/api/admin/goods-receipts', [])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.store.id', $default->id)
+            ->assertJsonPath('data.supplier.id', $usual->id)
+            ->json('data.id');
+
+        $receipt = GoodsReceipt::findOrFail($id);
+        $this->assertSame($manager->id, $receipt->user_id);
+        $this->assertSame('2026-09-25 10:32:00', $receipt->received_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function an_explicit_store_and_no_supplier_are_kept(): void
+    {
+        $manager = $this->actingAsManager();
+        Store::factory()->create(['is_default' => true]);
+        $chosen = Store::factory()->create();
+        GoodsReceipt::factory()->create(['user_id' => $manager->id, 'supplier_id' => Supplier::factory()->create()->id]);
+
+        $this->postJson('/api/admin/goods-receipts', ['store_id' => $chosen->id, 'supplier_id' => null])
+            ->assertCreated()
+            ->assertJsonPath('data.store.id', $chosen->id)
+            ->assertJsonPath('data.supplier', null);
+    }
+
+    #[Test]
+    public function the_managers_preferred_store_comes_before_the_default(): void
+    {
+        $manager = $this->actingAsManager();
+        Store::factory()->create(['is_default' => true]);
+        $preferred = Store::factory()->create();
+        $manager->update(['preferred_store_id' => $preferred->id]);
+
+        $this->postJson('/api/admin/goods-receipts', [])
+            ->assertCreated()
+            ->assertJsonPath('data.store.id', $preferred->id);
+    }
+
+    #[Test]
+    public function without_an_active_store_a_receipt_is_refused(): void
     {
         $this->actingAsManager();
+        Store::factory()->inactive()->create();
 
         $this->postJson('/api/admin/goods-receipts', [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('store_id');
+            ->assertJsonValidationErrors(['store_id' => 'Нет активного места хранения.']);
     }
 
     #[Test]

@@ -27,11 +27,12 @@ class WriteOffRequest extends FormRequest
      */
     public function rules(): array
     {
-        $required = $this->isMethod('POST') ? 'required' : 'sometimes';
+        $optional = $this->isMethod('POST') ? 'nullable' : 'sometimes';
 
         return [
-            'store_id' => [$required, 'integer', 'exists:stores,id'],
-            'reason' => [$required, Rule::in(WriteOff::REASONS)],
+            // POST без склада и причины — WriteOffController::store подставит.
+            'store_id' => [$optional, 'integer', 'exists:stores,id'],
+            'reason' => [$optional, Rule::in(WriteOff::REASONS)],
             'note' => ['nullable', 'string', 'max:2000'],
         ];
     }

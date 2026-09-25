@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\Admin\Concerns\DefaultsDocumentStore;
 use App\Http\Controllers\Api\Admin\Concerns\RefusesPostedDocuments;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\WriteOffRequest;
 use App\Models\StockMovement;
+use App\Models\User;
 use App\Models\WriteOff;
 use App\Services\Inventory\InsufficientStockException;
 use App\Services\Inventory\WriteOffService;
@@ -19,6 +21,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class WriteOffController extends Controller
 {
+    use DefaultsDocumentStore;
     use RefusesPostedDocuments;
 
     public function index(Request $request): JsonResponse
@@ -38,9 +41,20 @@ class WriteOffController extends Controller
         return response()->json($writeOffs);
     }
 
+    /**
+     * Черновик создаётся и пустым запросом: склад — {@see DefaultsDocumentStore},
+     * причина — «Повреждён» (`damaged`), автор — менеджер.
+     */
     public function store(WriteOffRequest $request): JsonResponse
     {
-        $writeOff = WriteOff::create([...$request->validated(), 'status' => WriteOff::STATUS_DRAFT]);
+        /** @var User $user */
+        $user = $request->user();
+        $data = $request->validated();
+
+        $data['store_id'] = $this->documentStoreId(isset($data['store_id']) ? (int) $data['store_id'] : null, $user);
+        $data['reason'] ??= 'damaged';
+
+        $writeOff = WriteOff::create([...$data, 'status' => WriteOff::STATUS_DRAFT, 'user_id' => $user->id]);
 
         return response()->json(['data' => $this->present($writeOff)], 201);
     }
