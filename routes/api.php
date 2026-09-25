@@ -206,9 +206,11 @@ Route::prefix('admin')
         Route::apiResource('goods-receipts', GoodsReceiptController::class);
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post']);
         Route::apiResource('goods-receipts.items', GoodsReceiptItemController::class)->except('show')->scoped();
+        Route::post('goods-receipts/{goods_receipt}/items/batch', [GoodsReceiptItemController::class, 'batch']);
         Route::apiResource('write-offs', WriteOffController::class);
         Route::post('write-offs/{write_off}/post', [WriteOffController::class, 'post']);
         Route::apiResource('write-offs.items', WriteOffItemController::class)->except('show')->scoped();
+        Route::post('write-offs/{write_off}/items/batch', [WriteOffItemController::class, 'batch']);
         Route::get('users', [UserController::class, 'index']);
         Route::post('users/{user}/approve', [UserController::class, 'approve']);
     });

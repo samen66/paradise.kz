@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Admin\Concerns\RefusesPostedDocuments;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DocumentItemsBatchRequest;
 use App\Http\Requests\Admin\GoodsReceiptItemRequest;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
@@ -40,6 +41,18 @@ class GoodsReceiptItemController extends Controller
             );
 
             return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], $created ? 201 : 200);
+        });
+    }
+
+    /**
+     * Все строки пачки — в одной транзакции; ответ — все строки документа.
+     */
+    public function batch(DocumentItemsBatchRequest $request, GoodsReceipt $goodsReceipt, DocumentLines $lines): JsonResponse
+    {
+        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked) use ($request, $lines): JsonResponse {
+            $lines->addMany($locked, $request->validated('items'));
+
+            return $this->index($locked);
         });
     }
 
