@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isAxiosError } from 'axios';
@@ -17,6 +17,7 @@ import api, { STOREFRONT_URL } from '@/lib/api';
 import { applyServerErrors } from '@/lib/errors';
 import { plural, ru } from '@/lib/text';
 import type { Attribute } from '@/lib/catalogTypes';
+import { useResource } from '@/lib/crud';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import { toast } from '@/stores/toastStore';
 import AccountingCard from './AccountingCard';
@@ -40,17 +41,16 @@ import {
   type NamedOption,
   type ProductFormValues,
 } from './formModel';
-import { reportPhotoError, uploadPhoto, type QueuedPhoto } from './photos';
+import { reportPhotoError, uploadPhoto, type ProductImage, type QueuedPhoto } from './photos';
 
 type Props = { initialProduct: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[]; attributes: Attribute[] };
 
 type RelationTab = ComponentType<{ productId: number; onCount?: (count: number) => void }>;
 
-/** Блоки со списками: сохраняются сразу, каждый в своём окне. */
+/** Блоки со списками: сохраняются сразу, каждый в своём окне. Варианты — отдельно: им нужны фото и атрибуты формы. */
 const RELATIONS: { id: string; title: string; forms: [string, string, string]; Tab: RelationTab }[] = [
   { id: 'prices', title: 'Цены по типам цен', forms: ['цена', 'цены', 'цен'], Tab: PricesTab },
   { id: 'client-prices', title: 'Цены для клиентов B2B', forms: ['цена', 'цены', 'цен'], Tab: ClientPricesTab },
-  { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab },
 ];
 
 /** Полоса переходов на телефоне. Свёрнутые блоки (FOLDABLE) при переходе раскрываются. */
@@ -102,10 +102,11 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
   const countSetters = useMemo(
     () =>
       Object.fromEntries(
-        RELATIONS.map((r) => [r.id, (n: number) => setCounts((c) => (c[r.id] === n ? c : { ...c, [r.id]: n }))]),
+        [...RELATIONS.map((r) => r.id), 'variants'].map((id) => [id, (n: number) => setCounts((c) => (c[id] === n ? c : { ...c, [id]: n }))]),
       ) as Record<string, (n: number) => void>,
     [],
   );
+  const images = useResource<ProductImage>(productId ? `/admin/products/${productId}/media` : null);
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const queueRef = useRef(queue);
@@ -282,6 +283,26 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
     }
   };
 
+  const relationBlock = (id: string, title: string, forms: [string, string, string], content: ReactNode) => {
+    const count = counts[id];
+
+    return (
+      <div key={id} className={LEFT}>
+        <Collapsible
+          id={id}
+          title={title}
+          note="Сохраняется сразу"
+          summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
+          open={open.has(id)}
+          onToggle={toggle(id)}
+          disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
+        >
+          {productId !== null && content}
+        </Collapsible>
+      </div>
+    );
+  };
+
   const title = product ? ru(product.name) || `Товар #${product.id}` : 'Новый товар';
 
   return (
@@ -312,7 +333,7 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:grid-rows-[repeat(7,auto)_1fr] lg:items-start lg:gap-x-6 lg:gap-y-4">
         <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className={LEFT} />
-        <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
+        <PhotosSection productId={productId} images={images} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
         <PriceSection form={form} extrasOpen={open.has('price-extra')} onExtrasToggle={toggle('price-extra')} className={LEFT} />
         <AttributesSection
           form={form}
@@ -337,25 +358,23 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
           <DimensionsCard form={form} />
         </div>
 
-        {RELATIONS.map(({ id, title, forms, Tab }) => {
-          const count = counts[id];
-
-          return (
-            <div key={id} className={LEFT}>
-              <Collapsible
-                id={id}
-                title={title}
-                note="Сохраняется сразу"
-                summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
-                open={open.has(id)}
-                onToggle={toggle(id)}
-                disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
-              >
-                {productId !== null && <Tab productId={productId} onCount={countSetters[id]} />}
-              </Collapsible>
-            </div>
-          );
-        })}
+        {RELATIONS.map(({ id, title, forms, Tab }) =>
+          relationBlock(id, title, forms, productId !== null && <Tab productId={productId} onCount={countSetters[id]} />),
+        )}
+        {relationBlock(
+          'variants',
+          'Варианты',
+          ['вариант', 'варианта', 'вариантов'],
+          productId !== null && (
+            <VariantsTab
+              productId={productId}
+              onCount={countSetters.variants}
+              images={images}
+              attributes={attributeList}
+              onAttributeCreated={(attribute) => setAttributeList((list) => [...list, attribute])}
+            />
+          ),
+        )}
         <div className={LEFT}>
           <SeoSection
             form={form}

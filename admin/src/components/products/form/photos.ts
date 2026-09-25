@@ -9,6 +9,9 @@ export const PHOTO_ACCEPT = PHOTO_TYPES.join(',');
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
+/** Фото товара, как его отдаёт `/admin/products/{id}/media`. */
+export type ProductImage = { id: number; file_name: string; url: string; thumb_url: string; order: number | null };
+
 /** Фото, выбранное до сохранения товара или не загрузившееся после. */
 export type QueuedPhoto = {
   key: string;
@@ -53,13 +56,20 @@ export class PhotoUploadError extends Error {
   }
 }
 
-/** Загружает одно фото в товар. Ошибка — PhotoUploadError с текстом для человека. */
-export async function uploadPhoto(productId: number, file: File): Promise<void> {
+/**
+ * Загружает одно фото в товар. Возвращает загруженное фото. Ошибка —
+ * PhotoUploadError с текстом для человека.
+ */
+export async function uploadPhoto(productId: number, file: File): Promise<ProductImage> {
   const body = new FormData();
   body.append('file', file);
 
   try {
-    await api.post(`/admin/products/${productId}/media`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const res = await api.post<{ data: ProductImage }>(`/admin/products/${productId}/media`, body, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return res.data.data;
   } catch (error) {
     const status = isAxiosError(error) ? error.response?.status : undefined;
     const reported = isAxiosError(error) && (status === undefined || status >= 500 || status === 403);
