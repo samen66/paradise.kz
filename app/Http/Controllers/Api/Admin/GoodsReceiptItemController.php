@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\GoodsReceiptItemRequest;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
+use App\Services\Inventory\DocumentLines;
 use Illuminate\Http\JsonResponse;
 
 class GoodsReceiptItemController extends Controller
@@ -22,12 +23,23 @@ class GoodsReceiptItemController extends Controller
         return response()->json(['data' => $goodsReceipt->items()->with(self::PRODUCT_COLUMNS)->orderBy('id')->get()]);
     }
 
-    public function store(GoodsReceiptItemRequest $request, GoodsReceipt $goodsReceipt): JsonResponse
+    /**
+     * 201 — новая строка; 200 — товар уже был в документе, его строка
+     * получила переданное количество (или +1).
+     */
+    public function store(GoodsReceiptItemRequest $request, GoodsReceipt $goodsReceipt, DocumentLines $lines): JsonResponse
     {
-        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked) use ($request): JsonResponse {
-            $item = $locked->items()->create($request->validated());
+        return $this->whileDraft($goodsReceipt, function (GoodsReceipt $locked) use ($request, $lines): JsonResponse {
+            $data = $request->validated();
 
-            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], 201);
+            ['item' => $item, 'created' => $created] = $lines->add(
+                $locked,
+                (int) $data['product_id'],
+                isset($data['quantity']) ? (string) $data['quantity'] : null,
+                isset($data['unit_cost']) ? (int) $data['unit_cost'] : null,
+            );
+
+            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], $created ? 201 : 200);
         });
     }
 

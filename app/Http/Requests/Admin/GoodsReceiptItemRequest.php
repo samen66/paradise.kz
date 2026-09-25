@@ -21,12 +21,13 @@ class GoodsReceiptItemRequest extends FormRequest
      */
     public function rules(): array
     {
-        $required = $this->isMethod('POST') ? 'required' : 'sometimes';
+        $isCreate = $this->isMethod('POST');
 
         return [
-            'product_id' => [$required, 'integer', 'exists:products,id'],
-            'quantity' => [$required, 'numeric', 'decimal:0,3', 'gt:0', 'max:9999999.999'],
-            'unit_cost' => [$required, 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            'product_id' => [$isCreate ? 'required' : 'sometimes', 'integer', 'exists:products,id'],
+            // POST: без количества — 1, без себестоимости — SuggestedUnitCost.
+            'quantity' => [$isCreate ? 'nullable' : 'sometimes', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999999.999'],
+            'unit_cost' => [$isCreate ? 'nullable' : 'sometimes', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
         ];
     }
 

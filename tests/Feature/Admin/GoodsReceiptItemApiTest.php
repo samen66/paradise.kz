@@ -7,6 +7,7 @@ namespace Tests\Feature\Admin;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
 use App\Models\Product;
+use App\Models\ProductStoreStock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -101,5 +102,72 @@ class GoodsReceiptItemApiTest extends TestCase
         $receipt = GoodsReceipt::factory()->create();
 
         $this->deleteJson("/api/admin/goods-receipts/{$receipt->id}/items/{$foreign->id}")->assertNotFound();
+    }
+
+    #[Test]
+    public function a_line_needs_only_the_product(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $earlier = GoodsReceipt::factory()->posted()->create(['posted_at' => '2026-09-20 10:00:00']);
+        GoodsReceiptItem::factory()->for($earlier, 'goodsReceipt')->create(['product_id' => $product->id, 'unit_cost' => 120_000]);
+        $receipt = GoodsReceipt::factory()->create();
+
+        $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", ['product_id' => $product->id])
+            ->assertCreated()
+            ->assertJsonPath('data.quantity', '1.000')
+            ->assertJsonPath('data.unit_cost', 120_000)
+            ->assertJsonPath('data.product.id', $product->id);
+    }
+
+    #[Test]
+    public function without_history_the_line_costs_the_store_average_or_zero(): void
+    {
+        $this->actingAsManager();
+        $receipt = GoodsReceipt::factory()->create();
+        $averaged = Product::factory()->create();
+        $fresh = Product::factory()->create();
+        ProductStoreStock::factory()->create(['product_id' => $averaged->id, 'store_id' => $receipt->store_id, 'stock' => 2, 'avg_cost' => 70_000]);
+
+        $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", ['product_id' => $averaged->id])
+            ->assertCreated()
+            ->assertJsonPath('data.unit_cost', 70_000);
+        $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", ['product_id' => $fresh->id])
+            ->assertCreated()
+            ->assertJsonPath('data.unit_cost', 0);
+    }
+
+    #[Test]
+    public function adding_a_product_again_raises_its_line_instead_of_a_second_one(): void
+    {
+        $this->actingAsManager();
+        $receipt = GoodsReceipt::factory()->create();
+        $product = Product::factory()->create();
+
+        $id = $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", [
+            'product_id' => $product->id, 'quantity' => '2', 'unit_cost' => '1500',
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", ['product_id' => $product->id, 'unit_cost' => '9'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $id)
+            ->assertJsonPath('data.quantity', '3.000')
+            ->assertJsonPath('data.unit_cost', 150_000);
+
+        $this->assertSame(1, $receipt->items()->count());
+    }
+
+    #[Test]
+    public function merging_past_the_maximum_quantity_is_refused(): void
+    {
+        $this->actingAsManager();
+        $receipt = GoodsReceipt::factory()->create();
+        $item = GoodsReceiptItem::factory()->for($receipt, 'goodsReceipt')->create(['quantity' => '9999999.000']);
+
+        $this->postJson("/api/admin/goods-receipts/{$receipt->id}/items", ['product_id' => $item->product_id, 'quantity' => '1.5'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity');
+
+        $this->assertSame('9999999.000', $item->fresh()->quantity);
     }
 }

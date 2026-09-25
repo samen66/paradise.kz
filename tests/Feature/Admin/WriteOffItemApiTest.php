@@ -107,4 +107,24 @@ class WriteOffItemApiTest extends TestCase
 
         $this->deleteJson("/api/admin/write-offs/{$writeOff->id}/items/{$foreign->id}")->assertNotFound();
     }
+
+    #[Test]
+    public function a_write_off_line_needs_only_the_product_and_repeats_merge(): void
+    {
+        $this->actingAsManager();
+        $writeOff = WriteOff::factory()->create();
+        $product = Product::factory()->create();
+
+        $id = $this->postJson("/api/admin/write-offs/{$writeOff->id}/items", ['product_id' => $product->id])
+            ->assertCreated()
+            ->assertJsonPath('data.quantity', '1.000')
+            ->json('data.id');
+
+        $this->postJson("/api/admin/write-offs/{$writeOff->id}/items", ['product_id' => $product->id, 'quantity' => '0.5'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $id)
+            ->assertJsonPath('data.quantity', '1.500');
+
+        $this->assertSame(1, $writeOff->items()->count());
+    }
 }

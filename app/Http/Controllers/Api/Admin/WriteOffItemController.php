@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\WriteOffItemRequest;
 use App\Models\ProductStoreStock;
 use App\Models\WriteOff;
 use App\Models\WriteOffItem;
+use App\Services\Inventory\DocumentLines;
 use Illuminate\Http\JsonResponse;
 
 class WriteOffItemController extends Controller
@@ -36,12 +37,22 @@ class WriteOffItemController extends Controller
         return response()->json(['data' => $items]);
     }
 
-    public function store(WriteOffItemRequest $request, WriteOff $writeOff): JsonResponse
+    /**
+     * 201 — новая строка; 200 — товар уже был в документе, его строка
+     * получила переданное количество (или +1).
+     */
+    public function store(WriteOffItemRequest $request, WriteOff $writeOff, DocumentLines $lines): JsonResponse
     {
-        return $this->whileDraft($writeOff, function (WriteOff $locked) use ($request): JsonResponse {
-            $item = $locked->items()->create($request->validated());
+        return $this->whileDraft($writeOff, function (WriteOff $locked) use ($request, $lines): JsonResponse {
+            $data = $request->validated();
 
-            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], 201);
+            ['item' => $item, 'created' => $created] = $lines->add(
+                $locked,
+                (int) $data['product_id'],
+                isset($data['quantity']) ? (string) $data['quantity'] : null,
+            );
+
+            return response()->json(['data' => $item->load(self::PRODUCT_COLUMNS)], $created ? 201 : 200);
         });
     }
 
