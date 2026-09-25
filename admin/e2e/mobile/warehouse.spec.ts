@@ -103,6 +103,9 @@ test("Подбор на телефоне — на весь экран, «Доб�
 
     await picker.getByLabel("Поиск в подборе").fill(product.name);
     await picker.getByTestId("picker-row").filter({ hasText: product.name }).getByTestId("picker-pick").click();
+    // Поле количества узкое — название товара не сжимается в столбик.
+    const qtyBox = (await picker.getByLabel(`Количество: ${product.name}`).boundingBox())!;
+    expect(qtyBox.width).toBeLessThanOrEqual(96);
     const add = picker.getByRole("button", { name: "Добавить 1 позицию · 1 шт" });
     const addBox = (await add.boundingBox())!;
     const hit = await page.evaluate(

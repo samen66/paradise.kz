@@ -103,3 +103,19 @@ test("поля шапки приёмки идут в одну колонку", a
     await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
   }
 });
+
+test.describe("тёмная тема телефона", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("текст в полях модалки остаётся тёмным на белом", async ({ page }) => {
+    // Модалка рисуется порталом в body — мимо <main> с его тёмным цветом текста.
+    await page.goto("/warehouse/suppliers");
+    await page.getByRole("button", { name: "Добавить поставщика" }).click();
+    const name = page.getByRole("dialog").getByLabel("Название *");
+    await name.fill("Проверка цвета");
+    const color = await name.evaluate((el) => getComputedStyle(el).color);
+    // Светлый текст на белом поле не прочитать: канал красного у тёмного цвета мал.
+    expect(Number(color.match(/\d+/)?.[0] ?? 255)).toBeLessThan(100);
+  });
+});
+

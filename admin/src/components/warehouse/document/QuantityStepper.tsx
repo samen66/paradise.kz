@@ -20,7 +20,11 @@ type Props = {
   max?: number;
 };
 
-/** «− N +»: кнопки 44 px на телефоне, число посередине можно набрать. Запятая становится точкой. */
+/**
+ * «− N +»: кнопки 44 px на телефоне, число посередине можно набрать. Запятая
+ * становится точкой. У поля снят `w-full` из `inputClass` — иначе он
+ * перебивает `w-20`, и поле съедает место названия товара.
+ */
 export default function QuantityStepper({ value, label, onChange, onBlur, min = 1, max }: Props) {
   const current = Number(value);
   const button =
@@ -41,7 +45,7 @@ export default function QuantityStepper({ value, label, onChange, onBlur, min = 
         type="text"
         inputMode="decimal"
         aria-label={`Количество: ${label}`}
-        className={`${inputClass} w-20 text-center`}
+        className={`${inputClass.replace('w-full ', '')} w-20 shrink-0 text-center`}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(',', '.'))}
         onBlur={onBlur}
