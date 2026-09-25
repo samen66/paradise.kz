@@ -42,6 +42,11 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  // «+ Создать» открывает шторку; закрываясь, она возвращает фокус в поле, и
+  // без этой отметки список открылся бы снова поверх только что выбранного.
+  // Снимается первым действием человека в поле (клик, ввод, клавиша), а не
+  // первым фокусом: в dev StrictMode шторка возвращает фокус дважды.
+  const [skipFocusOpen, setSkipFocusOpen] = useState(false);
 
   const all = useMemo(() => [{ value: '', label: emptyLabel }, ...options], [options, emptyLabel]);
   const selected = all.find((o) => o.value === value) ?? all[0];
@@ -58,6 +63,7 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
 
   const pick = (option: SelectOption) => {
     if (option.value === CREATE) {
+      setSkipFocusOpen(true);
       onCreate?.(typed);
     } else {
       onChange(option.value);
@@ -66,6 +72,8 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    setSkipFocusOpen(false);
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
 
@@ -104,12 +112,19 @@ export default function SearchSelect({ id, options, value, onChange, emptyLabel,
         value={open ? query : selected.label}
         placeholder={open ? selected.label : undefined}
         onFocus={() => {
+          if (skipFocusOpen) {
+            return;
+          }
           setOpen(true);
           setActive(0);
         }}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setSkipFocusOpen(false);
+          setOpen(true);
+        }}
         onBlur={close}
         onChange={(e) => {
+          setSkipFocusOpen(false);
           setQuery(e.target.value);
           setActive(0);
           setOpen(true);

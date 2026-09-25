@@ -53,9 +53,11 @@ test("атрибут создаётся без slug, переводится, п�
   await expect(dialog).toBeHidden();
 
   await page.getByLabel("Поиск атрибута").fill(name);
+  // Список фильтруется после записи поиска в адрес; до того в нём могут быть
+  // атрибуты соседних тестов — ждём, пока останется одна строка.
   await expect(page.getByText(name, { exact: true })).toBeVisible();
-  await expect(page.getByText("нет перевода на казахский")).toBeVisible();
-  await expect(page.getByText("не используется")).toBeVisible();
+  await expect(page.getByText("нет перевода на казахский")).toHaveCount(1);
+  await expect(page.getByText("не используется")).toHaveCount(1);
 
   await page.getByRole("radio", { name: /Без перевода/ }).click();
   await expect(page).toHaveURL(/filter=untranslated/);

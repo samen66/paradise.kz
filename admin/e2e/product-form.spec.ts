@@ -344,8 +344,10 @@ test("бренд создаётся прямо из поля «Бренд»", as
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("combobox", { name: "Бренд" })).toHaveValue(brandName);
 
+  // Ждём ответ сохранения товара, а не тост: «Сохранено» уже показала шторка бренда.
+  const saving = page.waitForResponse((r) => r.request().method() === "POST" && r.url().endsWith(`/admin/products/${product.id}`));
   await saveButton(page).click();
-  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+  expect((await saving).ok()).toBe(true);
 
   const saved = await adminApi(request).get<{ data: { brand_id: number | null } }>(`/admin/products/${product.id}`);
   expect(saved?.data.brand_id).not.toBeNull();
