@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
-import { createProduct, createReceiptDraft, createStore, receive, uniqueStamp } from "./warehouseApi";
+import { createProduct, createReceiptDraft, createStore, createWriteOffDraft, receive, uniqueStamp } from "./warehouseApi";
 
 /**
  * Склад: приёмка → остаток → движение; списание с нехваткой; склад с историей.
@@ -32,12 +32,6 @@ async function setupProductAndStore(request: APIRequestContext, stamp: number) {
   const product = await createProduct(request, stamp);
   const store = await createStore(request, stamp);
   return { productId: product.id, storeId: store.id, productName: product.name, storeName: store.name };
-}
-
-/** Старая страница списания (до её перевода на «живой документ» в Task 4). */
-async function addLine(page: Page, productName: string) {
-  await page.getByLabel("Добавить товар: название или код").fill(productName);
-  await page.getByRole("option").filter({ hasText: productName }).first().click();
 }
 
 /** Черновик на удаление: адрес карточки — /warehouse/…, а API — /admin/goods-receipts|write-offs/{id}. */
@@ -227,38 +221,41 @@ test("Подбор: закрытие с выбором спрашивает", as
   await expect(documentLine(page, productName)).toHaveCount(0);
 });
 
-test("списание больше остатка отклоняется, исправленное проводится", async ({ page, request }) => {
+test("списание: подбор ограничен остатком, строка сверх остатка блокирует проведение", async ({ page, request }) => {
   const stamp = uniqueStamp();
-  const { productId, storeId, productName, storeName } = await setupProductAndStore(request, stamp);
+  const { productId, storeId, productName } = await setupProductAndStore(request, stamp);
+  const empty = await createProduct(request, stamp, {}, " пусто");
   await receive(request, storeId, productId, 2);
-  const dialog = page.getByRole("dialog");
+  const writeOffId = await createWriteOffDraft(request, storeId);
+  drafts.push(`/admin/write-offs/${writeOffId}`);
 
-  await page.goto("/warehouse/documents?kind=write_offs");
-  await page.getByRole("button", { name: "Списать", exact: true }).click();
-  await dialog.getByLabel("Склад *").selectOption({ label: `${storeName} (выключен)` });
-  await dialog.getByLabel("Причина *").selectOption({ label: "Брак / повреждение" });
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  await page.goto(`/warehouse/write-offs/${writeOffId}`);
+  await page.getByRole("button", { name: "☰ Подбор" }).click();
+  const picker = page.getByRole("dialog", { name: "Подбор" });
+  await picker.getByLabel("Поиск в подборе").fill(`E2E товар ${stamp}`);
+  const row = picker.getByTestId("picker-row").filter({ hasText: productName });
+  await expect(row).toBeVisible();
+  // Товара без остатка в списании нет.
+  await expect(picker.getByTestId("picker-row").filter({ hasText: empty.name })).toHaveCount(0);
 
-  await expect(page).toHaveURL(/\/warehouse\/write-offs\/\d+$/);
-  drafts.push(draftPath(page, "/admin/write-offs"));
+  const more = row.getByRole("button", { name: `Больше: ${productName}` });
+  await more.click();
+  await more.click();
+  await expect(more).toBeDisabled();
+  await expect(row.getByLabel(`Количество: ${productName}`)).toHaveValue("2");
+  await picker.getByRole("button", { name: "Добавить 1 позицию · 2 шт" }).click();
 
-  await addLine(page, productName);
-  await dialog.getByLabel("Количество *").fill("5");
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
+  const line = documentLine(page, productName);
+  await expect(line.getByLabel(`Количество: ${productName}`)).toHaveValue("2");
+  await expect(line).toContainText("2");
 
-  // Columns by position: «Товар», «Количество», «Доступно».
-  const line = page.locator("tbody tr").filter({ hasText: productName });
-  await expect(line.locator("td").nth(1)).toHaveText("5");
-  await expect(line.locator("td").nth(2)).toHaveText("2");
+  await line.getByLabel(`Количество: ${productName}`).fill("3");
+  await expect(line).toContainText("Больше, чем на складе");
+  await expect(page.getByRole("button", { name: "Провести" })).toBeDisabled();
 
-  await page.getByRole("button", { name: "Провести" }).click();
-  await expect(page.getByText(`Не хватает: ${productName} — нужно 5, доступно 2.`)).toBeVisible();
-
-  await line.getByRole("button", { name: "Изменить" }).click();
-  await dialog.getByLabel("Количество *").fill("1");
-  await dialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(line.locator("td").nth(1)).toHaveText("1");
-
+  await line.getByLabel(`Количество: ${productName}`).fill("1");
+  await line.getByLabel(`Количество: ${productName}`).blur();
+  await expect(page.getByText("✓ Сохранено")).toBeVisible();
   await page.getByRole("button", { name: "Провести" }).click();
   await expect(page.getByText(/^Проведено /)).toBeVisible();
   await expect(page.getByText(/Себестоимость: 1\s000 ₸/)).toBeVisible();
