@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\Public\PageController;
 use App\Http\Controllers\Api\Public\ProductController as PublicProductController;
 use App\Http\Controllers\Api\Public\ProductReviewController;
 use App\Http\Controllers\Api\Public\SettingsController;
+use App\Http\Controllers\Api\Public\ShowroomController as PublicShowroomController;
 use App\Http\Controllers\Api\Public\SitemapController;
 use App\Http\Controllers\Api\Public\StoreController;
 use Illuminate\Http\Request;
@@ -115,6 +116,8 @@ Route::get('/b2b/home', B2bHomeController::class);
 // OrderPlacementService::placeGuest().
 Route::prefix('public')->group(function () {
     Route::get('/stores', [StoreController::class, 'index']);
+    Route::get('/showrooms', [PublicShowroomController::class, 'index']);
+    Route::get('/showrooms/{slug}', [PublicShowroomController::class, 'show']);
     Route::get('/categories', [PublicCategoryController::class, 'index']);
     Route::get('/categories/{slug}', [PublicCategoryController::class, 'show']);
     Route::get('/products', [PublicProductController::class, 'index']);

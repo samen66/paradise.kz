@@ -111,6 +111,8 @@ class ProductResource extends JsonResource
                         'id' => $s->store->id,
                         'name' => $s->store->name,
                         'address' => $s->store->address,
+                        // Only a published showroom has a storefront page to link to.
+                        'slug' => $s->store->isPublishedShowroom() ? $s->store->slug : null,
                     ],
                     'stock' => (float) $s->stock,
                 ])->values()->all(),
