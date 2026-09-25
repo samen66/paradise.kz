@@ -7,8 +7,10 @@ namespace Tests\Feature\Admin;
 use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantAttributeValue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -170,5 +172,40 @@ class ProductVariantApiTest extends TestCase
         $photo->delete();
 
         $this->assertDatabaseMissing('product_variant_media', ['product_variant_id' => $variant->id]);
+    }
+
+    #[Test]
+    public function listing_variants_does_not_run_more_queries_per_variant(): void
+    {
+        $this->actingAsManager();
+        $product = Product::factory()->create();
+        $color = Attribute::factory()->create();
+
+        for ($i = 0; $i < 3; $i++) {
+            $photo = $this->photo($product, "img{$i}.jpg");
+            $variant = ProductVariant::factory()->for($product)->create();
+            $variant->images()->attach($photo->id, ['sort_order' => 0]);
+            ProductVariantAttributeValue::factory()->create([
+                'product_variant_id' => $variant->id,
+                'attribute_id' => $color->id,
+            ]);
+        }
+
+        // Warm up framework-level caches (e.g. Spatie Permission's role
+        // cache) on an untracked request, so they don't skew the count below.
+        $this->getJson("/api/admin/products/{$product->id}/variants")->assertOk();
+
+        DB::enableQueryLog();
+        $this->getJson("/api/admin/products/{$product->id}/variants")
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Fixed relations eager-loaded once (variants, attributeValues,
+        // attribute, images pivot+media) — must not scale with variant
+        // count. The present() N+1 regression pushed this well past 15
+        // for 3 variants; loadMissing() keeps it flat and small.
+        $this->assertLessThanOrEqual(8, $queries);
     }
 }

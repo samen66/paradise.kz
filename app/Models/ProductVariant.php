@@ -14,8 +14,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * A product variant / modification mirrored from the ERP (e.g. a size/colour of
- * a parent product), with its own external id, barcodes, characteristics, price
- * and stock. Prices are kept in kopecks (minor units).
+ * a parent product), with its own external id, barcodes, price and stock.
+ * Characteristics live in {@see attributeValues()}, from the same attribute
+ * dictionary as the product's; the `characteristics` column is legacy ERP
+ * data, no longer written by the admin. Prices are kept in kopecks (minor
+ * units).
  */
 class ProductVariant extends Model
 {

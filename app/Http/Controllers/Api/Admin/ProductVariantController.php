@@ -96,7 +96,7 @@ class ProductVariantController extends Controller
      */
     private function present(ProductVariant $variant): array
     {
-        $variant->load(self::RELATIONS)->makeHidden([...self::HIDDEN, 'images']);
+        $variant->loadMissing(self::RELATIONS)->makeHidden([...self::HIDDEN, 'images']);
 
         return [
             ...$variant->toArray(),
