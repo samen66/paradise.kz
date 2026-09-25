@@ -20,9 +20,13 @@ class AttributeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'array'],
+            'name.ru' => ['required', 'string', 'max:255'],
+            'name.kk' => ['nullable', 'string', 'max:255'],
+            // Blank on create: the controller makes one from name.ru. Blank on
+            // update: the current slug stays.
             'slug' => [
-                'required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                'nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('attributes', 'slug')->ignore($this->route('attribute')),
             ],
             'is_filterable' => ['boolean'],

@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isAxiosError } from 'axios';
-import AttributeValuesTab from '@/components/products/AttributeValuesTab';
 import ClientPricesTab from '@/components/products/ClientPricesTab';
 import PricesTab from '@/components/products/PricesTab';
 import VariantsTab from '@/components/products/VariantsTab';
@@ -17,9 +16,12 @@ import { buttonSecondary } from '@/components/ui/styles';
 import api, { STOREFRONT_URL } from '@/lib/api';
 import { applyServerErrors } from '@/lib/errors';
 import { plural, ru } from '@/lib/text';
+import type { Attribute } from '@/lib/catalogTypes';
+import { useResource } from '@/lib/crud';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import { toast } from '@/stores/toastStore';
 import AccountingCard from './AccountingCard';
+import AttributesSection from './AttributesSection';
 import BasicSection from './BasicSection';
 import CatalogCard from './CatalogCard';
 import DimensionsCard from './DimensionsCard';
@@ -39,18 +41,16 @@ import {
   type NamedOption,
   type ProductFormValues,
 } from './formModel';
-import { reportPhotoError, uploadPhoto, type QueuedPhoto } from './photos';
+import { reportPhotoError, uploadPhoto, type ProductImage, type QueuedPhoto } from './photos';
 
-type Props = { initialProduct: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[] };
+type Props = { initialProduct: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[]; attributes: Attribute[] };
 
 type RelationTab = ComponentType<{ productId: number; onCount?: (count: number) => void }>;
 
-/** Блоки со списками: сохраняются сразу, каждый в своём окне. */
+/** Блоки со списками: сохраняются сразу, каждый в своём окне. Варианты — отдельно: им нужны фото и атрибуты формы. */
 const RELATIONS: { id: string; title: string; forms: [string, string, string]; Tab: RelationTab }[] = [
   { id: 'prices', title: 'Цены по типам цен', forms: ['цена', 'цены', 'цен'], Tab: PricesTab },
   { id: 'client-prices', title: 'Цены для клиентов B2B', forms: ['цена', 'цены', 'цен'], Tab: ClientPricesTab },
-  { id: 'attributes', title: 'Характеристики', forms: ['значение', 'значения', 'значений'], Tab: AttributeValuesTab },
-  { id: 'variants', title: 'Варианты', forms: ['вариант', 'варианта', 'вариантов'], Tab: VariantsTab },
 ];
 
 /** Полоса переходов на телефоне. Свёрнутые блоки (FOLDABLE) при переходе раскрываются. */
@@ -65,7 +65,7 @@ const SECTIONS = [
   { id: 'seo', label: 'SEO' },
 ];
 
-const FOLDABLE = new Set(['prices', 'client-prices', 'attributes', 'variants', 'seo']);
+const FOLDABLE = new Set(['prices', 'client-prices', 'variants', 'seo']);
 
 /** Карточка левой колонки на широком экране. */
 const LEFT = 'lg:col-span-2 lg:col-start-1';
@@ -85,12 +85,16 @@ const LEFT = 'lg:col-span-2 lg:col-start-1';
  * одним блоком на восемь строк рядом с ними. Лишняя высота уходит в
  * последнюю строку (`1fr`), а не в промежутки между левыми карточками.
  */
-export default function ProductForm({ initialProduct, categories, brands }: Props) {
+export default function ProductForm({ initialProduct, categories, brands, attributes }: Props) {
   const [product, setProduct] = useState<ApiProduct | null>(initialProduct);
+  const [categoryList, setCategoryList] = useState(categories);
+  const [brandList, setBrandList] = useState(brands);
+  const [attributeList, setAttributeList] = useState(attributes);
   const productId = product?.id ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const [basicLocale, setBasicLocale] = useState<Locale>('ru');
   const [seoLocale, setSeoLocale] = useState<Locale>('ru');
+  const [attributesLocale, setAttributesLocale] = useState<Locale>('ru');
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [counts, setCounts] = useState<Record<string, number>>({});
   // Сеттеры стабильны: вкладки держат onCount в зависимостях эффекта, и новый
@@ -98,10 +102,11 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
   const countSetters = useMemo(
     () =>
       Object.fromEntries(
-        RELATIONS.map((r) => [r.id, (n: number) => setCounts((c) => (c[r.id] === n ? c : { ...c, [r.id]: n }))]),
+        [...RELATIONS.map((r) => r.id), 'variants'].map((id) => [id, (n: number) => setCounts((c) => (c[id] === n ? c : { ...c, [id]: n }))]),
       ) as Record<string, (n: number) => void>,
     [],
   );
+  const images = useResource<ProductImage>(productId ? `/admin/products/${productId}/media` : null);
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const queueRef = useRef(queue);
@@ -191,6 +196,9 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
     if (plan.seoLocale) {
       setSeoLocale(plan.seoLocale);
     }
+    if (plan.attributesLocale) {
+      setAttributesLocale(plan.attributesLocale);
+    }
 
     // Два кадра: React успевает раскрыть блоки и сменить язык, браузер — разложить их.
     requestAnimationFrame(() =>
@@ -275,6 +283,26 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
     }
   };
 
+  const relationBlock = (id: string, title: string, forms: [string, string, string], content: ReactNode) => {
+    const count = counts[id];
+
+    return (
+      <div key={id} className={LEFT}>
+        <Collapsible
+          id={id}
+          title={title}
+          note="Сохраняется сразу"
+          summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
+          open={open.has(id)}
+          onToggle={toggle(id)}
+          disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
+        >
+          {productId !== null && content}
+        </Collapsible>
+      </div>
+    );
+  };
+
   const title = product ? ru(product.name) || `Товар #${product.id}` : 'Новый товар';
 
   return (
@@ -305,36 +333,48 @@ export default function ProductForm({ initialProduct, categories, brands }: Prop
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:grid-rows-[repeat(7,auto)_1fr] lg:items-start lg:gap-x-6 lg:gap-y-4">
         <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className={LEFT} />
-        <PhotosSection productId={productId} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
+        <PhotosSection productId={productId} images={images} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
         <PriceSection form={form} extrasOpen={open.has('price-extra')} onExtrasToggle={toggle('price-extra')} className={LEFT} />
+        <AttributesSection
+          form={form}
+          attributes={attributeList}
+          onAttributeCreated={(attribute) => setAttributeList((list) => [...list, attribute])}
+          locale={attributesLocale}
+          onLocaleChange={setAttributesLocale}
+          className={LEFT}
+        />
 
         <div className="flex flex-col gap-4 lg:col-start-3 lg:row-span-8 lg:row-start-1">
           <StatusCard form={form} />
-          <CatalogCard form={form} categories={categories} brands={brands} />
+          <CatalogCard
+            form={form}
+            categories={categoryList}
+            brands={brandList}
+            onCategoryCreated={(c) => setCategoryList((list) => [...list, c])}
+            onBrandCreated={(b) => setBrandList((list) => [...list, b])}
+          />
           <AccountingCard form={form} defaultMinStock={product?.min_stock_default} />
           {product && <StockCard product={product} />}
           <DimensionsCard form={form} />
         </div>
 
-        {RELATIONS.map(({ id, title, forms, Tab }) => {
-          const count = counts[id];
-
-          return (
-            <div key={id} className={LEFT}>
-              <Collapsible
-                id={id}
-                title={title}
-                note="Сохраняется сразу"
-                summary={count === undefined ? null : count === 0 ? 'нет' : `${count} ${plural(count, forms)}`}
-                open={open.has(id)}
-                onToggle={toggle(id)}
-                disabledHint={productId === null ? 'Доступно после сохранения товара' : undefined}
-              >
-                {productId !== null && <Tab productId={productId} onCount={countSetters[id]} />}
-              </Collapsible>
-            </div>
-          );
-        })}
+        {RELATIONS.map(({ id, title, forms, Tab }) =>
+          relationBlock(id, title, forms, productId !== null && <Tab productId={productId} onCount={countSetters[id]} />),
+        )}
+        {relationBlock(
+          'variants',
+          'Варианты',
+          ['вариант', 'варианта', 'вариантов'],
+          productId !== null && (
+            <VariantsTab
+              productId={productId}
+              onCount={countSetters.variants}
+              images={images}
+              attributes={attributeList}
+              onAttributeCreated={(attribute) => setAttributeList((list) => [...list, attribute])}
+            />
+          ),
+        )}
         <div className={LEFT}>
           <SeoSection
             form={form}

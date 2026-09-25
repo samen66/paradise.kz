@@ -34,7 +34,10 @@ class UserController extends Controller
                     });
                 }),
             )
-            ->latest()
+            // For the client picker; the clients screen sends no sort and
+            // keeps the newest first.
+            ->allowedSorts('company_name', 'name', 'created_at')
+            ->defaultSort('-created_at')
             ->paginate(20);
 
         return response()->json($users);

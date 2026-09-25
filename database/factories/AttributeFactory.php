@@ -21,7 +21,7 @@ class AttributeFactory extends Factory
         $name = fake()->unique()->word();
 
         return [
-            'name' => $name,
+            'name' => ['ru' => $name],
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 100_000),
             'is_filterable' => false,
         ];

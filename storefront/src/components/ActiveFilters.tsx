@@ -2,14 +2,18 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import type { Facets } from "@/lib/types";
 import type { CatalogSearchParams } from "./CatalogView";
 
 export function ActiveFilters({
   searchParams,
   pathname,
+  facets,
 }: {
   searchParams: CatalogSearchParams;
   pathname: string;
+  /** Подписи значений атрибутов; без них в чипе — ru-ключ из адреса. */
+  facets?: Facets | null;
 }) {
   const t = useTranslations("catalog");
   const router = useRouter();
@@ -50,7 +54,13 @@ export function ActiveFilters({
         if (key === "in_stock") label = t("onlyInStock");
         if (key === "q") label = `"${searchParams[key]}"`;
         if (key.startsWith("attr[")) {
-          label = searchParams[key] as string;
+          const slug = key.slice("attr[".length, -1);
+          const options = facets?.attributes.find((a) => a.slug === slug)?.values ?? [];
+          // В адресе — ru-ключи; на экране — подписи на языке страницы.
+          label = String(searchParams[key])
+            .split(",")
+            .map((value) => options.find((o) => o.value === value)?.label ?? value)
+            .join(", ");
         }
 
         return (

@@ -121,3 +121,15 @@ test("цена по своему типу добавляется, показыв
   await page.locator("tbody tr").filter({ hasText: typeName }).getByRole("button", { name: "Удалить" }).click();
   await expect(page.locator("tbody tr").filter({ hasText: typeName })).toHaveCount(0);
 });
+
+test("цена клиента: список B2B-клиентов виден без ввода", async ({ page, request }) => {
+  const clients = await adminApi(request).get<{ data: { id: number }[] }>("/admin/users");
+  test.skip(!clients?.data?.length, "В базе нет B2B-клиентов");
+  const product = requireInStockProduct();
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByRole("button", { name: /^Цены для клиентов B2B/ }).click();
+  await page.getByRole("button", { name: "Добавить цену клиента" }).click();
+  await page.getByRole("dialog").getByRole("combobox", { name: "Найти B2B-клиента" }).click();
+  await expect(page.getByRole("dialog").getByRole("option").first()).toBeVisible();
+});

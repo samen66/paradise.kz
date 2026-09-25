@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Product, ProductVariant } from "@/lib/types";
+import { useSelectedVariant } from "./SelectedVariant";
 import { formatPrice } from "@/lib/format";
 import { StarRating } from "@/components/StarRating";
 import { AddToCartButton } from "@/components/AddToCartButton";
@@ -22,9 +23,7 @@ export function ProductInfo({ product, locale, categoryName }: ProductInfoProps)
   const tCommon = useTranslations("common");
 
   const variants = product.variants ?? [];
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
-    variants.length > 0 && variants[0].in_stock ? variants[0].id : null
-  );
+  const { variantId: selectedVariantId, setVariantId: setSelectedVariantId } = useSelectedVariant();
 
   const selectedVariant = variants.find(v => v.id === selectedVariantId) || null;
 

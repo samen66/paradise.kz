@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\RelationManagers;
 
+use App\Models\Attribute;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -13,9 +14,13 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use LaraZeus\SpatieTranslatable\Actions\LocaleSwitcher;
+use LaraZeus\SpatieTranslatable\Resources\RelationManagers\Concerns\Translatable;
 
 class AttributeValuesRelationManager extends RelationManager
 {
+    use Translatable;
+
     protected static string $relationship = 'attributeValues';
 
     protected static ?string $title = 'Характеристики';
@@ -27,6 +32,7 @@ class AttributeValuesRelationManager extends RelationManager
                 Select::make('attribute_id')
                     ->label('Атрибут')
                     ->relationship('attribute', 'name')
+                    ->getOptionLabelFromRecordUsing(fn (Attribute $record): string => $record->getTranslation('name', 'ru'))
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -46,6 +52,7 @@ class AttributeValuesRelationManager extends RelationManager
             ])
             ->filters([])
             ->headerActions([
+                LocaleSwitcher::make(),
                 CreateAction::make(),
             ])
             ->recordActions([
