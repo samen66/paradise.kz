@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import { buttonGhost, buttonLink, inputClass } from '@/components/ui/styles';
 import LoadMoreSentinel from './LoadMoreSentinel';
 import { pickerMeta } from './pickerText';
+import ProductThumb from './ProductThumb';
 
 type Props = { kind: DraftKind; storeId: number; onPick: (product: PickerProduct) => Promise<void> };
 
@@ -102,10 +103,13 @@ function ProductSearch({ kind, storeId, onPick, layout, onDone }: SearchProps) {
       onMouseDown={(e) => e.preventDefault()}
       onMouseEnter={() => setActive(index)}
       onClick={() => void pick(product)}
-      className={`min-h-11 cursor-pointer px-3 py-2 ${index === active ? 'bg-blue-50' : ''}`}
+      className={`flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 ${index === active ? 'bg-blue-50' : ''}`}
     >
-      <div className="text-sm font-medium text-zinc-900">{ru(product.name) || `#${product.id}`}</div>
-      <div className="text-xs text-zinc-500">{pickerMeta(product, kind)}</div>
+      <ProductThumb url={product.thumb_url} />
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-zinc-900">{ru(product.name) || `#${product.id}`}</div>
+        <div className="text-xs text-zinc-500">{pickerMeta(product, kind)}</div>
+      </div>
     </li>
   );
 

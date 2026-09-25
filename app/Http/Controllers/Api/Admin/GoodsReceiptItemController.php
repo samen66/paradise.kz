@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\GoodsReceiptItemRequest;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
 use App\Services\Inventory\DocumentLines;
+use App\Support\ProductThumb;
 use Illuminate\Http\JsonResponse;
 
 class GoodsReceiptItemController extends Controller
@@ -21,7 +22,10 @@ class GoodsReceiptItemController extends Controller
 
     public function index(GoodsReceipt $goodsReceipt): JsonResponse
     {
-        return response()->json(['data' => $goodsReceipt->items()->with(self::PRODUCT_COLUMNS)->orderBy('id')->get()]);
+        $items = $goodsReceipt->items()->with([self::PRODUCT_COLUMNS, 'product.media'])->orderBy('id')->get();
+        ProductThumb::attach($items->pluck('product'));
+
+        return response()->json(['data' => $items]);
     }
 
     /**

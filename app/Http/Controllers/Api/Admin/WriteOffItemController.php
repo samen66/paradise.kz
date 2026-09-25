@@ -12,6 +12,7 @@ use App\Models\ProductStoreStock;
 use App\Models\WriteOff;
 use App\Models\WriteOffItem;
 use App\Services\Inventory\DocumentLines;
+use App\Support\ProductThumb;
 use Illuminate\Http\JsonResponse;
 
 class WriteOffItemController extends Controller
@@ -26,7 +27,8 @@ class WriteOffItemController extends Controller
      */
     public function index(WriteOff $writeOff): JsonResponse
     {
-        $items = $writeOff->items()->with(self::PRODUCT_COLUMNS)->orderBy('id')->get();
+        $items = $writeOff->items()->with([self::PRODUCT_COLUMNS, 'product.media'])->orderBy('id')->get();
+        ProductThumb::attach($items->pluck('product'));
 
         $onHand = ProductStoreStock::query()
             ->where('store_id', $writeOff->store_id)

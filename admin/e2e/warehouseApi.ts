@@ -1,3 +1,4 @@
+import path from "node:path";
 import { test, type APIRequestContext } from "@playwright/test";
 import { adminApi } from "./adminApi";
 
@@ -43,4 +44,9 @@ export async function createReceiptDraft(request: APIRequestContext, storeId: nu
 export async function createWriteOffDraft(request: APIRequestContext, storeId: number): Promise<number> {
   const writeOff = await adminApi(request).create<Created>("/admin/write-offs", { store_id: storeId, reason: "damaged" });
   return writeOff.data.id;
+}
+
+/** Фото товара — однопиксельный PNG из e2e/assets. */
+export async function addPhoto(request: APIRequestContext, productId: number) {
+  await adminApi(request).upload(`/admin/products/${productId}/media`, path.join(__dirname, "assets/pixel.png"), "image/png");
 }

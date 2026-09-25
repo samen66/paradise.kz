@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { adminApi } from "./adminApi";
 import { ADMIN_SESSION } from "./session";
-import { createProduct, createReceiptDraft, createStore, createWriteOffDraft, receive, uniqueStamp } from "./warehouseApi";
+import { addPhoto, createProduct, createReceiptDraft, createStore, createWriteOffDraft, receive, uniqueStamp } from "./warehouseApi";
 
 /**
  * Склад: приёмка → остаток → движение; списание с нехваткой; склад с историей.
@@ -271,6 +271,27 @@ test("«+ Принять товар» сразу открывает чернов
   drafts.push(draftPath(page, "/admin/goods-receipts"));
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByTestId("document-fields")).toContainText(store.name);
+});
+
+test("фото товара видно в поле, в «Подборе» и в строке документа", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const { productId, productName, storeId } = await setupProductAndStore(request, stamp);
+  await addPhoto(request, productId);
+  const receiptId = await createReceiptDraft(request, storeId);
+  drafts.push(`/admin/goods-receipts/${receiptId}`);
+
+  await page.goto(`/warehouse/receipts/${receiptId}`);
+  await page.getByLabel("Добавить товар", { exact: true }).fill(productName);
+  const option = page.getByRole("option").filter({ hasText: productName });
+  await expect(option.getByTestId("product-thumb").locator("img")).toHaveCount(1);
+  await page.getByLabel("Добавить товар", { exact: true }).press("Enter");
+
+  await expect(documentLine(page, productName).getByTestId("product-thumb").locator("img")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "☰ Подбор" }).click();
+  const picker = page.getByRole("dialog", { name: "Подбор" });
+  await picker.getByLabel("Поиск в подборе").fill(productName);
+  await expect(picker.getByTestId("picker-row").filter({ hasText: productName }).getByTestId("product-thumb").locator("img")).toHaveCount(1);
 });
 
 test("склад с историей удалить нельзя", async ({ page, request }) => {

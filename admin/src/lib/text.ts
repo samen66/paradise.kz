@@ -3,7 +3,7 @@ export type Translatable = string | { ru?: string; kk?: string } | null | undefi
 /** The Russian text of a translatable column, whichever shape the API sent. */
 export const ru = (value: Translatable): string => (typeof value === 'string' ? value : value?.ru ?? '');
 
-export type ProductRef = { id: number; name: Translatable; code: string | null; article: string | null };
+export type ProductRef = { id: number; name: Translatable; code: string | null; article: string | null; thumb_url?: string | null };
 
 export const productLabel = (p: ProductRef): string =>
   [ru(p.name) || `#${p.id}`, p.article || p.code].filter(Boolean).join(' · ');

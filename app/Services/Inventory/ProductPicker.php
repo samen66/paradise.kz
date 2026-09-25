@@ -7,6 +7,7 @@ namespace App\Services\Inventory;
 use App\Models\Product;
 use App\Services\Catalog\CategoryTree;
 use App\Support\ProductSearch;
+use App\Support\ProductThumb;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -77,7 +78,7 @@ class ProductPicker
     {
         $ids = collect($page->items())->map(fn (object $row): int => (int) $row->id)->all();
 
-        $products = Product::query()->whereIn('id', $ids)->get(['id', 'name', 'code', 'article', 'uom'])->keyBy('id');
+        $products = Product::query()->with('media')->whereIn('id', $ids)->get(['id', 'name', 'code', 'article', 'uom'])->keyBy('id');
         $costs = $this->costs->forMany($ids, $storeId);
 
         $page->through(function (object $row) use ($products, $costs): array {
@@ -89,6 +90,7 @@ class ProductPicker
                 'code' => $product->code,
                 'article' => $product->article,
                 'uom' => $product->uom,
+                'thumb_url' => ProductThumb::url($product),
                 'on_hand' => (float) $row->on_hand,
                 'suggested_unit_cost' => $costs[$product->id],
             ];

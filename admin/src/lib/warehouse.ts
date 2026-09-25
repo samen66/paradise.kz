@@ -264,6 +264,7 @@ export type PickerProduct = {
   code: string | null;
   article: string | null;
   uom: string | null;
+  thumb_url: string | null;
   /** Остаток на складе документа. */
   on_hand: number;
   /** Себестоимость новой строки приёмки, тиыны. */

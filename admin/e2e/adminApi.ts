@@ -85,5 +85,18 @@ export function adminApi(request: APIRequestContext) {
     async create<T = unknown>(path: string, body: unknown): Promise<T> {
       return this.send<T>("post", path, body);
     },
+    /** Setup: файл полем `file` (фото товара). Бросает на не-2xx, как `send`. */
+    async upload<T = unknown>(path: string, filePath: string, mimeType: string): Promise<T> {
+      const res = await request.post(`${API_URL}${path}`, {
+        headers: headers(),
+        multipart: { file: { name: filePath.split("/").pop() ?? "file", mimeType, buffer: fs.readFileSync(filePath) } },
+      });
+
+      if (!res.ok()) {
+        throw new Error(`UPLOAD ${path} → ${res.status()}: ${await res.text()}`);
+      }
+
+      return (await res.json()) as T;
+    },
   };
 }

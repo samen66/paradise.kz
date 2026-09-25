@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Inventory;
 
-use App\Http\Controllers\Api\Admin\ProductMediaController;
 use App\Models\Product;
 use App\Models\ProductStoreStock;
 use App\Support\ProductSearch;
+use App\Support\ProductThumb;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -170,7 +170,6 @@ final class StockByProduct
     {
         $qty = (float) $row->on_hand;
         $value = (int) round((float) $row->stock_value);
-        $photo = $product->getFirstMedia(Product::IMAGE_COLLECTION);
 
         return [
             'id' => $product->id,
@@ -180,7 +179,7 @@ final class StockByProduct
                 'code' => $product->code,
                 'article' => $product->article,
                 'uom' => $product->uom,
-                'thumb_url' => $photo === null ? null : ProductMediaController::present($photo)['thumb_url'],
+                'thumb_url' => ProductThumb::url($product),
             ],
             'stock' => $qty,
             'min_stock' => $product->min_stock === null ? $this->threshold() : (float) $product->min_stock,

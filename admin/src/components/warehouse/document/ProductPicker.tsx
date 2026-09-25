@@ -10,6 +10,7 @@ import Modal from '@/components/ui/Modal';
 import { buttonPrimary, inputClass } from '@/components/ui/styles';
 import LoadMoreSentinel from './LoadMoreSentinel';
 import { pickerMeta } from './pickerText';
+import ProductThumb from './ProductThumb';
 import QuantityStepper from './QuantityStepper';
 import type { LineRow } from './useDocument';
 
@@ -124,6 +125,7 @@ export default function ProductPicker({ kind, storeId, rows, onAdd, onClose }: P
             const name = ru(product.name) || `#${product.id}`;
             return (
               <li key={product.id} data-testid="picker-row" className={`flex items-center gap-3 py-2 ${quantity > 0 ? 'bg-blue-50/60' : ''}`}>
+                <ProductThumb url={product.thumb_url} />
                 <button
                   type="button"
                   data-testid="picker-pick"
