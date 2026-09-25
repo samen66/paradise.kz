@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { adminApi } from "../adminApi";
 import { ADMIN_SESSION } from "../session";
-import { createProduct, createStore, receive, uniqueStamp } from "../warehouseApi";
+import { createProduct, createReceiptDraft, createStore, receive, uniqueStamp } from "../warehouseApi";
 
 /**
  * Раздел «Склад» на телефоне: вкладки одной строкой, «Склад» внизу
@@ -72,4 +72,37 @@ test("карточка остатка показывает разбивку по
   const card = page.getByRole("listitem").filter({ hasText: product.name });
   await expect(card).toContainText(`${first.name} 1`);
   await expect(card).toContainText(`${second.name} 2`);
+});
+
+test("на телефоне товар добавляется из поиска на весь экран, степпер сохраняет", async ({ page, request }) => {
+  const stamp = uniqueStamp();
+  const product = await createProduct(request, stamp);
+  const store = await createStore(request, stamp);
+  const receiptId = await createReceiptDraft(request, store.id);
+
+  try {
+    await page.goto(`/warehouse/receipts/${receiptId}`);
+    await page.getByRole("button", { name: "+ Добавить товар" }).click();
+    const dialog = page.getByRole("dialog", { name: "Добавить товар" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Поиск товара").fill(product.name);
+    await dialog.getByRole("option").filter({ hasText: product.name }).click();
+    await expect(dialog).toBeHidden();
+
+    const card = page.getByTestId("document-line").filter({ hasText: product.name });
+    await card.getByRole("button", { name: `Больше: ${product.name}` }).click();
+    await expect(card.getByLabel(`Количество: ${product.name}`)).toHaveValue("2");
+    await expect(page.getByText("✓ Сохранено")).toBeVisible();
+
+    // Панель «Провести» — над нижней навигацией, а не под ней.
+    const post = page.getByRole("button", { name: "Провести" });
+    const box = (await post.boundingBox())!;
+    const hit = await page.evaluate(
+      ([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.textContent?.trim() ?? null,
+      [box.x + box.width / 2, box.y + box.height / 2],
+    );
+    expect(hit).toBe("Провести");
+  } finally {
+    await adminApi(request).delete(`/admin/goods-receipts/${receiptId}`);
+  }
 });

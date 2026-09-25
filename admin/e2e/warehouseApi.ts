@@ -33,3 +33,14 @@ export async function receive(request: APIRequestContext, storeId: number, produ
   await api.create(`/admin/goods-receipts/${receipt.data.id}/items`, { product_id: productId, quantity, unit_cost: unitCost });
   await api.send("post", `/admin/goods-receipts/${receipt.data.id}/post`);
 }
+
+/** Черновик приёмки на месте хранения теста — сразу через API, без экрана создания. */
+export async function createReceiptDraft(request: APIRequestContext, storeId: number): Promise<number> {
+  const receipt = await adminApi(request).create<Created>("/admin/goods-receipts", { store_id: storeId });
+  return receipt.data.id;
+}
+
+export async function createWriteOffDraft(request: APIRequestContext, storeId: number): Promise<number> {
+  const writeOff = await adminApi(request).create<Created>("/admin/write-offs", { store_id: storeId, reason: "damaged" });
+  return writeOff.data.id;
+}
