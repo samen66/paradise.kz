@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Admin\PriceTypeController;
 use App\Http\Controllers\Api\Admin\ProductCollectionController;
 use App\Http\Controllers\Api\Admin\ProductCollectionProductController;
 use App\Http\Controllers\Api\Admin\ProductMediaController;
+use App\Http\Controllers\Api\Admin\ProductPickerController;
 use App\Http\Controllers\Api\Admin\ProductPriceController;
 use App\Http\Controllers\Api\Admin\ProductVariantController;
 use App\Http\Controllers\Api\Admin\StockController;
@@ -200,6 +201,7 @@ Route::prefix('admin')
         // every change is recorded in the ledger.
         Route::get('stock/products', [StockController::class, 'products']);
         Route::get('stock/summary', [StockController::class, 'summary']);
+        Route::get('product-picker', [ProductPickerController::class, 'index']);
         Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('stores', AdminStoreController::class);
