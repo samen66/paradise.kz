@@ -10,9 +10,14 @@ import { useEffect } from 'react';
 let lockCount = 0;
 let previousOverflow = '';
 
+// Открытые слои по порядку: Escape закрывает только последний. Без этого
+// Esc в шторке атрибута поверх окна варианта закрыл бы оба.
+const stack: symbol[] = [];
+
 /**
  * Общее поведение всплывающих слоёв — модалки, шторки, меню «Ещё»:
- * Escape закрывает слой, а страница под ним не прокручивается.
+ * Escape закрывает слой (только верхний открытый), а страница под ним не
+ * прокручивается.
  *
  * На телефоне прокручивается сам документ (см. shell/AppShell), и без
  * блокировки палец, долиставший шторку до конца, начинал бы листать
@@ -20,14 +25,21 @@ let previousOverflow = '';
  */
 export function useOverlay(onClose: () => void): void {
   useEffect(() => {
+    const token = Symbol('overlay');
+    stack.push(token);
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      // defaultPrevented — Escape уже обработал вложенный элемент (закрыл список SearchSelect).
+      if (e.key === 'Escape' && !e.defaultPrevented && stack[stack.length - 1] === token) {
         onClose();
       }
     };
     window.addEventListener('keydown', onKey);
 
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      stack.splice(stack.indexOf(token), 1);
+    };
   }, [onClose]);
 
   useEffect(() => {

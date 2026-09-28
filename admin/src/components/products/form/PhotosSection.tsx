@@ -4,16 +4,16 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import ConfirmButton from '@/components/ui/ConfirmButton';
 import { buttonDanger, buttonLink } from '@/components/ui/styles';
 import api from '@/lib/api';
-import { useResource } from '@/lib/crud';
+import type { Resource } from '@/lib/crud';
 import { serverMessage } from '@/lib/errors';
 import { toast } from '@/stores/toastStore';
 import FormCard from './FormCard';
-import { PHOTO_ACCEPT, photoProblem, queuePhoto, reportPhotoError, uploadPhoto, type QueuedPhoto } from './photos';
-
-type Image = { id: number; file_name: string; url: string; thumb_url: string; order: number | null };
+import { PHOTO_ACCEPT, photoProblem, queuePhoto, reportPhotoError, uploadPhoto, type ProductImage, type QueuedPhoto } from './photos';
 
 type Props = {
   productId: number | null;
+  /** Галерея сохранённого товара. */
+  images: Resource<ProductImage>;
   queue: QueuedPhoto[];
   onQueueChange: Dispatch<SetStateAction<QueuedPhoto[]>>;
   /** Идёт сохранение товара — новые файлы не принимаем. */
@@ -29,10 +29,10 @@ const MainBadge = () => (
  * Фото товара. У сохранённого товара файлы загружаются сразу. У нового —
  * копятся в очереди с превью и уходят после первого сохранения (это делает
  * ProductForm); не загрузившиеся остаются здесь с кнопкой «Повторить».
+ * Список фото держит ProductForm — его же читает окно варианта.
  */
-export default function PhotosSection({ productId, queue, onQueueChange, busy, className }: Props) {
+export default function PhotosSection({ productId, images, queue, onQueueChange, busy, className }: Props) {
   const path = productId ? `/admin/products/${productId}/media` : null;
-  const images = useResource<Image>(path);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const saved = productId !== null ? images.items : [];

@@ -22,7 +22,10 @@ export interface ProductVariant {
   id: number;
   external_id: string;
   name: string;
-  characteristics: Record<string, unknown>;
+  /** Структурированные характеристики или старый объект из ERP. */
+  characteristics: ProductCharacteristic[] | Record<string, unknown>;
+  /** Фото варианта; пусто — показывать фото товара. */
+  images?: ProductImage[];
   barcodes: string[];
   stock?: number;
   /** Absent for a B2B client awaiting approval. */
@@ -167,10 +170,17 @@ export interface Settings {
   stores: StoreInfo[];
 }
 
+export interface FacetValue {
+  /** ru-текст — ключ в адресе (`attr[color]=Серый`), одинаковый на обоих языках. */
+  value: string;
+  /** Подпись на языке запроса. */
+  label: string;
+}
+
 export interface FacetAttribute {
   name: string;
   slug: string;
-  values: string[];
+  values: FacetValue[];
 }
 
 export interface FacetBrand {

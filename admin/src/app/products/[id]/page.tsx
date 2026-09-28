@@ -9,8 +9,9 @@ import ProductFormSkeleton from '@/components/products/form/ProductFormSkeleton'
 import type { ApiProduct, NamedOption } from '@/components/products/form/formModel';
 import { buttonLink, buttonSecondary } from '@/components/ui/styles';
 import api from '@/lib/api';
+import type { Attribute } from '@/lib/catalogTypes';
 
-type Loaded = { product: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[] };
+type Loaded = { product: ApiProduct | null; categories: NamedOption[]; brands: NamedOption[]; attributes: Attribute[] };
 
 type State = { status: 'loading' } | { status: 'ready'; data: Loaded } | { status: 'missing' } | { status: 'failed' };
 
@@ -31,12 +32,13 @@ export default function ProductPage() {
     setState({ status: 'loading' });
 
     try {
-      const [categories, brands, product] = await Promise.all([
+      const [categories, brands, attributes, product] = await Promise.all([
         api.get('/admin/categories').then((r) => list(r.data)).catch((): NamedOption[] => []),
         api.get('/admin/brands').then((r) => list(r.data)).catch((): NamedOption[] => []),
+        api.get('/admin/attributes').then((r) => ((r.data?.data ?? []) as Attribute[])).catch((): Attribute[] => []),
         id === 'create' ? Promise.resolve(null) : api.get<{ data: ApiProduct }>(`/admin/products/${id}`).then((r) => r.data.data),
       ]);
-      setState({ status: 'ready', data: { product, categories, brands } });
+      setState({ status: 'ready', data: { product, categories, brands, attributes } });
     } catch (error) {
       setState({ status: isAxiosError(error) && error.response?.status === 404 ? 'missing' : 'failed' });
     }
@@ -72,5 +74,5 @@ export default function ProductPage() {
     );
   }
 
-  return <ProductForm initialProduct={state.data.product} categories={state.data.categories} brands={state.data.brands} />;
+  return <ProductForm initialProduct={state.data.product} categories={state.data.categories} brands={state.data.brands} attributes={state.data.attributes} />;
 }

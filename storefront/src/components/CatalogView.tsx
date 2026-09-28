@@ -119,7 +119,7 @@ export async function CatalogView({
         </div>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <ActiveFilters searchParams={searchParams} pathname={pathname} />
+          <ActiveFilters searchParams={searchParams} pathname={pathname} facets={facets} />
           <div className="ml-auto min-w-[220px]">
             <SortSelect />
           </div>

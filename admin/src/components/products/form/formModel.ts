@@ -1,5 +1,6 @@
 import type { FieldErrors } from 'react-hook-form';
 import { z } from 'zod';
+import { appendAttributeRows, attributeRowsSchema, toAttributeRows, type ApiAttributeValue } from '@/components/catalog/attributeRows';
 import { LOCALES, type Locale } from '@/components/ui/LocaleSwitch';
 import type { SelectOption } from '@/components/ui/SearchSelect';
 import { TENGE_PATTERN, tiynToTenge } from '@/lib/money';
@@ -42,6 +43,8 @@ export type ApiProduct = {
   min_stock?: string | number | null;
   /** Общий порог из config/inventory.php. */
   min_stock_default?: number;
+  /** Характеристики; в ответах show/store/update. */
+  attribute_values?: ApiAttributeValue[];
 };
 
 /** Категория или бренд из `/admin/categories`, `/admin/brands`. */
@@ -81,6 +84,7 @@ export const productSchema = z.object({
   supplier: upTo(255),
   is_active: z.boolean(),
   is_new_arrival: z.boolean(),
+  attribute_values: attributeRowsSchema,
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
@@ -113,6 +117,7 @@ export const emptyProductValues = (): ProductFormValues => ({
   b2b_min_order_qty: '', uom: '', weight: '', volume: '', min_stock: '', country: '', supplier: '',
   is_active: true,
   is_new_arrival: false,
+  attribute_values: [],
 });
 
 export const toFormValues = (p: ApiProduct): ProductFormValues => ({
@@ -139,6 +144,7 @@ export const toFormValues = (p: ApiProduct): ProductFormValues => ({
   supplier: text(p.supplier),
   is_active: p.is_active ?? true,
   is_new_arrival: p.is_new_arrival ?? false,
+  attribute_values: toAttributeRows(p.attribute_values),
 });
 
 /**
@@ -162,6 +168,7 @@ export function toFormData(values: ProductFormValues, isUpdate: boolean): FormDa
 
   data.append('is_active', values.is_active ? '1' : '0');
   data.append('is_new_arrival', values.is_new_arrival ? '1' : '0');
+  appendAttributeRows(data, values.attribute_values);
 
   if (isUpdate) {
     // Laravel не разбирает multipart у PUT — метод подменяется полем.
@@ -240,7 +247,7 @@ const FOLD_OF: Record<string, string> = {
  * Что открыть, чтобы ошибки стали видны: свёрнутые блоки и язык карточек.
  * Русский важнее: если ошибки на обоих языках, показываем RU.
  */
-export function revealPlan(paths: string[]): { folds: string[]; basicLocale?: Locale; seoLocale?: Locale } {
+export function revealPlan(paths: string[]): { folds: string[]; basicLocale?: Locale; seoLocale?: Locale; attributesLocale?: Locale } {
   const folds = [...new Set(paths.map((p) => FOLD_OF[p.split('.')[0]]).filter((f): f is string => Boolean(f)))];
 
   const localeOf = (fields: string[]): Locale | undefined =>
@@ -250,5 +257,6 @@ export function revealPlan(paths: string[]): { folds: string[]; basicLocale?: Lo
     folds,
     basicLocale: localeOf(['name', 'description']),
     seoLocale: localeOf(['seo_title', 'seo_description']),
+    attributesLocale: LOCALES.find((locale) => paths.some((p) => p.startsWith('attribute_values.') && p.endsWith(`.value.${locale}`))),
   };
 }

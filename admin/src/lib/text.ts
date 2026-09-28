@@ -3,12 +3,15 @@ export type Translatable = string | { ru?: string; kk?: string } | null | undefi
 /** The Russian text of a translatable column, whichever shape the API sent. */
 export const ru = (value: Translatable): string => (typeof value === 'string' ? value : value?.ru ?? '');
 
+/** Казахский текст переводимой колонки; '' — перевода нет. */
+export const kk = (value: Translatable): string => (typeof value === 'string' ? '' : value?.kk ?? '');
+
 export type ProductRef = { id: number; name: Translatable; code: string | null; article: string | null; thumb_url?: string | null };
 
 export const productLabel = (p: ProductRef): string =>
   [ru(p.name) || `#${p.id}`, p.article || p.code].filter(Boolean).join(' · ');
 
-export type ClientRef = { id: number; company_name: string | null; email: string | null; phone: string | null };
+export type ClientRef = { id: number; company_name: string | null; name: string | null; email: string | null; phone: string | null; is_approved?: boolean };
 
 export const clientLabel = (c: ClientRef): string =>
   [c.company_name || `Клиент #${c.id}`, c.phone || c.email].filter(Boolean).join(' · ');

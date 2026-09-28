@@ -118,3 +118,6 @@ export function useResource<T extends { id: number }>(path: string | null, param
 
   return { items, meta, page, setPage, loading, reload, create, update, remove };
 }
+
+/** Что возвращает useResource — для передачи одного списка нескольким компонентам. */
+export type Resource<T extends { id: number }> = ReturnType<typeof useResource<T>>;

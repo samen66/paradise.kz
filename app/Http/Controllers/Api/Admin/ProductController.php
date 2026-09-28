@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductSaveRequest;
 use App\Models\Product;
+use App\Services\Catalog\AttributeValueSync;
 use App\Services\Pricing\PricingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -121,9 +124,12 @@ class ProductController extends Controller
         $product->issues = $codes;
     }
 
+    /** Relations every show/store/update response carries. */
+    private const CARD_RELATIONS = ['category', 'brand', 'attributeValues.attribute:id,name,slug'];
+
     public function show(Product $product): JsonResponse
     {
-        $product->load(['category', 'brand', 'externalMapping']);
+        $product->load([...self::CARD_RELATIONS, 'externalMapping']);
 
         return response()->json(['data' => [
             ...$this->present($product),
@@ -131,18 +137,40 @@ class ProductController extends Controller
         ]]);
     }
 
-    public function store(ProductSaveRequest $request): JsonResponse
+    public function store(ProductSaveRequest $request, AttributeValueSync $sync): JsonResponse
     {
-        $product = Product::create($request->validated());
+        $validated = $request->validated();
 
-        return response()->json(['data' => $this->present($product->load(['category', 'brand']))], 201);
+        $product = DB::transaction(function () use ($validated, $sync): Product {
+            $product = Product::create(Arr::except($validated, 'attribute_values'));
+            $this->syncAttributeValues($product, $validated, $sync);
+
+            return $product;
+        });
+
+        return response()->json(['data' => $this->present($product->load(self::CARD_RELATIONS))], 201);
     }
 
-    public function update(ProductSaveRequest $request, Product $product): JsonResponse
+    public function update(ProductSaveRequest $request, Product $product, AttributeValueSync $sync): JsonResponse
     {
-        $product->update($request->validated());
+        $validated = $request->validated();
 
-        return response()->json(['data' => $this->present($product->load(['category', 'brand']))]);
+        DB::transaction(function () use ($product, $validated, $sync): void {
+            $product->update(Arr::except($validated, 'attribute_values'));
+            $this->syncAttributeValues($product, $validated, $sync);
+        });
+
+        return response()->json(['data' => $this->present($product->load(self::CARD_RELATIONS))]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncAttributeValues(Product $product, array $validated, AttributeValueSync $sync): void
+    {
+        if (array_key_exists('attribute_values', $validated)) {
+            $sync->sync($product, $validated['attribute_values']);
+        }
     }
 
     /**

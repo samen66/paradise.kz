@@ -127,7 +127,7 @@ export function B2BCatalogView({ title, seoDescription }: { title: string; seoDe
             <SortSelect isB2B={true} />
           </div>
           <div className="w-full">
-            <ActiveFilters searchParams={paramsRecord} pathname={pathname} />
+            <ActiveFilters searchParams={paramsRecord} pathname={pathname} facets={facets} />
           </div>
         </div>
 

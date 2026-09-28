@@ -111,7 +111,7 @@ class ProductController extends Controller
 
         $store = $this->stores->resolve(null, $this->requestedStoreId($request));
 
-        $product->loadMissing('media', 'variants', 'category', 'brand', 'attributeValues.attribute', 'reviews', 'shorts', 'storeStocks.store');
+        $product->loadMissing('media', 'variants.attributeValues.attribute', 'variants.images', 'category', 'brand', 'attributeValues.attribute', 'reviews', 'shorts', 'storeStocks.store');
         $this->presenter->enrich($product->newCollection([$product]), $store);
         $product->with_description = true;
 
@@ -171,7 +171,8 @@ class ProductController extends Controller
      * filter[attr][color]=red,blue → products whose `color` attribute value is
      * red OR blue; separate attributes combine with AND. Only attributes the
      * admin marked filterable participate — unknown/unfilterable slugs match
-     * nothing rather than silently matching everything.
+     * nothing rather than silently matching everything. values are the ru
+     * texts from the facets.
      *
      * @param  Builder<Product>  $query
      */
@@ -191,7 +192,8 @@ class ProductController extends Controller
                     ->whereColumn('attribute_values.product_id', 'products.id')
                     ->where('attributes.slug', (string) $attributeSlug)
                     ->where('attributes.is_filterable', true)
-                    ->whereIn('attribute_values.value', $values);
+                    // The ru text is the filter key in both languages (see FacetController).
+                    ->whereIn('attribute_values.value->ru', $values);
             });
         }
     }

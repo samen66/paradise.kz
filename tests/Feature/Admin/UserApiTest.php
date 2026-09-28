@@ -46,4 +46,29 @@ class UserApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $client->id);
     }
+
+    #[Test]
+    public function clients_can_be_listed_by_company_name(): void
+    {
+        $this->actingAsManager();
+        User::factory()->b2b()->create(['company_name' => 'Яблоко']);
+        User::factory()->b2b()->create(['company_name' => 'Арман']);
+
+        $this->getJson('/api/admin/users?sort=company_name')
+            ->assertOk()
+            ->assertJsonPath('data.0.company_name', 'Арман')
+            ->assertJsonPath('data.1.company_name', 'Яблоко');
+    }
+
+    #[Test]
+    public function without_a_sort_the_newest_client_comes_first(): void
+    {
+        $this->actingAsManager();
+        User::factory()->b2b()->create(['company_name' => 'Старый', 'created_at' => now()->subDay()]);
+        User::factory()->b2b()->create(['company_name' => 'Новый']);
+
+        $this->getJson('/api/admin/users')
+            ->assertOk()
+            ->assertJsonPath('data.0.company_name', 'Новый');
+    }
 }

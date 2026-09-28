@@ -14,9 +14,13 @@ import { createProduct, uniqueStamp } from "./warehouseApi";
 test.use({ storageState: ADMIN_SESSION });
 
 let created: number[] = [];
+let createdBrands: number[] = [];
+let createdAttributes: number[] = [];
 
 test.beforeEach(() => {
   created = [];
+  createdBrands = [];
+  createdAttributes = [];
 });
 
 test.afterEach(async ({ request }) => {
@@ -24,6 +28,13 @@ test.afterEach(async ({ request }) => {
 
   for (const id of created) {
     await api.delete(`/admin/products/${id}`);
+  }
+  for (const id of createdBrands) {
+    await api.delete(`/admin/brands/${id}`);
+  }
+  // После товаров: их значения уже ушли каскадом, и атрибут не занят.
+  for (const id of createdAttributes) {
+    await api.delete(`/admin/attributes/${id}`);
   }
 });
 
@@ -177,7 +188,7 @@ test("несуществующий товар — «Товар не найден
   await expect(page.getByRole("link", { name: "К списку товаров" })).toBeVisible();
 });
 
-test("новый товар: одно нажатие — один товар, после сохранения та же страница", async ({ page }) => {
+test("новый товар: одно нажатие — один товар, после сохранения та же страница", async ({ page, request }) => {
   const name = `E2E новый ${Date.now()}`;
   const creates: string[] = [];
   page.on("request", (r) => {
@@ -190,10 +201,15 @@ test("новый товар: одно нажатие — один товар, п
   await expect(page.getByRole("heading", { level: 1, name: "Новый товар" })).toBeVisible();
   await page.getByLabel("Название *").fill(name);
   await page.getByLabel("Розничная", { exact: true }).fill("2500");
-  const attributes = page.getByRole("button", { name: /^Характеристики/ });
-  await expect(attributes).toBeDisabled();
-  await expect(attributes).toContainText("Доступно после сохранения товара");
-  await expect(attributes).not.toHaveAttribute("aria-controls");
+  const attributeName = `E2E размер ${Date.now()}`;
+  await page.getByRole("button", { name: "+ Добавить характеристику" }).click();
+  await page.getByRole("combobox", { name: "Атрибут" }).fill(attributeName);
+  await page.getByRole("option", { name: `+ Создать «${attributeName}»` }).click();
+  const sheet = page.getByRole("dialog", { name: "Новый атрибут" });
+  await sheet.getByLabel("Название (KK)").fill(`${attributeName} kk`);
+  await sheet.getByRole("button", { name: "Создать" }).click();
+  await expect(sheet).toBeHidden();
+  await page.getByLabel("Значение (RU)").fill("200x90 см");
   await saveButton(page).dblclick();
 
   await expect(page).toHaveURL(/\/products\/\d+$/);
@@ -201,8 +217,30 @@ test("новый товар: одно нажатие — один товар, п
   await expect(page.getByText("Товар создан")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   expect(creates).toHaveLength(1);
-  await expect(attributes).toBeEnabled();
   await expect(page.getByRole("button", { name: /^Варианты/ })).toContainText("нет");
+
+  await page.reload();
+  await expect(page.getByLabel("Значение (RU)")).toHaveValue("200x90 см");
+  const attributes = await adminApi(request).get<{ data: { id: number; slug: string; name: { ru?: string } }[] }>("/admin/attributes");
+  const createdAttribute = attributes?.data.find((a) => a.name.ru === attributeName);
+  expect(createdAttribute).toBeTruthy();
+  createdAttributes.push(createdAttribute!.id);
+});
+
+test("последняя характеристика удаляется", async ({ page, request }) => {
+  const api = adminApi(request);
+  const attribute = await api.create<{ data: { id: number } }>("/admin/attributes", { name: { ru: `E2E цвет ${Date.now()}` } });
+  createdAttributes.push(attribute.data.id);
+  const product = await draftProduct(request, { attribute_values: [{ attribute_id: attribute.data.id, value: { ru: "Серый" } }] });
+
+  await page.goto(`/products/${product.id}`);
+  await expect(page.getByLabel("Значение (RU)")).toHaveValue("Серый");
+  await page.getByRole("button", { name: "Удалить характеристику" }).click();
+  await saveButton(page).click();
+  await expect(page.getByText("Сохранено", { exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText("Характеристик пока нет.")).toBeVisible();
 });
 
 const PIXEL = path.join(__dirname, "assets/pixel.png");
@@ -289,6 +327,31 @@ test("категория выбирается поиском и показыва
     await api.delete(`/admin/categories/${child.id}`);
     await api.delete(`/admin/categories/${parent.id}`);
   }
+});
+
+test("бренд создаётся прямо из поля «Бренд»", async ({ page, request }) => {
+  const product = await draftProduct(request);
+  const brandName = `E2E бренд ${Date.now()}`;
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByRole("combobox", { name: "Бренд" }).fill(brandName);
+  await page.getByRole("option", { name: `+ Создать «${brandName}»` }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Новый бренд" });
+  await expect(dialog.getByLabel("Название (RU) *")).toHaveValue(brandName);
+  await dialog.getByLabel("Название (KK)").fill(`${brandName} kk`);
+  await dialog.getByRole("button", { name: "Создать" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("combobox", { name: "Бренд" })).toHaveValue(brandName);
+
+  // Ждём ответ сохранения товара, а не тост: «Сохранено» уже показала шторка бренда.
+  const saving = page.waitForResponse((r) => r.request().method() === "POST" && r.url().endsWith(`/admin/products/${product.id}`));
+  await saveButton(page).click();
+  expect((await saving).ok()).toBe(true);
+
+  const saved = await adminApi(request).get<{ data: { brand_id: number | null } }>(`/admin/products/${product.id}`);
+  expect(saved?.data.brand_id).not.toBeNull();
+  createdBrands.push(saved!.data.brand_id!);
 });
 
 test("выбор с клавиатуры: стрелки, Enter, Escape", async ({ page, request }) => {

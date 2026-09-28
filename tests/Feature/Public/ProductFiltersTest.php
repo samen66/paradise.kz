@@ -129,6 +129,17 @@ class ProductFiltersTest extends TestCase
     }
 
     #[Test]
+    public function the_attribute_filter_matches_the_ru_key_in_any_locale(): void
+    {
+        $color = Attribute::factory()->filterable()->create(['slug' => 'color']);
+        $grey = Product::factory()->create();
+        AttributeValue::factory()->create(['product_id' => $grey->id, 'attribute_id' => $color->id, 'value' => ['ru' => 'Серый', 'kk' => 'Сұр']]);
+
+        $this->assertSame([$grey->id], $this->listedIds('locale=kk&filter[attr][color]='.rawurlencode('Серый')));
+        $this->assertSame([], $this->listedIds('locale=kk&filter[attr][color]='.rawurlencode('Сұр')));
+    }
+
+    #[Test]
     public function a_non_filterable_attribute_matches_nothing(): void
     {
         $hidden = Attribute::factory()->create(['slug' => 'internal-grade', 'is_filterable' => false]);

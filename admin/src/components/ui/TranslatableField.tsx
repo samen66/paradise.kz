@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { get, type FieldValues, type Path, type UseFormReturn } from 'react-hook-form';
 import Field from './Field';
 import { inputClass } from './styles';
@@ -14,7 +15,13 @@ type Props<T extends FieldValues> = {
 
 const LOCALES = ['ru', 'kk'] as const;
 
+/**
+ * Поле на ru и kk рядом. id полей уникальны на экземпляр: шторка (бренд,
+ * атрибут) открывается поверх формы товара, где уже есть `name-ru`, и с
+ * одинаковым id её подписи указывали бы на поле под шторкой.
+ */
 export default function TranslatableField<T extends FieldValues>({ form, name, label, required, multiline }: Props<T>) {
+  const prefix = useId();
   const {
     register,
     formState: { errors },
@@ -24,7 +31,7 @@ export default function TranslatableField<T extends FieldValues>({ form, name, l
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {LOCALES.map((locale) => {
         const path = `${name}.${locale}` as Path<T>;
-        const id = `${name}-${locale}`;
+        const id = `${prefix}${name}-${locale}`;
         const error = get(errors, path)?.message as string | undefined;
         const star = required && locale === 'ru' ? ' *' : '';
 

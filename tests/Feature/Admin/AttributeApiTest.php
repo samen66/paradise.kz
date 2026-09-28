@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\ProductVariantAttributeValue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\ActsAsStaff;
@@ -32,13 +33,13 @@ class AttributeApiTest extends TestCase
     public function it_lists_attributes_by_name(): void
     {
         $this->actingAsManager();
-        Attribute::factory()->create(['name' => 'Цвет']);
-        Attribute::factory()->create(['name' => 'Материал']);
+        Attribute::factory()->create(['name' => ['ru' => 'Цвет']]);
+        Attribute::factory()->create(['name' => ['ru' => 'Материал']]);
 
         $this->getJson('/api/admin/attributes')
             ->assertOk()
-            ->assertJsonPath('data.0.name', 'Материал')
-            ->assertJsonPath('data.1.name', 'Цвет');
+            ->assertJsonPath('data.0.name.ru', 'Материал')
+            ->assertJsonPath('data.1.name.ru', 'Цвет');
     }
 
     #[Test]
@@ -47,16 +48,16 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
 
         $id = $this->postJson('/api/admin/attributes', [
-            'name' => 'Цвет',
+            'name' => ['ru' => 'Цвет'],
             'slug' => 'color',
             'is_filterable' => true,
         ])->assertCreated()->json('data.id');
 
         $this->putJson("/api/admin/attributes/{$id}", [
-            'name' => 'Цвет обивки',
+            'name' => ['ru' => 'Цвет обивки'],
             'slug' => 'color',
             'is_filterable' => false,
-        ])->assertOk()->assertJsonPath('data.name', 'Цвет обивки');
+        ])->assertOk()->assertJsonPath('data.name.ru', 'Цвет обивки');
 
         $this->assertDatabaseHas('attributes', ['id' => $id, 'slug' => 'color', 'is_filterable' => false]);
 
@@ -70,10 +71,10 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
         Attribute::factory()->create(['slug' => 'color']);
 
-        $this->postJson('/api/admin/attributes', ['name' => 'Цвет', 'slug' => 'color'])
+        $this->postJson('/api/admin/attributes', ['name' => ['ru' => 'Цвет'], 'slug' => 'color'])
             ->assertUnprocessable()->assertJsonValidationErrors('slug');
 
-        $this->postJson('/api/admin/attributes', ['name' => 'Цвет', 'slug' => 'Цвет!'])
+        $this->postJson('/api/admin/attributes', ['name' => ['ru' => 'Цвет'], 'slug' => 'Цвет!'])
             ->assertUnprocessable()->assertJsonValidationErrors('slug');
     }
 
@@ -83,7 +84,7 @@ class AttributeApiTest extends TestCase
         $this->actingAsManager();
         $attribute = Attribute::factory()->create(['slug' => 'color']);
 
-        $this->putJson("/api/admin/attributes/{$attribute->id}", ['name' => 'Цвет', 'slug' => 'color'])
+        $this->putJson("/api/admin/attributes/{$attribute->id}", ['name' => ['ru' => 'Цвет'], 'slug' => 'color'])
             ->assertOk();
     }
 
@@ -98,5 +99,28 @@ class AttributeApiTest extends TestCase
             ->assertJsonStructure(['message']);
 
         $this->assertDatabaseHas('attributes', ['id' => $value->attribute_id]);
+    }
+
+    #[Test]
+    public function an_attribute_used_by_a_variant_cannot_be_deleted(): void
+    {
+        $this->actingAsManager();
+        $attribute = Attribute::factory()->create();
+        ProductVariantAttributeValue::factory()->create(['attribute_id' => $attribute->id]);
+
+        $this->deleteJson("/api/admin/attributes/{$attribute->id}")->assertUnprocessable();
+        $this->assertDatabaseHas('attributes', ['id' => $attribute->id]);
+    }
+
+    #[Test]
+    public function the_list_counts_variant_usage_too(): void
+    {
+        $this->actingAsManager();
+        $attribute = Attribute::factory()->create();
+        ProductVariantAttributeValue::factory()->count(3)->create(['attribute_id' => $attribute->id]);
+
+        $this->getJson('/api/admin/attributes')
+            ->assertOk()
+            ->assertJsonPath('data.0.variant_values_count', 3);
     }
 }
