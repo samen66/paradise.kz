@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\StoreResource;
 use App\Models\Store;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StoreController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): AnonymousResourceCollection
     {
-        $stores = Store::where('is_active', true)
-            ->get(['id', 'name', 'address', 'city', 'working_hours', 'phone']);
-
-        return response()->json([
-            'data' => $stores
-        ]);
+        return StoreResource::collection(
+            Store::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
+        );
     }
 }

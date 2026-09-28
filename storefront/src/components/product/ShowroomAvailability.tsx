@@ -63,12 +63,16 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <Link
-                      href={`/showrooms/${sr.store.id}`}
-                      className="text-[15px] font-semibold text-ink decoration-2 hover:underline"
-                    >
-                      {sr.store.name}
-                    </Link>
+                    {sr.store.slug ? (
+                      <Link
+                        href={`/showrooms/${sr.store.slug}`}
+                        className="text-[15px] font-semibold text-ink decoration-2 hover:underline"
+                      >
+                        {sr.store.name}
+                      </Link>
+                    ) : (
+                      <span className="text-[15px] font-semibold text-ink">{sr.store.name}</span>
+                    )}
                     <span
                       className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold"
                       style={{ background: meta.bg, color: meta.color }}
@@ -103,12 +107,14 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                     </svg>
                     Показать на карте
                   </button>
-                  <Link
-                    href={`/showrooms/${sr.store.id}`}
-                    className="inline-flex items-center rounded-full bg-ink px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-ink-hover"
-                  >
-                    Подробнее
-                  </Link>
+                  {sr.store.slug && (
+                    <Link
+                      href={`/showrooms/${sr.store.slug}`}
+                      className="inline-flex items-center rounded-full bg-ink px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-ink-hover"
+                    >
+                      Подробнее
+                    </Link>
+                  )}
                 </div>
               </div>
             );
@@ -192,12 +198,14 @@ export function ShowroomAvailability({ showrooms }: ShowroomAvailabilityProps) {
                   >
                     Построить маршрут
                   </a>
-                  <Link
-                    href={`/showrooms/${mapSr.store.id}`}
-                    className="flex flex-1 items-center justify-center rounded-xl border border-line bg-white dark:bg-surface px-3 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-neutral-50 dark:hover:bg-white/5"
-                  >
-                    Страница шоурума
-                  </Link>
+                  {mapSr.store.slug && (
+                    <Link
+                      href={`/showrooms/${mapSr.store.slug}`}
+                      className="flex flex-1 items-center justify-center rounded-xl border border-line bg-white dark:bg-surface px-3 py-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-neutral-50 dark:hover:bg-white/5"
+                    >
+                      Страница шоурума
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

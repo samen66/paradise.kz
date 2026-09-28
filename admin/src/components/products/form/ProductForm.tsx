@@ -125,7 +125,7 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
       setQueue((q) => q.map((p) => (p.key === photo.key ? { ...p, status: 'uploading' } : p)));
 
       try {
-        await uploadPhoto(id, photo.file);
+        await uploadPhoto(`/admin/products/${id}/media`, photo.file);
         URL.revokeObjectURL(photo.preview);
         setQueue((q) => q.filter((p) => p.key !== photo.key));
       } catch (error) {
@@ -333,7 +333,7 @@ export default function ProductForm({ initialProduct, categories, brands, attrib
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:grid-rows-[repeat(7,auto)_1fr] lg:items-start lg:gap-x-6 lg:gap-y-4">
         <BasicSection form={form} locale={basicLocale} onLocaleChange={setBasicLocale} className={LEFT} />
-        <PhotosSection productId={productId} images={images} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
+        <PhotosSection mediaPath={productId === null ? null : `/admin/products/${productId}/media`} images={images} queue={queue} onQueueChange={setQueue} busy={saving} className={LEFT} />
         <PriceSection form={form} extrasOpen={open.has('price-extra')} onExtrasToggle={toggle('price-extra')} className={LEFT} />
         <AttributesSection
           form={form}
